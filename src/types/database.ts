@@ -1,4 +1,4 @@
-// TypeScript Definitions for PhysiQ Database Schema
+// TypeScript Definitions for PhysiQ Database Schema (MySQL)
 
 export type UserRole = 'member' | 'admin';
 
@@ -104,16 +104,15 @@ export interface BodyMeasurement {
   created_at: Date;
 }
 
-// MongoDB Progress Photo Document Type
-export interface PhotoMetadata {
-  _id?: string;
+export interface ProgressPhoto {
+  id: number;
   user_id: number;
   photo_url: string;
   date_taken: string;
   angle: 'front' | 'side' | 'back' | 'other';
   weight_at_time?: number | null;
   notes?: string | null;
-  tags?: string[];
+  tags?: string[] | null; // Stored as JSON in MySQL
   created_at: Date;
 }
 

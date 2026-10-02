@@ -1,4 +1,4 @@
-# PhysiQ Data Dictionary
+# PhysiQ Data Dictionary (MySQL)
 
 ## Table 1: `users`
 | Column | Type | Nullable | Key | Default | Description |
@@ -111,3 +111,16 @@
 | `arms` | DECIMAL(5,2) | YES | | NULL | Arm circumference in cm |
 | `recorded_on` | DATE | NO | | | Measurement date |
 | `created_at` | TIMESTAMP | NO | | CURRENT_TIMESTAMP | Record timestamp |
+
+## Table 11: `progress_photos`
+| Column | Type | Nullable | Key | Default | Description |
+|---|---|---|---|---|---|
+| `id` | INT | NO | PK | AUTO_INCREMENT | Unique photo record identifier |
+| `user_id` | INT | NO | FK | | References `users(id)` ON DELETE CASCADE |
+| `photo_url` | VARCHAR(500) | NO | | | Image URI / file path |
+| `date_taken` | DATE | NO | | | Date photo was taken |
+| `angle` | ENUM(...) | NO | | 'front' | Pose angle: front, side, back, other |
+| `weight_at_time` | DECIMAL(5,2) | YES | | NULL | Body weight snapshot at photo time |
+| `notes` | TEXT | YES | | NULL | Notes / comments |
+| `tags` | JSON | YES | | NULL | JSON array of tags (e.g. `["morning", "fasted"]`) |
+| `created_at` | TIMESTAMP | NO | | CURRENT_TIMESTAMP | Upload timestamp |

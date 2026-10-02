@@ -1,15 +1,12 @@
 import Link from 'next/link';
 import { 
-  Activity, 
   Database, 
-  Flame, 
-  Dumbbell, 
   BrainCircuit, 
   ArrowRight, 
-  Layers, 
+  Dumbbell, 
   Camera, 
-  TrendingUp, 
-  ShieldCheck 
+  Flame,
+  CheckCircle2
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -24,7 +21,7 @@ export default function HomePage() {
             </div>
             <div>
               <span className="font-bold text-xl tracking-tight text-white">Physi<span className="text-indigo-400">Q</span></span>
-              <span className="text-[10px] uppercase font-mono tracking-widest bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full ml-2 border border-indigo-500/20">DBMS Level 3</span>
+              <span className="text-[10px] uppercase font-mono tracking-widest bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full ml-2 border border-indigo-500/20">Pure MySQL DBMS</span>
             </div>
           </div>
 
@@ -34,7 +31,7 @@ export default function HomePage() {
               className="text-xs font-mono text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg"
             >
               <Database className="w-3.5 h-3.5 text-indigo-400" />
-              <span>DB Health API</span>
+              <span>MySQL Health API</span>
             </Link>
           </div>
         </div>
@@ -53,7 +50,7 @@ export default function HomePage() {
           </h1>
 
           <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            Unlike rigid calendar apps that desync when sessions are missed, PhysiQ queries historical relational data to dynamically determine what muscle group is most overdue for training.
+            Powered 100% by MySQL. PhysiQ queries historical relational workout records to dynamically calculate overdue body parts, compute session volume via triggers, and estimate progressive overload targets.
           </p>
         </div>
       </section>
@@ -67,7 +64,7 @@ export default function HomePage() {
           </div>
           <h2 className="text-lg font-bold text-white mb-2">Adaptive Training Engine</h2>
           <p className="text-slate-400 text-sm leading-relaxed mb-4">
-            Employs MySQL stored procedures (<code className="text-indigo-300 text-xs font-mono">sp_get_next_body_part</code>) and triggers to identify overdue body parts rather than following static calendar days.
+            Employs MySQL stored procedures (<code className="text-indigo-300 text-xs font-mono">sp_get_next_body_part</code>) and triggers to recommend overdue body parts derived directly from training history.
           </p>
           <div className="text-xs font-mono text-indigo-400 flex items-center gap-1">
             Dynamic Scheduling <ArrowRight className="w-3.5 h-3.5" />
@@ -79,33 +76,33 @@ export default function HomePage() {
           <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-4 group-hover:scale-110 transition-transform">
             <Database className="w-6 h-6" />
           </div>
-          <h2 className="text-lg font-bold text-white mb-2">10-Table 3NF MySQL Core</h2>
+          <h2 className="text-lg font-bold text-white mb-2">11-Table 3NF MySQL Core</h2>
           <p className="text-slate-400 text-sm leading-relaxed mb-4">
-            Structured relational design with automated triggers for session volume, atomicity in logging transactions, views for weekly aggregation, and composite indexing.
+            Fully normalized relational design with automated triggers for session volume, ACID transactions for workout logging, views for weekly analytics, and composite indexes.
           </p>
           <div className="text-xs font-mono text-violet-400 flex items-center gap-1">
-            ACID Transactions <ArrowRight className="w-3.5 h-3.5" />
+            ACID Transactions &amp; Triggers <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </div>
 
-        {/* Pillar 3: Polyglot Persistence */}
+        {/* Pillar 3: MySQL Progress & JSON Features */}
         <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 hover:border-pink-500/40 transition-all group">
           <div className="w-12 h-12 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 mb-4 group-hover:scale-110 transition-transform">
-            <Layers className="w-6 h-6" />
+            <Camera className="w-6 h-6" />
           </div>
-          <h2 className="text-lg font-bold text-white mb-2">MongoDB Photo Metadata</h2>
+          <h2 className="text-lg font-bold text-white mb-2">Progress &amp; Visual Tracking</h2>
           <p className="text-slate-400 text-sm leading-relaxed mb-4">
-            Flexible document schema storing progress-photo angles, lighting notes, conditioning tags, and weight snapshots without sparse relational overhead.
+            Stores progress photos and body measurement time-series in MySQL using JSON tag arrays, date indexing, and relational foreign keys to the active user.
           </p>
           <div className="text-xs font-mono text-pink-400 flex items-center gap-1">
-            Document Schema <ArrowRight className="w-3.5 h-3.5" />
+            MySQL JSON &amp; Timeline <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
-        PhysiQ &bull; DBMS Level 3 Project &bull; Built with Next.js, MySQL &amp; MongoDB
+        PhysiQ &bull; DBMS Level 3 Project &bull; Built with Next.js &amp; MySQL
       </footer>
     </main>
   );

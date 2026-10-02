@@ -1,5 +1,5 @@
 -- =============================================================================
--- PhysiQ Indexes & Performance Optimization
+-- PhysiQ Indexes & Performance Optimization (MySQL)
 -- Specifically designed for frequent query patterns (time-series, user lookups, aggregations)
 -- =============================================================================
 
@@ -41,7 +41,14 @@ CREATE INDEX idx_body_measurements_user_date
 ON body_measurements (user_id, recorded_on DESC);
 
 -- -----------------------------------------------------------------------------
--- 6. Index on Exercises (Muscle Group)
+-- 6. Index on Progress Photos (User ID + Date Taken)
+-- Speeds up photo timeline queries and before/after comparisons
+-- -----------------------------------------------------------------------------
+CREATE INDEX idx_progress_photos_user_date 
+ON progress_photos (user_id, date_taken DESC);
+
+-- -----------------------------------------------------------------------------
+-- 7. Index on Exercises (Muscle Group)
 -- Optimizes filtering exercises by muscle group in the exercise library
 -- -----------------------------------------------------------------------------
 CREATE INDEX idx_exercises_muscle_group 

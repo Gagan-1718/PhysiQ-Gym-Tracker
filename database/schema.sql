@@ -1,5 +1,5 @@
 -- =============================================================================
--- PhysiQ Relational Schema (MySQL)
+-- PhysiQ Relational Schema (Pure MySQL)
 -- Normalized to 3NF
 -- =============================================================================
 
@@ -145,6 +145,22 @@ CREATE TABLE IF NOT EXISTS body_measurements (
     chest DECIMAL(5,2) NULL COMMENT 'Chest circumference in cm',
     arms DECIMAL(5,2) NULL COMMENT 'Arms circumference in cm',
     recorded_on DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 11. Progress Photos Table (MySQL)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS progress_photos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    photo_url VARCHAR(500) NOT NULL,
+    date_taken DATE NOT NULL,
+    angle ENUM('front', 'side', 'back', 'other') DEFAULT 'front',
+    weight_at_time DECIMAL(5,2) NULL COMMENT 'Body weight snapshot in kg',
+    notes TEXT NULL,
+    tags JSON NULL COMMENT 'JSON tags e.g. ["fasted", "morning", "pump"]',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

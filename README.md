@@ -1,6 +1,6 @@
 # PhysiQ — Database-Driven Gym Management & Adaptive Tracker
 
-PhysiQ is a database-centric personal fitness tracking system designed to replace fragmented fitness logging with a single, intelligent feedback loop. Instead of rigidly following a static calendar (e.g., Monday = Push), PhysiQ uses relational workout history to dynamically recommend the most overdue body part and calculate progressive overload targets.
+PhysiQ is a pure MySQL database-centric personal fitness tracking system designed to replace fragmented fitness logging with a single, intelligent feedback loop. Instead of rigidly following a static calendar (e.g., Monday = Push), PhysiQ uses relational workout history in MySQL to dynamically recommend the most overdue body part and calculate progressive overload targets.
 
 ---
 
@@ -17,16 +17,15 @@ PhysiQ is a database-centric personal fitness tracking system designed to replac
 ## 🛠️ Tech Stack & Architecture
 
 - **Frontend & Full-Stack**: Next.js 14+ (App Router, Server Actions / Route Handlers)
-- **Relational Database (SQL)**: MySQL 8.0+ (3NF Normalized, 10 Core Tables)
-- **Document Database (NoSQL)**: MongoDB (Progress Photo Metadata & flexible snapshots)
-- **Authentication**: NextAuth.js / Auth.js (Bcrypt salted password hashing)
+- **Database (100% SQL)**: MySQL 8.0+ (3NF Normalized, 11 Tables)
+- **Authentication**: NextAuth.js / Auth.js (Bcrypt password hashing)
 - **Styling**: Tailwind CSS & Lucide Icons
 
 ---
 
-## 🗄️ Database Architecture & Advanced DBMS Features
+## 🗄️ Database Architecture & Advanced MySQL Features
 
-### 1. Relational Schema (MySQL — 10 Tables in 3NF)
+### 1. Relational Schema (MySQL — 11 Tables in 3NF)
 - `users`: User profiles, goals, metrics, and role-based access (`member`, `admin`).
 - `splits`: Named workout splits (e.g., PPL, Upper/Lower, Bro Split).
 - `split_days`: Scheduled workout days linked with `last_trained_date`.
@@ -37,11 +36,9 @@ PhysiQ is a database-centric personal fitness tracking system designed to replac
 - `foods`: Master nutrition database (calories and macros per 100g).
 - `nutrition_logs`: Daily food consumption entries.
 - `body_measurements`: Time-series body metric logs (weight, waist, chest, arms).
+- `progress_photos`: Visual progress tracking with camera angles and JSON tags.
 
-### 2. Document Collection (MongoDB)
-- `photo_metadata`: Semi-structured progress photo data (angles, timestamps, weight snapshots, notes, flexible tags).
-
-### 3. Advanced SQL Features Implemented
+### 2. Advanced MySQL Features Implemented
 - **Triggers**:
   - `trg_after_workout_session_insert`: Auto-updates `split_days.last_trained_date`.
   - `trg_after_set_insert` / `trg_after_set_update` / `trg_after_set_delete`: Live session volume recalculation.
@@ -58,6 +55,7 @@ PhysiQ is a database-centric personal fitness tracking system designed to replac
   - `idx_workout_sessions_user_date (user_id, session_date DESC)`
   - `idx_nutrition_logs_user_date (user_id, log_date DESC)`
   - `idx_sets_session_exercise (session_id, exercise_id)`
+  - `idx_progress_photos_user_date (user_id, date_taken DESC)`
 
 ---
 
@@ -66,19 +64,21 @@ PhysiQ is a database-centric personal fitness tracking system designed to replac
 ```text
 PhysiQ-Gym-Tracker/
 ├── database/
-│   ├── schema.sql                 # Complete MySQL 3NF schema DDL
+│   ├── schema.sql                 # Complete MySQL 3NF schema DDL (11 tables)
 │   ├── triggers.sql               # Automated triggers for dates and volume
 │   ├── procedures.sql             # Stored procedures & functions
 │   ├── views.sql                  # Analytical and dashboard views
 │   ├── indexes.sql                # Query performance composite indexes
-│   ├── mongodb/
-│   │   └── photo_metadata_schema.json # MongoDB JSON Schema validator
 │   └── seeds/
 │       ├── exercises.sql          # Seed data for master exercise library
 │       └── foods.sql              # Seed data for nutritional items
 ├── docs/
 │   ├── DATABASE_DESIGN.md         # Comprehensive design & 3NF justification
 │   └── DATA_DICTIONARY.md         # Full table-by-table attribute dictionary
+├── src/
+│   ├── app/                       # Next.js App Router (pages & API routes)
+│   ├── lib/                       # MySQL connection pool & helpers
+│   └── types/                     # TypeScript database types
 ├── .env.example                   # Environment configuration template
 └── README.md
 ```
@@ -87,13 +87,7 @@ PhysiQ-Gym-Tracker/
 
 ## ⚡ Quick Start & Database Setup
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/Gagan-1718/PhysiQ-Gym-Tracker.git
-cd PhysiQ-Gym-Tracker
-```
-
-### 2. Initialize the MySQL Database
+### 1. Initialize the MySQL Database
 ```bash
 # Log in to MySQL and run scripts in order
 mysql -u root -p < database/schema.sql
@@ -105,8 +99,8 @@ mysql -u root -p < database/seeds/exercises.sql
 mysql -u root -p < database/seeds/foods.sql
 ```
 
-### 3. Environment Variables
-Copy `.env.example` to `.env` and fill in your database credentials:
+### 2. Configure Environment
 ```bash
 cp .env.example .env
+# Update MySQL credentials in .env
 ```
