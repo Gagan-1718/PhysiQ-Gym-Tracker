@@ -21,6 +21,7 @@ async function initDatabase() {
     '../database/indexes.sql',
     '../database/seeds/exercises.sql',
     '../database/seeds/foods.sql',
+    '../database/seeds/sample_history.sql',
   ];
 
   try {
