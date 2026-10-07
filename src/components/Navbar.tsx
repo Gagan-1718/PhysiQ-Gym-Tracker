@@ -9,6 +9,7 @@ import {
   BarChart3, 
   BookOpen, 
   Home,
+  TrendingUp,
   User
 } from 'lucide-react';
 
@@ -16,8 +17,9 @@ const NAV_ITEMS = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Workouts', href: '/workouts', icon: Dumbbell },
   { name: 'Training Split', href: '/split', icon: Layers },
+  { name: 'Target Overload', href: '/progression', icon: TrendingUp },
   { name: 'Nutrition', href: '/nutrition', icon: Apple },
-  { name: 'Exercise Library', href: '/exercises', icon: BookOpen },
+  { name: 'Exercises', href: '/exercises', icon: BookOpen },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
 ];
 
@@ -45,7 +47,7 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-sm'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
