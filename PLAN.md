@@ -145,49 +145,197 @@ flowchart LR
 
 ---
 
-## 6. Systematic 5-Phase Implementation Roadmap
+## 6. Highly Granular 10-Phase Nested Roadmap & Work Distribution
+
+This distributed breakdown allows for **daily commits**, clean **Git contribution graphing**, and strict division of responsibilities across both partners as mandated by Dr. Nagasundari S.
 
 ```mermaid
-gantt
-    title PhysiQ 7-Day Sprint Roadmap
-    dateFormat  YYYY-MM-DD
-    section Phase 1: DB Foundation
-    Run init-db & verify triggers/procs/views     :active, p1, 2026-10-15, 1d
-    section Phase 2: Auth & PWA Shell
-    NextAuth + 2 Roles + Mobile PWA Nav         :p2, 2026-10-16, 1d
-    section Phase 3: Adaptive Engine & Logger
-    Adaptive split + Transaction logger + PRs    :p3, 2026-10-17, 2d
-    section Phase 4: Overload & Daily Fuel
-    Overload target predictor + Fuel protocol   :p4, 2026-10-19, 1d
-    section Phase 5: Story Feed & Viva Demo
-    MongoDB Story feed + Notifications + EXPLAIN:p5, 2026-10-20, 2d
+flowchart TD
+    subgraph TrackA ["Track A: Database Core & Storage Architecture (Member 1)"]
+        P1["Phase 1: 3NF Relational & Polyglot Schema"]
+        P2["Phase 2: Database-Engine Logic & Routines"]
+        P3["Phase 3: Seeding & Multi-Week Mock History"]
+        P4["Phase 4: Connection Pool & DB Drivers"]
+        P10["Phase 10: Analytical SQL & EXPLAIN Profiling"]
+    end
+
+    subgraph TrackB ["Track B: Application Layer & User Experience (Member 2)"]
+        P5["Phase 5: Auth, Security & RBAC Guardrails"]
+        P6["Phase 6: Mobile-First PWA Shell & UI Kit"]
+        P7["Phase 7: Adaptive Engine & Workout Logger"]
+        P8["Phase 8: Progressive Overload & Fuel Protocol"]
+        P9["Phase 9: NoSQL Story Feed & Overdue Alerts"]
+    end
+
+    P1 --> P2 --> P3 --> P4
+    P4 --> P7
+    P5 --> P6 --> P7 --> P8 --> P9 --> P10
 ```
 
-### Phase 1: Database Foundation & Verification (Day 1)
-- [ ] Connect MySQL server with `physiq_db`.
-- [ ] Execute `schema.sql`, `triggers.sql`, `procedures.sql`, `views.sql`, `indexes.sql`.
-- [ ] Load seed data: `seeds/exercises.sql` and `seeds/sample_history.sql`.
-- [ ] Verify triggers and procedures in MySQL Workbench.
+---
 
-### Phase 2: Auth, Roles & Mobile-First PWA Shell (Day 2)
-- [ ] NextAuth credentials login for `member` and `admin` roles.
-- [ ] Implement mobile-first navigation bar and bottom app tab bar.
-- [ ] Configure `manifest.json` for "Add to Home Screen" PWA installation.
+### Phase 1: Relational Architecture, 3NF Modeling & Polyglot Schema
+*Focus: Establishing clean database constraints, foreign key cascades, and document validators.*
+* **Subphase 1.1: MySQL Core DDL Implementation**
+  * Define `users`, `splits`, `split_days`, `exercises`, `workout_sessions`, `sets`, `personal_records`, `body_measurements`.
+  * Add explicit constraints: `CHECK (reps > 0)`, `CHECK (weight >= 0)`, `UNIQUE (email)`, `UNIQUE (exercise_name)`.
+  * Commit tag: `feat(db): implement 3NF MySQL relational DDL`
+* **Subphase 1.2: MongoDB Document Validator & Modeling**
+  * Write JSON Schema validator for `journey_stories` (flexible tags, mood, photo URL, date).
+  * Write JSON Schema validator for `custom_routines` (nested superset arrays).
+  * Commit tag: `feat(nosql): define MongoDB collection validation schemas`
+* **Subphase 1.3: Data Dictionary & Normalization Documentation**
+  * Formalize functional dependency proofs proving 1NF, 2NF, and 3NF compliance.
+  * Generate complete data dictionary tables with types, nullability, and foreign key actions.
+  * Commit tag: `docs(db): generate 3NF normalization proof & data dictionary`
 
-### Phase 3: Adaptive Engine & Transactional Workout Logger (Days 3–4)
-- [ ] Wire `/split` page to call `sp_get_next_body_part`.
-- [ ] Wire `/workouts` logger to submit atomic MySQL transaction.
-- [ ] Verify automatic volume calculation and PR detection in database tables.
+---
 
-### Phase 4: Progressive Overload & Smart Fuel Protocol (Day 5)
-- [ ] Integrate `/progression` page with `sp_estimate_next_target` and `fn_calculate_1rm`.
-- [ ] Build the "Daily Fuel & Recovery Target" card (protein, water, sleep check-offs).
+### Phase 2: Database-Engine Server-Side Logic (Triggers, Routines & Views)
+*Focus: Enforcing business logic inside the database engine rather than application code.*
+* **Subphase 2.1: Automated State & Volume Triggers**
+  * Implement `trg_after_workout_session_insert`: synchronizes `split_days.last_trained_date`.
+  * Implement `trg_after_set_insert`, `trg_after_set_update`, `trg_after_set_delete`: atomic session volume calculator.
+  * Commit tag: `feat(triggers): add last_trained_date sync and volume calculation triggers`
+* **Subphase 2.2: Adaptive Scheduling & Overload Stored Procedures**
+  * Implement `sp_get_next_body_part`: adaptive overdue algorithm with priority ordering.
+  * Implement `sp_estimate_next_target`: progressive overload weight/rep predictor.
+  * Implement `sp_check_and_update_pr`: automated personal record detection.
+  * Commit tag: `feat(procedures): implement adaptive scheduler and PR detection procedures`
+* **Subphase 2.3: Stored Functions & Relational Views**
+  * Implement deterministic function `fn_calculate_1rm(weight, reps)` (Epley formula).
+  * Implement function `fn_get_daily_fuel_targets(weight, goal)` (calculates protein & water requirements).
+  * Create view `view_weekly_muscle_volume` and `view_personal_records_detailed`.
+  * Commit tag: `feat(views): create analytical views and mathematical 1RM function`
+* **Subphase 2.4: Composite B-Tree Indexing Strategy**
+  * Create `idx_workout_sessions_user_date (user_id, session_date DESC)`.
+  * Create `idx_sets_session_exercise (session_id, exercise_id)`.
+  * Create `idx_body_measurements_user_date (user_id, recorded_on DESC)`.
+  * Commit tag: `feat(indexes): add composite performance indexes for history queries`
 
-### Phase 5: MongoDB Visual Story Feed, Notifications & Demo Script (Days 6–7)
-- [ ] Connect MongoDB collection `journey_stories` for chronological fitness logs.
-- [ ] Add Database-Driven Overdue Notification banner and HTML5 browser notifications.
-- [ ] Run `EXPLAIN` query plan analysis comparing index range scans vs full table scans.
-- [ ] Rehearse the 5-minute faculty demonstration workflow.
+---
+
+### Phase 3: Seeding & Realistic Telemetry Generation
+*Focus: Supplying realistic data so all procedures, views, and dashboards are immediately verifiable.*
+* **Subphase 3.1: Master Exercise Library Seeding**
+  * Seed 30 core compound and isolation movements categorized by Chest, Back, Shoulders, Quads, Hamstrings, Arms, Core.
+  * Commit tag: `seed(exercises): populate master exercises library across all muscle groups`
+* **Subphase 3.2: Multi-Week Realistic Workout History Seeding**
+  * Seed 3+ weeks of sessions, working sets, PR milestones, and measurement changes for test user `alex@physiq.test`.
+  * Commit tag: `seed(history): populate 3-week progressive training history and PR milestones`
+* **Subphase 3.3: Automated Database Migration & Init Runner**
+  * Build and verify `scripts/init-db.js` running all DDL, triggers, procs, views, and seeds in sequential dependency order.
+  * Commit tag: `feat(scripts): build automated multi-file database initialization runner`
+
+---
+
+### Phase 4: Full-Stack Database Driver & Connection Layer
+*Focus: Safe connection pooling, transactional helper wrappers, and fail-safe error handling.*
+* **Subphase 4.1: MySQL Connection Pool & Transaction Wrapper**
+  * Configure `mysql2/promise` connection pool with keep-alive, connection limits, and error recovery.
+  * Build `executeTransaction()` utility handling automatic `BEGIN`, `COMMIT`, and `ROLLBACK`.
+  * Commit tag: `feat(lib): configure resilient MySQL connection pool and transaction helper`
+* **Subphase 4.2: MongoDB Client Driver & Singleton Connection**
+  * Build singleton MongoDB client wrapper in `src/lib/mongodb.ts`.
+  * Ensure connection reuse during Next.js hot-reload development cycles.
+  * Commit tag: `feat(lib): configure MongoDB client connection singleton`
+* **Subphase 4.3: Health Check & Connection Telemetry API**
+  * Implement `/api/health` returning live table counts, connection statuses, and driver latencies.
+  * Commit tag: `feat(api): build database health check and diagnostics endpoint`
+
+---
+
+### Phase 5: Authentication, Security & Role-Based Access Control (RBAC)
+*Focus: Rubric compliance for user authentication and minimum 2 roles (`member` and `admin`).*
+* **Subphase 5.1: Password Security & User Registration Endpoint**
+  * Implement `/api/auth/register` with 10-round bcrypt password hashing and email uniqueness constraints.
+  * Commit tag: `feat(auth): implement secure registration with bcrypt credential hashing`
+* **Subphase 5.2: Role Segregation & Admin Guards**
+  * Configure NextAuth credentials provider attaching `role` (`member` | `admin`) to the session token.
+  * Build role-guard middleware restricting master exercise catalog mutations to `admin`.
+  * Commit tag: `feat(auth): add role-based access control guards for member and admin roles`
+* **Subphase 5.3: Profile & Physical Goal Configuration**
+  * Allow users to manage fitness goals (`hypertrophy`, `strength`, `fat loss`) and starting physical metrics in MySQL.
+  * Commit tag: `feat(profile): build user goal selection and physical metric settings`
+
+---
+
+### Phase 6: Mobile-First PWA Shell & Reusable UI Component Kit
+*Focus: Gym-friendly touch interface, zero app-store hassle, and responsive laptop viva presentation.*
+* **Subphase 6.1: PWA Web App Manifest & Offline Foundation**
+  * Create `public/manifest.json`, theme colors, and mobile standalone viewport meta tags.
+  * Commit tag: `feat(pwa): configure Web App Manifest for mobile home-screen installation`
+* **Subphase 6.2: Responsive Shell & Dual-Navigation System**
+  * Implement top navigation bar for desktop/laptop displays.
+  * Implement bottom touch-friendly tab bar for mobile viewports (Home, Split, Workout, Progress, Feed).
+  * Commit tag: `feat(ui): implement dual responsive desktop and mobile bottom tab navigation`
+* **Subphase 6.3: Reusable Atomic UI Component Kit**
+  * Build polished dark-theme `Card`, `StatWidget`, `Button`, `Modal`, and `Badge` components.
+  * Commit tag: `feat(ui): build atomic design component library with dark-mode styling`
+
+---
+
+### Phase 7: Adaptive Training Engine & Workout Transaction Logger
+*Focus: The centerpiece of the project — adaptive body-part scheduling and atomic workout logging.*
+* **Subphase 7.1: Adaptive Scheduling Dashboard UI**
+  * Render the hero overdue recommendation card on the dashboard calling `sp_get_next_body_part`.
+  * Add visual indicator showing days elapsed since last session and recovery status.
+  * Commit tag: `feat(split): integrate adaptive overdue body part recommendation UI`
+* **Subphase 7.2: Active Workout Session Logger UI**
+  * Build live workout logger: dynamically add exercises, enter weight & reps, and mark warmup sets.
+  * Add set deletion, reordering, and RPE input fields.
+  * Commit tag: `feat(workouts): build dynamic workout session logger interface`
+* **Subphase 7.3: ACID Transaction Backend Integration**
+  * Connect workout submission to `/api/workouts` running atomic transaction across sessions, sets, and triggers.
+  * Verify volume auto-calculation trigger and PR detection procedure execution.
+  * Commit tag: `feat(workouts): connect ACID transaction handler with automated PR triggers`
+
+---
+
+### Phase 8: Progressive Overload Predictor & Daily Fuel Protocol
+*Focus: Data-driven training targets and zero-bloat nutrition guidance.*
+* **Subphase 8.1: Progressive Overload Estimation UI & API**
+  * Build `/progression` page invoking `sp_estimate_next_target` for any selected exercise.
+  * Render historical top sets and highlight the suggested next weight/rep load.
+  * Commit tag: `feat(overload): build progressive overload estimation page and API handler`
+* **Subphase 8.2: 1-Rep Max Calculator Widget**
+  * Integrate Epley formula function `fn_calculate_1rm` showing estimated strength maximums across rep sets.
+  * Commit tag: `feat(overload): add 1RM calculator widget powered by deterministic SQL function`
+* **Subphase 8.3: Daily Fuel & Recovery Target Protocol**
+  * Build the "Daily Fuel & Recovery Target" card calculating protein ($2.0\text{g/kg}$) and water ($0.04\text{L/kg}$) targets.
+  * Add interactive daily check-off pills stored in `user_daily_fuel`.
+  * Commit tag: `feat(fuel): implement zero-bloat daily protein and hydration target protocol`
+
+---
+
+### Phase 9: NoSQL Visual Journey Feed & Overdue Notification System
+*Focus: MongoDB document modeling and database-triggered alerts.*
+* **Subphase 9.1: MongoDB Journey Stories CRUD & Timeline Feed**
+  * Build `/api/stories` route performing insert and chronological document retrieval on `journey_stories`.
+  * Render Instagram-story style timeline feed displaying weekly photos, weight snapshots, and tags.
+  * Commit tag: `feat(nosql): build chronological fitness journey feed with MongoDB storage`
+* **Subphase 9.2: Database-Driven Overdue Notification Banner**
+  * Display a prominent alert banner at the top of the PWA whenever any split day is overdue by $\ge 4$ days.
+  * Commit tag: `feat(alerts): add database-driven overdue workout notification banner`
+* **Subphase 9.3: HTML5 Browser Notification Integration**
+  * Wire PWA push notifications using the browser `Notification` API to alert users when a muscle group needs training.
+  * Commit tag: `feat(pwa): integrate HTML5 browser notifications for overdue workouts`
+
+---
+
+### Phase 10: Performance Optimization, EXPLAIN Proof & Viva Demonstration
+*Focus: Final faculty evaluation prep, query profiling, and documentation integrity.*
+* **Subphase 10.1: Complex Analytical SQL Query Suite**
+  * Finalize `database/queries/demo_analytical_queries.sql` showcasing correlated subqueries, multi-table `JOIN`, `GROUP BY`, and `HAVING`.
+  * Commit tag: `feat(queries): finalize suite of 5 analytical SQL queries for evaluation`
+* **Subphase 10.2: `EXPLAIN` Query Plan Profiling & Performance Report**
+  * Profile `idx_workout_sessions_user_date` in MySQL Workbench, comparing index seeks (`type: range`) vs full table scans (`type: ALL`).
+  * Finalize `docs/QUERY_PERFORMANCE_EXPLAIN.md`.
+  * Commit tag: `docs(explain): document EXPLAIN execution plans and indexing performance proof`
+* **Subphase 10.3: End-to-End 24-Step Viva Demonstration Walkthrough**
+  * Conduct complete rehearsal of the 24-step demo script (from ER diagram to live workout transaction and MongoDB feed).
+  * Update `README.md` with final screenshots, setup instructions, and team contribution summary.
+  * Commit tag: `docs(viva): finalize end-to-end evaluation demo script and project README`
 
 ---
 
@@ -208,10 +356,5 @@ gantt
 
 To guarantee a clean, active GitHub activity log for evaluator audits:
 1. **Branch Protection:** All core features are developed and committed onto `the-DEMIGOD-iteration` branch before merging into `main`.
-2. **Conventional Commits:** Every commit strictly uses conventional prefixes:
-   * `feat(split): ...`
-   * `feat(workouts): ...`
-   * `feat(overload): ...`
-   * `feat(nosql): ...`
-   * `docs(viva): ...`
+2. **Conventional Commits:** Every commit strictly uses conventional prefixes matching our subphases (`feat(db):`, `feat(triggers):`, `feat(procedures):`, `feat(nosql):`, `feat(workouts):`, `docs(viva):`).
 3. **Co-Authorship:** Both team members contribute daily commits covering database design and application logic to satisfy rubric Section 2 ("Each member must contribute to both database and application development").
