@@ -78,4 +78,19 @@ BEGIN
     RETURN ROUND(p_weight * 40 / 50) * 50;
 END$$
 
+DROP FUNCTION IF EXISTS fn_calorie_target$$
+CREATE FUNCTION fn_calorie_target(p_weight DECIMAL(5,2), p_goal VARCHAR(20))
+RETURNS SMALLINT UNSIGNED
+DETERMINISTIC NO SQL
+BEGIN
+    DECLARE v_adjust INT DEFAULT 0;
+    SET v_adjust = CASE p_goal
+        WHEN 'hypertrophy' THEN 300
+        WHEN 'strength'    THEN 200
+        WHEN 'fat_loss'    THEN -400
+        ELSE 0
+    END;
+    RETURN ROUND((p_weight * 33 + v_adjust) / 10) * 10;
+END$$
+
 DELIMITER ;
