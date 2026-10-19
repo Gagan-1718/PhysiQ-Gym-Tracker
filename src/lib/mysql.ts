@@ -64,7 +64,7 @@ export async function callRows<T>(proc: string, params: Params, db: Queryable = 
  * CALL a procedure with OUT parameters. CALL and the SELECT of the @variables
  * must run on the same connection, so this borrows one from the pool.
  */
-export async function callOut<T extends Record<string, unknown>>(
+export async function callOut<T extends object>(
   proc: string,
   inParams: Params,
   outNames: (keyof T & string)[]
