@@ -33,3 +33,7 @@ yarn-error.log*
 # Local database / dump scratchpads
 *.sql.bak
 dump.rdb
+
+# TypeScript / Next generated
+*.tsbuildinfo
+next-env.d.ts
