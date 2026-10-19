@@ -27,12 +27,14 @@ CREATE TABLE IF NOT EXISTS users (
     goal            ENUM('hypertrophy', 'strength', 'fat_loss', 'maintenance') NOT NULL DEFAULT 'hypertrophy',
     height          DECIMAL(5,2) NULL COMMENT 'cm',
     starting_weight DECIMAL(5,2) NULL COMMENT 'kg, used until the first body measurement is logged',
+    weekly_goal     TINYINT UNSIGNED NOT NULL DEFAULT 4 COMMENT 'target sessions per week (the Train ring)',
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uq_users_email UNIQUE (email),
     CONSTRAINT chk_users_email CHECK (email LIKE '%_@_%._%'),
     CONSTRAINT chk_users_height CHECK (height IS NULL OR height BETWEEN 100 AND 250),
-    CONSTRAINT chk_users_starting_weight CHECK (starting_weight IS NULL OR starting_weight BETWEEN 30 AND 300)
+    CONSTRAINT chk_users_starting_weight CHECK (starting_weight IS NULL OR starting_weight BETWEEN 30 AND 300),
+    CONSTRAINT chk_users_weekly_goal CHECK (weekly_goal BETWEEN 1 AND 7)
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
