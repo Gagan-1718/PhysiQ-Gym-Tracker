@@ -124,3 +124,25 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
     CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_sessions_split_day FOREIGN KEY (split_day_id) REFERENCES split_days(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 8. sets — individual sets performed in a session
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sets (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    session_id  INT NOT NULL,
+    exercise_id INT NOT NULL,
+    set_number  TINYINT UNSIGNED NOT NULL COMMENT '1-based, per exercise within the session',
+    reps        SMALLINT UNSIGNED NOT NULL,
+    weight      DECIMAL(6,2) NOT NULL DEFAULT 0.00 COMMENT 'kg; 0 for bodyweight',
+    is_warmup   BOOLEAN NOT NULL DEFAULT FALSE,
+    rpe         DECIMAL(3,1) NULL COMMENT 'Rate of Perceived Exertion 1-10',
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_sets_session_exercise_number UNIQUE (session_id, exercise_id, set_number),
+    CONSTRAINT chk_sets_reps CHECK (reps BETWEEN 1 AND 100),
+    CONSTRAINT chk_sets_weight CHECK (weight BETWEEN 0 AND 999.99),
+    CONSTRAINT chk_sets_rpe CHECK (rpe IS NULL OR rpe BETWEEN 1 AND 10),
+    CONSTRAINT chk_sets_number CHECK (set_number BETWEEN 1 AND 50),
+    CONSTRAINT fk_sets_session FOREIGN KEY (session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sets_exercise FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
