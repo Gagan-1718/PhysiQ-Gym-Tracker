@@ -146,3 +146,22 @@ CREATE TABLE IF NOT EXISTS sets (
     CONSTRAINT fk_sets_session FOREIGN KEY (session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
     CONSTRAINT fk_sets_exercise FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 9. personal_records — points at each user's best set per exercise (BCNF)
+--    Candidate keys: (user_id, exercise_id) and set_id. Weight, reps and date
+--    are NOT copied here; they are read through set_id (no update anomalies).
+--    "Best" = highest Epley 1RM, ties go to the heavier, then the earlier set.
+--    Maintained automatically by triggers on sets / workout_sessions.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS personal_records (
+    user_id     INT NOT NULL,
+    exercise_id INT NOT NULL,
+    set_id      INT NOT NULL,
+    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, exercise_id),
+    CONSTRAINT uq_personal_records_set UNIQUE (set_id),
+    CONSTRAINT fk_pr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pr_exercise FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_pr_set FOREIGN KEY (set_id) REFERENCES sets(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
