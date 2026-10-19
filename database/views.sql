@@ -123,3 +123,22 @@ JOIN exercises e         ON e.id = s.exercise_id
 JOIN muscle_groups mg    ON mg.id = e.muscle_group_id
 WHERE s.is_warmup = FALSE
 GROUP BY ws.user_id, week_start, mg.id, mg.name;
+
+-- -----------------------------------------------------------------------------
+-- 5. view_exercise_session_best — per user, exercise and session: best
+--    estimated 1RM, top weight, sets and volume (feeds strength-trend charts)
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW view_exercise_session_best AS
+SELECT
+    ws.user_id,
+    s.exercise_id,
+    ws.id                                     AS session_id,
+    ws.session_date,
+    MAX(fn_calculate_1rm(s.weight, s.reps))   AS best_e1rm,
+    MAX(s.weight)                             AS top_weight,
+    COUNT(*)                                  AS working_sets,
+    SUM(s.weight * s.reps)                    AS volume
+FROM sets s
+JOIN workout_sessions ws ON ws.id = s.session_id
+WHERE s.is_warmup = FALSE
+GROUP BY ws.user_id, s.exercise_id, ws.id, ws.session_date;
