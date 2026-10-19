@@ -147,4 +147,22 @@ BEGIN
     END IF;
 END$$
 
+-- =============================================================================
+-- exercises: audit trail for the admin-managed master library.
+-- The app runs `SET @app_user_id = <admin id>` on the same connection first.
+-- =============================================================================
+
+-- 9. Audit inserts
+DROP TRIGGER IF EXISTS trg_exercises_ai$$
+CREATE TRIGGER trg_exercises_ai
+AFTER INSERT ON exercises
+FOR EACH ROW
+BEGIN
+    INSERT INTO admin_audit_logs (admin_id, action, target_table, target_id, details)
+    VALUES (@app_user_id, 'INSERT', 'exercises', NEW.id,
+            JSON_OBJECT('name', NEW.name,
+                        'muscle_group_id', NEW.muscle_group_id,
+                        'equipment', NEW.equipment_needed));
+END$$
+
 DELIMITER ;
