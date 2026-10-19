@@ -124,4 +124,21 @@ BEGIN
     END IF;
 END$$
 
+-- -----------------------------------------------------------------------------
+-- sp_refresh_last_trained — recompute the cached last_trained_date of one day
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_refresh_last_trained$$
+CREATE PROCEDURE sp_refresh_last_trained(IN p_split_day_id INT)
+BEGIN
+    IF p_split_day_id IS NOT NULL THEN
+        UPDATE split_days
+        SET last_trained_date = (
+            SELECT MAX(ws.session_date)
+            FROM workout_sessions ws
+            WHERE ws.split_day_id = p_split_day_id
+        )
+        WHERE id = p_split_day_id;
+    END IF;
+END$$
+
 DELIMITER ;
