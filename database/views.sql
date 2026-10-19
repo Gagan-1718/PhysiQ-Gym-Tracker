@@ -104,3 +104,22 @@ LEFT JOIN (
     GROUP BY session_id
 ) AS sc ON sc.session_id = ws.id
 GROUP BY ws.user_id, week_start;
+
+-- -----------------------------------------------------------------------------
+-- 4. view_weekly_muscle_volume — working sets and volume per muscle per week
+--    (weekly sets per muscle is the standard hypertrophy dose metric)
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW view_weekly_muscle_volume AS
+SELECT
+    ws.user_id,
+    DATE_SUB(ws.session_date, INTERVAL WEEKDAY(ws.session_date) DAY) AS week_start,
+    mg.id                    AS muscle_group_id,
+    mg.name                  AS muscle_group,
+    COUNT(*)                 AS working_sets,
+    SUM(s.weight * s.reps)   AS volume
+FROM sets s
+JOIN workout_sessions ws ON ws.id = s.session_id
+JOIN exercises e         ON e.id = s.exercise_id
+JOIN muscle_groups mg    ON mg.id = e.muscle_group_id
+WHERE s.is_warmup = FALSE
+GROUP BY ws.user_id, week_start, mg.id, mg.name;
