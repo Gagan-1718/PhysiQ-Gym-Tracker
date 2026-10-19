@@ -13,7 +13,7 @@ interface StepperProps {
   unit?: string;
   label: string;
   decimals?: boolean;
-  size?: 'lg' | 'md';
+  size?: 'lg' | 'md' | 'sm';
   className?: string;
 }
 
@@ -38,16 +38,17 @@ export function Stepper({ value, onChange, step, min = 0, max = 999, unit, label
   };
 
   const h = size === 'lg' ? 'h-14' : 'h-11';
+  const w = size === 'lg' ? 'w-14' : size === 'md' ? 'w-11' : 'w-8';
   return (
-    <div className={cn('flex items-center rounded-2xl bg-surface-2', className)}>
+    <div className={cn('flex items-center rounded-2xl bg-surface-2 focus-within:ring-2 focus-within:ring-accent/50', className)}>
       <button
         type="button"
         onClick={() => bump(-1)}
         disabled={value !== null && value <= min}
         aria-label={`Decrease ${label}`}
-        className={cn('press flex shrink-0 items-center justify-center rounded-l-2xl text-fg-2 hover:text-fg disabled:opacity-30', h, size === 'lg' ? 'w-14' : 'w-11')}
+        className={cn('press flex shrink-0 items-center justify-center rounded-l-2xl text-fg-2 hover:text-fg disabled:opacity-30', h, w)}
       >
-        <Minus className="h-5 w-5" />
+        <Minus className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
       </button>
       <div className="flex min-w-0 flex-1 items-baseline justify-center">
         <input
@@ -63,7 +64,7 @@ export function Stepper({ value, onChange, step, min = 0, max = 999, unit, label
           style={{ width: `${Math.max(text.length, 1) + 0.6}ch` }}
           className={cn(
             'tabular min-w-0 max-w-full bg-transparent text-center font-round font-extrabold text-fg placeholder:text-fg-3 focus:outline-none',
-            size === 'lg' ? 'text-[26px]' : 'text-xl'
+            size === 'lg' ? 'text-[26px]' : size === 'md' ? 'text-xl' : 'text-lg'
           )}
         />
         {unit && (
@@ -77,9 +78,9 @@ export function Stepper({ value, onChange, step, min = 0, max = 999, unit, label
         onClick={() => bump(1)}
         disabled={value !== null && value >= max}
         aria-label={`Increase ${label}`}
-        className={cn('press flex shrink-0 items-center justify-center rounded-r-2xl text-fg-2 hover:text-fg disabled:opacity-30', h, size === 'lg' ? 'w-14' : 'w-11')}
+        className={cn('press flex shrink-0 items-center justify-center rounded-r-2xl text-fg-2 hover:text-fg disabled:opacity-30', h, w)}
       >
-        <Plus className="h-5 w-5" />
+        <Plus className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
       </button>
     </div>
   );
