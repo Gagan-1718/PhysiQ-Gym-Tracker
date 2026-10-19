@@ -44,6 +44,19 @@ test('a user can have many splits but only one active split', () =>
     await rejects(createSplit(conn, userId, [['D', 2]], true), 'ER_DUP_ENTRY');
   }));
 
+test('client_ref makes workout submission idempotent per user', () =>
+  inRollback(async (conn) => {
+    const a = await createUser(conn);
+    const b = await createUser(conn);
+    const ref = '0f8fad5b-d9cb-469f-a165-70867728950e';
+    const insert = (userId) =>
+      conn.query("INSERT INTO workout_sessions (user_id, session_date, body_part, client_ref) VALUES (?, CURRENT_DATE, 'Push', ?)", [userId, ref]);
+    await insert(a);
+    await rejects(insert(a), 'ER_DUP_ENTRY');
+    await insert(b); // another user's device may reuse the same id
+    await conn.query("INSERT INTO workout_sessions (user_id, session_date, body_part) VALUES (?, CURRENT_DATE, 'Push'), (?, CURRENT_DATE, 'Pull')", [a, a]);
+  }));
+
 test('a body measurement needs at least one value', () =>
   inRollback(async (conn) => {
     const userId = await createUser(conn);
