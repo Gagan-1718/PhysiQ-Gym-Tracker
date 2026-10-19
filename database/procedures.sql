@@ -93,4 +93,35 @@ BEGIN
     RETURN ROUND((p_weight * 33 + v_adjust) / 10) * 10;
 END$$
 
+-- =============================================================================
+-- INTEGRITY HELPERS (called by triggers)
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- sp_assert_valid_session — rules a CHECK constraint cannot express:
+--   * CHECK cannot use CURRENT_DATE (non-deterministic)
+--   * CHECK cannot look at another table (split day ownership)
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_assert_valid_session$$
+CREATE PROCEDURE sp_assert_valid_session(
+    IN p_user_id INT,
+    IN p_split_day_id INT,
+    IN p_session_date DATE
+)
+BEGIN
+    -- One day of tolerance absorbs client/server timezone differences.
+    IF p_session_date > DATE_ADD(CURRENT_DATE, INTERVAL 1 DAY) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'session_date cannot be in the future';
+    END IF;
+
+    IF p_split_day_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+        FROM split_days sd
+        JOIN splits s ON s.id = sd.split_id
+        WHERE sd.id = p_split_day_id AND s.user_id = p_user_id
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'split_day_id does not belong to this user';
+    END IF;
+END$$
+
 DELIMITER ;
