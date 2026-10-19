@@ -207,4 +207,43 @@ BEGIN
     ON DUPLICATE KEY UPDATE set_id = ranked.set_id;
 END$$
 
+-- =============================================================================
+-- FEATURE PROCEDURES (called by the app)
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- sp_get_next_body_part — adaptive scheduling.
+-- Picks the highest-priority day of the user's active split from
+-- view_split_day_status: never trained > overdue > ready > recovering, then
+-- longest since trained. Falls back to 'Full Body' when there is no split.
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_get_next_body_part$$
+CREATE PROCEDURE sp_get_next_body_part(
+    IN  p_user_id INT,
+    OUT p_split_day_id INT,
+    OUT p_recommended_body_part VARCHAR(50),
+    OUT p_days_since_last_trained INT,
+    OUT p_status VARCHAR(12)
+)
+BEGIN
+    DECLARE CONTINUE HANDLER FOR NOT FOUND BEGIN END;
+
+    SET p_split_day_id = NULL;
+    SET p_recommended_body_part = NULL;
+    SET p_days_since_last_trained = NULL;
+    SET p_status = NULL;
+
+    SELECT v.split_day_id, v.body_part, v.days_since, v.status
+    INTO p_split_day_id, p_recommended_body_part, p_days_since_last_trained, p_status
+    FROM view_split_day_status v
+    WHERE v.user_id = p_user_id
+    ORDER BY v.priority_rank
+    LIMIT 1;
+
+    IF p_recommended_body_part IS NULL THEN
+        SET p_recommended_body_part = 'Full Body';
+        SET p_status = 'new';
+    END IF;
+END$$
+
 DELIMITER ;
