@@ -1,0 +1,13 @@
+<svg viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="t" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B3123A"/><stop offset="1" stop-color="#FA2D55"/></linearGradient>
+    <linearGradient id="p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6FA312"/><stop offset="1" stop-color="#B6F23B"/></linearGradient>
+    <linearGradient id="w" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0E7FA0"/><stop offset="1" stop-color="#2DD4F5"/></linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" transform="rotate(-90 24 24)">
+    <circle cx="24" cy="24" r="19" stroke="url(#t)" stroke-width="5" stroke-dasharray="105 120"/>
+    <circle cx="24" cy="24" r="12.5" stroke="url(#p)" stroke-width="5" stroke-dasharray="62 79"/>
+    <circle cx="24" cy="24" r="6" stroke="url(#w)" stroke-width="5" stroke-dasharray="26 38"/>
+  </g>
+  <path d="M33 33 L42 42" stroke="#FA2D55" stroke-width="5" stroke-linecap="round"/>
+</svg>
