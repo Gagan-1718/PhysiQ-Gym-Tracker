@@ -317,4 +317,32 @@ BEGIN
     END IF;
 END$$
 
+-- -----------------------------------------------------------------------------
+-- sp_ensure_daily_fuel — create (or, for today, refresh) a day's fuel targets.
+-- Past days are frozen; today's targets follow the latest weight and goal.
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_ensure_daily_fuel$$
+CREATE PROCEDURE sp_ensure_daily_fuel(IN p_user_id INT, IN p_date DATE)
+BEGIN
+    DECLARE v_goal VARCHAR(20);
+    DECLARE v_weight DECIMAL(5,2);
+
+    SET v_goal = (SELECT goal FROM users WHERE id = p_user_id);
+    IF v_goal IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Unknown user';
+    END IF;
+
+    SET v_weight = COALESCE(fn_current_weight(p_user_id, p_date), 70.00);
+
+    INSERT INTO user_daily_fuel (user_id, fuel_date, protein_target_g, water_target_ml, calorie_target)
+    VALUES (p_user_id, p_date,
+            fn_protein_target_g(v_weight),
+            fn_water_target_ml(v_weight),
+            fn_calorie_target(v_weight, v_goal)) AS new_fuel
+    ON DUPLICATE KEY UPDATE
+        protein_target_g = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.protein_target_g, user_daily_fuel.protein_target_g),
+        water_target_ml  = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.water_target_ml,  user_daily_fuel.water_target_ml),
+        calorie_target   = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.calorie_target,   user_daily_fuel.calorie_target);
+END$$
+
 DELIMITER ;
