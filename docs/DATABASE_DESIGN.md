@@ -1,63 +1,222 @@
-# PhysiQ Database Architecture & Design Document
+# PhysiQ Database Design
 
-## 1. Overview
+PhysiQ uses **polyglot persistence**:
 
-PhysiQ uses a **100% MySQL** relational database architecture designed for data integrity, 3NF normalization, transactional consistency, and advanced database-side intelligence.
+- **MySQL 8.0** holds everything relational, transactional and rule-bound: users,
+  splits, workouts, sets, PRs, measurements, fuel and the audit trail.
+- **MongoDB** holds nested, sparse, evolving documents: routine templates and the
+  journey timeline.
 
----
+The core rule of the project is **the database decides**. Recommendations,
+overload targets, PR detection, volume and recovery status are computed by
+triggers, procedures and views inside MySQL, not in application code.
 
-## 2. Normalization Analysis (3NF)
-
-The relational schema is strictly normalized up to **Third Normal Form (3NF)**:
-
-1. **First Normal Form (1NF)**:
-   - All table attributes hold atomic (indivisible) values.
-   - Repeating groups (sets, split days, food logs) are separated into individual tables with unique primary keys.
-
-2. **Second Normal Form (2NF)**:
-   - All non-key attributes are fully functionally dependent on the entire primary key. No partial key dependencies exist.
-
-3. **Third Normal Form (3NF)**:
-   - Transitive dependencies are eliminated.
-   - In `nutrition_logs`, calories and macros are referenced via `food_id` rather than duplicated per log entry. Totals are derived dynamically via views (`view_daily_macro_totals`).
-   - In `sets`, exercise metadata (muscle group, equipment) is referenced via `exercise_id` rather than duplicated per set.
+```
+PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN
+        │        │         │          │
+     logger   ACID txn   views    sp_get_next_body_part
+              triggers            sp_estimate_next_target
+```
 
 ---
 
-## 3. Entity-Relationship & Cardinalities
+## 1. Why two databases?
 
-- **users (1) ── (N) splits**: A user can create multiple training splits.
-- **splits (1) ── (N) split_days**: A split consists of multiple ordered workout days/body parts.
-- **users (1) ── (N) workout_sessions**: A user logs multiple workout sessions over time.
-- **workout_sessions (1) ── (N) sets**: A session contains multiple performed sets.
-- **exercises (1) ── (N) sets**: An exercise is performed across multiple sets.
-- **users (1) ── (N) personal_records**: A user tracks best performance per exercise.
-- **exercises (1) ── (N) personal_records**: Each PR links to an exercise in the master library.
-- **users (1) ── (N) nutrition_logs**: A user logs food consumption entries.
-- **foods (1) ── (N) nutrition_logs**: Master food items are referenced in intake logs.
-- **users (1) ── (N) body_measurements**: Time-series measurement records per user.
-- **users (1) ── (N) progress_photos**: Progress photo records with metadata and JSON tags per user.
+| Data | Store | Why |
+|---|---|---|
+| Users, splits, sessions, sets, PRs, measurements, fuel, audit | **MySQL** | Strict structure, relationships everywhere, multi-row writes that must be atomic (a session and its sets), and integrity rules (FKs, CHECKs, triggers). 3NF prevents update anomalies in the training history. |
+| `custom_routines` | **MongoDB** | A routine is an ordered list of exercises with per-exercise targets and optional superset groups. It is read and written as one unit. In SQL this needs 2–3 extra tables and joins for something that is never queried by its parts. |
+| `journey_stories` | **MongoDB** | Journals and progress photos carry sparse, changing attributes: mood, energy, tags, photo angle, free-form highlights. A table would be wide and mostly NULL, and every new attribute would need a migration. The validator still enforces the fields that matter. |
+
+**Cross-store references.** Mongo documents store MySQL ids (`user_id`,
+`exercise_id`, `session_id`). No database can enforce an FK across stores, so
+the API checks that every referenced id exists in MySQL before writing to
+Mongo. Deleting a user also deletes their Mongo documents.
 
 ---
 
-## 4. Advanced MySQL DBMS Features Implemented
+## 2. Entity-relationship model (MySQL)
 
-1. **ACID Transactions**: Atomic workout submission logic ensuring session, sets, volume, and PRs succeed or rollback together.
-2. **Database Triggers**:
-   - `trg_after_workout_session_insert`: Auto-updates `split_days.last_trained_date`.
-   - `trg_after_set_insert` / `trg_after_set_update` / `trg_after_set_delete`: Live session volume calculation.
-3. **Stored Procedures & Functions**:
-   - `sp_get_next_body_part`: Adaptive scheduling logic to find the most overdue muscle group.
-   - `sp_estimate_next_target`: Progressive overload estimation based on recent performance.
-   - `fn_calculate_1rm`: Epley 1-Rep Max formula function.
-   - `sp_check_and_update_pr`: Automated PR tracking.
-4. **Relational Views**:
-   - `view_daily_macro_totals`: Dynamic aggregation of daily nutrition.
-   - `view_personal_records_detailed`: PR summary joined with exercise metadata.
-   - `view_weekly_summary`: Aggregated weekly training volume and adherence.
-5. **Composite & Performance Indexes**:
-   - `idx_workout_sessions_user_date (user_id, session_date)`
-   - `idx_nutrition_logs_user_date (user_id, log_date)`
-   - `idx_sets_session_exercise (session_id, exercise_id)`
-   - `idx_personal_records_user_exercise (user_id, exercise_id)`
-   - `idx_body_measurements_user_date (user_id, recorded_on)`
+```mermaid
+erDiagram
+    users ||--o{ splits : owns
+    splits ||--|{ split_days : "has ordered"
+    split_days }o--o{ muscle_groups : "trains (split_day_muscles)"
+    muscle_groups ||--o{ exercises : categorises
+    users ||--o{ workout_sessions : logs
+    split_days |o--o{ workout_sessions : "trained in"
+    workout_sessions ||--|{ sets : contains
+    exercises ||--o{ sets : "performed as"
+    users ||--o{ personal_records : holds
+    exercises ||--o{ personal_records : "best for"
+    sets ||--o| personal_records : "is the PR"
+    users ||--o{ body_measurements : records
+    users ||--o{ user_daily_fuel : tracks
+    users |o--o{ admin_audit_logs : "acted in"
+```
+
+| Relationship | Cardinality | Delete rule |
+|---|---|---|
+| users → splits → split_days | 1:N:N | CASCADE |
+| split_days ↔ muscle_groups | M:N via `split_day_muscles` | CASCADE / RESTRICT |
+| users → workout_sessions → sets | 1:N:N | CASCADE |
+| split_days → workout_sessions | 1:N (optional) | SET NULL (history survives a split change) |
+| exercises → sets | 1:N | RESTRICT (a trained exercise cannot vanish) |
+| sets → personal_records | 1:0..1 | CASCADE (then triggers promote the next best) |
+
+---
+
+## 3. Normalisation
+
+### 1NF
+Every column is atomic and there are no repeating groups. Sets, split days and
+muscle mappings are rows in their own tables rather than lists in a column.
+
+### 2NF
+Every table with a composite key has only full-key dependencies:
+
+- `split_day_muscles (split_day_id, muscle_group_id)`: no non-key columns.
+- `personal_records (user_id, exercise_id)`: `set_id` depends on the whole key
+  (the best set *for this user and this exercise*).
+- `user_daily_fuel (user_id, fuel_date)`: targets and progress are facts about
+  *that user on that day*, not about the user alone or the date alone.
+
+### 3NF
+There are no transitive dependencies. Examples of what we deliberately did not store:
+
+| Not stored | Why | Where it comes from |
+|---|---|---|
+| `exercises.muscle_group` text | `exercise → muscle_group_id → name` would be transitive | `muscle_groups` lookup |
+| PR weight / reps / date | `set_id → weight, reps` would be transitive | join through `set_id` (`view_personal_records_detailed`) |
+| Estimated 1RM | function of `(weight, reps)` | `fn_calculate_1rm` |
+| Weekly totals | aggregates | `view_weekly_summary`, `view_weekly_muscle_volume` |
+| Recovery status | function of date and rest window | `view_split_day_status` |
+
+### BCNF: `personal_records`
+The table has two candidate keys, `(user_id, exercise_id)` and `set_id`. Every
+functional dependency has a superkey on its left-hand side:
+`(user_id, exercise_id) → set_id` and `set_id → (user_id, exercise_id)`.
+So the table is in BCNF.
+
+### Controlled denormalisation (documented exceptions)
+
+| Column | Derivable from | Why we cache it | How it stays correct |
+|---|---|---|---|
+| `split_days.last_trained_date` | `MAX(workout_sessions.session_date)` | read on every dashboard load by the scheduler | triggers on session insert, update and delete |
+| `workout_sessions.total_volume` | `SUM(weight × reps)` of working sets | history lists show volume per session | triggers on set insert, update and delete |
+
+`npm run test:db` proves both caches stay in sync through inserts, edits,
+deletes, backdated logs and cascades.
+
+**Snapshot attributes (not redundancy).** `workout_sessions.body_part` stores
+the label at training time, so renaming or deleting a split never rewrites
+history. `user_daily_fuel` targets are frozen once a day is over, so a later
+weigh-in does not change past days.
+
+---
+
+## 4. Integrity: declarative first, triggers for the rest
+
+| Rule | Mechanism |
+|---|---|
+| Valid ranges (reps 1–100, RPE 1–10, weight ≥ 0, body metrics) | `CHECK` constraints |
+| One active split per user | generated column `active_slot = IF(is_active,1,NULL)` + `UNIQUE(user_id, active_slot)` |
+| No duplicate set numbers per exercise in a session | `UNIQUE(session_id, exercise_id, set_number)` |
+| One measurement per user per day | `UNIQUE(user_id, recorded_on)` |
+| No future workouts (CHECK cannot use `CURRENT_DATE`) | `BEFORE INSERT/UPDATE` trigger → `SIGNAL SQLSTATE '45000'` |
+| A session's split day must belong to the same user (cross-table) | same trigger |
+| A session can never change owner | `BEFORE UPDATE` trigger |
+
+---
+
+## 5. Server-side logic
+
+### Triggers (11)
+| Trigger | Fires | Does |
+|---|---|---|
+| `trg_workout_sessions_bi` / `_bu` | before insert/update | validation (future date, split-day ownership, owner change) |
+| `trg_workout_sessions_ai` | after insert | `last_trained_date = GREATEST(old, new)` (never regresses) |
+| `trg_workout_sessions_au` | after update | recompute affected days when the date or day changes |
+| `trg_workout_sessions_ad` | after delete | recompute the day and rebuild the user's PRs (cascaded sets fire no triggers) |
+| `trg_sets_ai` / `_au` / `_ad` | after set change | maintain `total_volume` and re-check the PR |
+| `trg_exercises_ai` / `_au` / `_ad` | after library change | write `admin_audit_logs` with before/after JSON and the acting admin (`@app_user_id`) |
+
+### Procedures and functions
+| Routine | Purpose |
+|---|---|
+| `sp_get_next_body_part` | adaptive scheduling: highest-priority day of the active split (OUT params) |
+| `sp_estimate_next_target` | double progression: 10+ reps → +2.5 kg at 8; otherwise +1 rep |
+| `sp_check_and_update_pr` / `sp_rebuild_personal_records` | PR maintenance (the rebuild uses `ROW_NUMBER()`) |
+| `sp_get_daily_fuel` / `sp_log_fuel` / `sp_ensure_daily_fuel` | daily protein, water and calorie targets and progress |
+| `sp_assert_valid_session`, `sp_refresh_last_trained` | helpers used by the triggers |
+| `fn_calculate_1rm` | Epley: `w × (1 + reps/30)` |
+| `fn_current_weight` | latest weigh-in on or before a date, else starting weight |
+| `fn_protein_target_g`, `fn_water_target_ml`, `fn_calorie_target` | 2 g/kg, 40 ml/kg, ~33 kcal/kg ± goal |
+
+### Views
+`view_split_day_status` (recovery status and priority rank),
+`view_personal_records_detailed`, `view_weekly_summary`,
+`view_weekly_muscle_volume`, `view_exercise_session_best`.
+
+---
+
+## 6. Transactions
+
+**Logging a workout** (`POST /api/workouts`) is one ACID transaction:
+
+```
+BEGIN
+  INSERT workout_sessions            -- trigger: validate, mark split day trained
+  INSERT sets × n                    -- triggers: add volume, detect PRs
+  SELECT new PRs, final volume       -- read back inside the same txn
+COMMIT                               -- or ROLLBACK on any error: nothing is half-saved
+```
+
+**Switching splits** is also one transaction: deactivate the old split, insert
+the new split, its days and their muscle mappings. The one-active-split unique
+index makes it impossible to end up with two active splits even if two
+requests race.
+
+---
+
+## 7. Roles (RBAC)
+
+| Role | Can |
+|---|---|
+| `member` | read and write only their own data (every query is scoped by the session user id, never by a client-supplied id) |
+| `admin` | everything a member can, plus manage the exercise library and read the audit log |
+
+Passwords are bcrypt-hashed (10 rounds). All SQL uses parameterised queries.
+
+---
+
+## 8. MongoDB collections
+
+| Collection | Validator highlights | Indexes |
+|---|---|---|
+| `custom_routines` | `user_id` int, 1–20 exercises, each with `exercise_id`, `target_sets` 1–10, optional rep range, rest and superset letter | unique `(user_id, name)`, `(user_id, last_used_at)` |
+| `journey_stories` | `kind` enum, `date` `YYYY-MM-DD`, mood/energy 1–5, ≤ 12 tags; **extra fields allowed** | `(user_id, date, created_at)`, `(user_id, tags)` multikey, sparse `session_id` |
+
+Validators are applied with `validationLevel: strict` and
+`validationAction: error`, and `npm run test:db` checks them.
+
+---
+
+## 9. Files and commands
+
+| File | Contents |
+|---|---|
+| `database/schema.sql` | 12 tables |
+| `database/procedures.sql` | functions and procedures (loaded before triggers) |
+| `database/triggers.sql` | 11 triggers |
+| `database/views.sql` | 5 views |
+| `database/indexes.sql` | composite indexes |
+| `database/seeds/` | exercise library, demo data (generated by `scripts/generate-demo-data.js`) |
+| `database/mongodb/` | JSON-schema validators |
+| `database/queries/` | analytical suite, EXPLAIN benchmark |
+
+```bash
+npm run db:init     # first-time build of MySQL + MongoDB (refuses if physiq_db exists)
+npm run db:reset    # DROP and rebuild (destroys data)
+npm run test:db     # 36 tests, each inside a rolled-back transaction
+```
