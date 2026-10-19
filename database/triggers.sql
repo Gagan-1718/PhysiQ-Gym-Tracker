@@ -165,4 +165,18 @@ BEGIN
                         'equipment', NEW.equipment_needed));
 END$$
 
+-- 10. Audit updates (before / after snapshot)
+DROP TRIGGER IF EXISTS trg_exercises_au$$
+CREATE TRIGGER trg_exercises_au
+AFTER UPDATE ON exercises
+FOR EACH ROW
+BEGIN
+    INSERT INTO admin_audit_logs (admin_id, action, target_table, target_id, details)
+    VALUES (@app_user_id, 'UPDATE', 'exercises', NEW.id,
+            JSON_OBJECT(
+                'before', JSON_OBJECT('name', OLD.name, 'muscle_group_id', OLD.muscle_group_id, 'equipment', OLD.equipment_needed),
+                'after',  JSON_OBJECT('name', NEW.name, 'muscle_group_id', NEW.muscle_group_id, 'equipment', NEW.equipment_needed)
+            ));
+END$$
+
 DELIMITER ;
