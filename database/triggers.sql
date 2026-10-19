@@ -127,4 +127,24 @@ BEGIN
     END IF;
 END$$
 
+-- 8. Deleted set -> remove its volume; if it was the PR, the next best takes over
+DROP TRIGGER IF EXISTS trg_sets_ad$$
+CREATE TRIGGER trg_sets_ad
+AFTER DELETE ON sets
+FOR EACH ROW
+BEGIN
+    DECLARE v_user_id INT;
+
+    IF OLD.is_warmup = FALSE THEN
+        UPDATE workout_sessions
+        SET total_volume = total_volume - OLD.weight * OLD.reps
+        WHERE id = OLD.session_id;
+    END IF;
+
+    SET v_user_id = (SELECT user_id FROM workout_sessions WHERE id = OLD.session_id);
+    IF v_user_id IS NOT NULL THEN
+        CALL sp_check_and_update_pr(v_user_id, OLD.exercise_id);
+    END IF;
+END$$
+
 DELIMITER ;
