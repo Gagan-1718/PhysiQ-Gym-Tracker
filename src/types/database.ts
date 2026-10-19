@@ -73,6 +73,13 @@ export interface OverloadTarget {
   rationale: string;
 }
 
+/** Per-exercise data the logger loads when an exercise is added (GET /api/train/context) */
+export interface ExerciseContext {
+  target: OverloadTarget;
+  last: LastPerformanceSet[];
+  pr: { weight: number; reps: number; estimated_1rm: number } | null;
+}
+
 export interface LastPerformanceSet {
   set_number: number;
   weight: number;
