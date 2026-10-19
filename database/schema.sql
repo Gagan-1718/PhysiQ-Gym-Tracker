@@ -76,3 +76,20 @@ CREATE TABLE IF NOT EXISTS splits (
     CONSTRAINT uq_splits_one_active_per_user UNIQUE (user_id, active_slot),
     CONSTRAINT fk_splits_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 5. split_days — ordered days of a split (e.g. Push / Pull / Legs)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS split_days (
+    id                INT AUTO_INCREMENT PRIMARY KEY,
+    split_id          INT NOT NULL,
+    body_part         VARCHAR(50) NOT NULL COMMENT 'day label, e.g. Push, Pull, Legs, Upper',
+    day_order         TINYINT UNSIGNED NOT NULL,
+    min_rest_days     TINYINT UNSIGNED NOT NULL DEFAULT 2 COMMENT 'recovery window before this day is ready again',
+    last_trained_date DATE NULL COMMENT 'trigger-maintained cache of MAX(workout_sessions.session_date)',
+    CONSTRAINT uq_split_days_order UNIQUE (split_id, day_order),
+    CONSTRAINT uq_split_days_label UNIQUE (split_id, body_part),
+    CONSTRAINT chk_split_days_order CHECK (day_order BETWEEN 1 AND 14),
+    CONSTRAINT chk_split_days_rest CHECK (min_rest_days BETWEEN 0 AND 7),
+    CONSTRAINT fk_split_days_split FOREIGN KEY (split_id) REFERENCES splits(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
