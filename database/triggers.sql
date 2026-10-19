@@ -51,4 +51,18 @@ BEGIN
     END IF;
 END$$
 
+-- 4. Date or split day changed -> recompute both affected days
+DROP TRIGGER IF EXISTS trg_workout_sessions_au$$
+CREATE TRIGGER trg_workout_sessions_au
+AFTER UPDATE ON workout_sessions
+FOR EACH ROW
+BEGIN
+    IF NOT (NEW.split_day_id <=> OLD.split_day_id) OR NEW.session_date <> OLD.session_date THEN
+        CALL sp_refresh_last_trained(OLD.split_day_id);
+        IF NOT (NEW.split_day_id <=> OLD.split_day_id) THEN
+            CALL sp_refresh_last_trained(NEW.split_day_id);
+        END IF;
+    END IF;
+END$$
+
 DELIMITER ;
