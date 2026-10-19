@@ -179,4 +179,17 @@ BEGIN
             ));
 END$$
 
+-- 11. Audit deletes
+DROP TRIGGER IF EXISTS trg_exercises_ad$$
+CREATE TRIGGER trg_exercises_ad
+AFTER DELETE ON exercises
+FOR EACH ROW
+BEGIN
+    INSERT INTO admin_audit_logs (admin_id, action, target_table, target_id, details)
+    VALUES (@app_user_id, 'DELETE', 'exercises', OLD.id,
+            JSON_OBJECT('name', OLD.name,
+                        'muscle_group_id', OLD.muscle_group_id,
+                        'equipment', OLD.equipment_needed));
+END$$
+
 DELIMITER ;
