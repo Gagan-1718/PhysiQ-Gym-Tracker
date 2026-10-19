@@ -10,7 +10,7 @@ import type { User } from '@/types/database';
 export const GET = route(async () => {
   const me = await requireUser();
   const user = await selectOne<User & { has_active_split: number }>(
-    `SELECT u.id, u.name, u.email, u.role, u.goal, u.height, u.starting_weight, u.created_at,
+    `SELECT u.id, u.name, u.email, u.role, u.goal, u.height, u.starting_weight, u.weekly_goal, u.created_at,
             EXISTS (SELECT 1 FROM splits s WHERE s.user_id = u.id AND s.is_active) AS has_active_split
      FROM users u WHERE u.id = ?`,
     [me.id]
@@ -26,6 +26,7 @@ const ProfileSchema = z
     goal: z.enum(['hypertrophy', 'strength', 'fat_loss', 'maintenance']),
     height: z.number().min(100).max(250).nullable(),
     starting_weight: z.number().min(30).max(300).nullable(),
+    weekly_goal: z.number().int().min(1).max(7),
   })
   .partial()
   .strict();
