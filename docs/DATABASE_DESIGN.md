@@ -122,7 +122,9 @@ weigh-in does not change past days.
 | Valid ranges (reps 1–100, RPE 1–10, weight ≥ 0, body metrics) | `CHECK` constraints |
 | One active split per user | generated column `active_slot = IF(is_active,1,NULL)` + `UNIQUE(user_id, active_slot)` |
 | No duplicate set numbers per exercise in a session | `UNIQUE(session_id, exercise_id, set_number)` |
-| One measurement per user per day | `UNIQUE(user_id, recorded_on)` |
+| One measurement per user per day (a second log updates it via `ON DUPLICATE KEY UPDATE`) | `UNIQUE(user_id, recorded_on)` |
+| A retried workout submit cannot create a duplicate | `UNIQUE(user_id, client_ref)` |
+| Weekly session goal between 1 and 7 | `CHECK (weekly_goal BETWEEN 1 AND 7)` |
 | No future workouts (CHECK cannot use `CURRENT_DATE`) | `BEFORE INSERT/UPDATE` trigger → `SIGNAL SQLSTATE '45000'` |
 | A session's split day must belong to the same user (cross-table) | same trigger |
 | A session can never change owner | `BEFORE UPDATE` trigger |
@@ -158,6 +160,11 @@ weigh-in does not change past days.
 `view_personal_records_detailed`, `view_weekly_summary`,
 `view_weekly_muscle_volume`, `view_exercise_session_best`.
 
+### Notable queries in the API
+- **Last session per exercise** (`/api/train/context`): `ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY session_date DESC)` in a CTE.
+- **Activity streak** (`/api/progress`): a *gaps-and-islands* query. `week_index − ROW_NUMBER()` is constant inside an unbroken run of training weeks, so `GROUP BY` that value gives each streak's length.
+- **History paging** (`/api/workouts`): keyset pagination on `(session_date, id) < (?, ?)` served by `idx_workout_sessions_user_date`. It avoids `OFFSET`, which gets slower the deeper you page.
+
 ---
 
 ## 6. Transactions
@@ -166,11 +173,21 @@ weigh-in does not change past days.
 
 ```
 BEGIN
-  INSERT workout_sessions            -- trigger: validate, mark split day trained
-  INSERT sets × n                    -- triggers: add volume, detect PRs
-  SELECT new PRs, final volume       -- read back inside the same txn
-COMMIT                               -- or ROLLBACK on any error: nothing is half-saved
+  INSERT workout_sessions (… client_ref)  -- trigger: validate, mark split day trained
+  INSERT sets × n  (one multi-row INSERT) -- triggers: add volume, detect PRs
+COMMIT                                    -- or ROLLBACK on any error: nothing is half-saved
+SELECT total_volume, new PRs              -- read back what the triggers computed
 ```
+
+**Idempotency.** Each workout carries a `client_ref` UUID generated on the phone.
+`UNIQUE (user_id, client_ref)` means a double tap on *Finish* or a network retry
+fails with a duplicate-key error. The API catches that and returns the session
+that was already saved, so a duplicate workout can never be created.
+
+**Cross-store write order.** The journal (mood, tags, text) is written to MongoDB
+only after the MySQL transaction commits. If MongoDB is unavailable, the workout
+is still saved and the API returns a warning. The relational record is never
+held hostage by the document store.
 
 **Switching splits** is also one transaction: deactivate the old split, insert
 the new split, its days and their muscle mappings. The one-active-split unique
