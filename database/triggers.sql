@@ -98,4 +98,33 @@ BEGIN
     CALL sp_check_and_update_pr(v_user_id, NEW.exercise_id);
 END$$
 
+-- 7. Edited set -> swap old volume for new and re-check PRs
+DROP TRIGGER IF EXISTS trg_sets_au$$
+CREATE TRIGGER trg_sets_au
+AFTER UPDATE ON sets
+FOR EACH ROW
+BEGIN
+    DECLARE v_old_user_id INT;
+    DECLARE v_new_user_id INT;
+
+    IF OLD.is_warmup = FALSE THEN
+        UPDATE workout_sessions
+        SET total_volume = total_volume - OLD.weight * OLD.reps
+        WHERE id = OLD.session_id;
+    END IF;
+    IF NEW.is_warmup = FALSE THEN
+        UPDATE workout_sessions
+        SET total_volume = total_volume + NEW.weight * NEW.reps
+        WHERE id = NEW.session_id;
+    END IF;
+
+    SET v_new_user_id = (SELECT user_id FROM workout_sessions WHERE id = NEW.session_id);
+    CALL sp_check_and_update_pr(v_new_user_id, NEW.exercise_id);
+
+    IF OLD.exercise_id <> NEW.exercise_id OR OLD.session_id <> NEW.session_id THEN
+        SET v_old_user_id = (SELECT user_id FROM workout_sessions WHERE id = OLD.session_id);
+        CALL sp_check_and_update_pr(v_old_user_id, OLD.exercise_id);
+    END IF;
+END$$
+
 DELIMITER ;
