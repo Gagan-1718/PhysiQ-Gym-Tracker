@@ -93,3 +93,14 @@ CREATE TABLE IF NOT EXISTS split_days (
     CONSTRAINT chk_split_days_rest CHECK (min_rest_days BETWEEN 0 AND 7),
     CONSTRAINT fk_split_days_split FOREIGN KEY (split_id) REFERENCES splits(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 6. split_day_muscles — M:N between split days and the muscle groups they train
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS split_day_muscles (
+    split_day_id    INT NOT NULL,
+    muscle_group_id INT NOT NULL,
+    PRIMARY KEY (split_day_id, muscle_group_id),
+    CONSTRAINT fk_sdm_split_day FOREIGN KEY (split_day_id) REFERENCES split_days(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sdm_muscle_group FOREIGN KEY (muscle_group_id) REFERENCES muscle_groups(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
