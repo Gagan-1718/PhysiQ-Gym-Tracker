@@ -176,4 +176,35 @@ BEGIN
     END IF;
 END$$
 
+-- -----------------------------------------------------------------------------
+-- sp_rebuild_personal_records — recompute every PR of a user in one pass using
+-- a window function. Used after a whole session is deleted (FK cascades do not
+-- fire the sets triggers).
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_rebuild_personal_records$$
+CREATE PROCEDURE sp_rebuild_personal_records(IN p_user_id INT)
+BEGIN
+    INSERT INTO personal_records (user_id, exercise_id, set_id)
+    SELECT ranked.user_id, ranked.exercise_id, ranked.set_id
+    FROM (
+        SELECT ws.user_id,
+               s.exercise_id,
+               s.id AS set_id,
+               ROW_NUMBER() OVER (
+                   PARTITION BY s.exercise_id
+                   ORDER BY fn_calculate_1rm(s.weight, s.reps) DESC,
+                            s.weight DESC,
+                            s.reps DESC,
+                            ws.session_date ASC,
+                            s.id ASC
+               ) AS rn
+        FROM sets s
+        JOIN workout_sessions ws ON ws.id = s.session_id
+        WHERE ws.user_id = p_user_id
+          AND s.is_warmup = FALSE
+    ) AS ranked
+    WHERE ranked.rn = 1
+    ON DUPLICATE KEY UPDATE set_id = ranked.set_id;
+END$$
+
 DELIMITER ;
