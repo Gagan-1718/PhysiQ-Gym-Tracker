@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useSyncExternalStore } from 'react';
-import { localDateISO, localDateTime } from './format';
+import { localDateISO, localDateTime, uuid } from './format';
 import type { LastPerformanceSet, OverloadTarget } from '@/types/database';
 
 /**
@@ -18,6 +18,8 @@ export interface DraftSet {
   warmup: boolean;
   done: boolean;
   rpe: number | null;
+  /** Set beat the previous best estimated 1RM when it was ticked */
+  pr?: boolean;
 }
 
 export interface DraftExercise {
@@ -30,12 +32,16 @@ export interface DraftExercise {
   superset: string | null;
   target: OverloadTarget | null;
   last: LastPerformanceSet[];
+  lastDate: string | null;
+  prE1rm: number | null;
   sets: DraftSet[];
 }
 
 export interface WorkoutDraft {
   version: 1;
   userId: number;
+  /** Idempotency key sent with the save (workout_sessions.client_ref) */
+  clientRef: string;
   startedAt: string; // local 'YYYY-MM-DD HH:MM:SS'
   startedAtMs: number;
   sessionDate: string; // local 'YYYY-MM-DD'
@@ -107,6 +113,7 @@ export function createDraft(userId: number, init: { splitDayId: number | null; b
   return {
     version: 1,
     userId,
+    clientRef: uuid(),
     startedAt: localDateTime(now),
     startedAtMs: now.getTime(),
     sessionDate: localDateISO(now),
@@ -118,6 +125,11 @@ export function createDraft(userId: number, init: { splitDayId: number | null; b
     restEndsAt: null,
     restTotal: 0,
   };
+}
+
+/** Non-reactive read, e.g. to decide on a redirect right after hydration. */
+export function peekDraft(userId: number): WorkoutDraft | null {
+  return read(userId);
 }
 
 /** Reactive access to the current user's draft plus an updater. */
