@@ -62,8 +62,15 @@ export function route<C = { params: Record<string, string> }>(handler: Handler<C
 
 export const ok = <T>(data: T, status = 200) => NextResponse.json(data, { status });
 
-/** Parse a JSON body; malformed JSON becomes a 400. */
+/**
+ * Parse a JSON body; malformed JSON becomes a 400. Requiring the JSON content
+ * type means a cross-site HTML form (text/plain, urlencoded) can never reach a
+ * handler, on top of the SameSite=Lax session cookie.
+ */
 export async function readJson(req: Request): Promise<unknown> {
+  if (!req.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+    throw new ApiError(415, 'Send the request body as application/json.');
+  }
   try {
     return await req.json();
   } catch {
