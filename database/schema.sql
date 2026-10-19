@@ -44,3 +44,19 @@ CREATE TABLE IF NOT EXISTS muscle_groups (
     region ENUM('upper', 'lower', 'core') NOT NULL,
     CONSTRAINT uq_muscle_groups_name UNIQUE (name)
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 3. exercises — master library (only admins may change it; audited by triggers)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS exercises (
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    name             VARCHAR(150) NOT NULL,
+    muscle_group_id  INT NOT NULL,
+    equipment_needed ENUM('Barbell', 'Dumbbell', 'Machine', 'Cable', 'Bodyweight', 'Kettlebell', 'Band', 'Other')
+                     NOT NULL DEFAULT 'Bodyweight',
+    instructions     TEXT NULL,
+    created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_exercises_name UNIQUE (name),
+    CONSTRAINT fk_exercises_muscle_group FOREIGN KEY (muscle_group_id)
+        REFERENCES muscle_groups(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
