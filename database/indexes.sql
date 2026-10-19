@@ -32,3 +32,7 @@ CREATE INDEX idx_sets_exercise_session
 -- 4. Exercise library browsing: WHERE muscle_group_id = ? ORDER BY name
 CREATE INDEX idx_exercises_muscle_group_name
     ON exercises (muscle_group_id, name);
+
+-- 5. Admin audit feed: ORDER BY created_at DESC LIMIT n
+CREATE INDEX idx_admin_audit_logs_created
+    ON admin_audit_logs (created_at DESC);
