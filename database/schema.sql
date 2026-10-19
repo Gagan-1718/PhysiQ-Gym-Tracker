@@ -60,3 +60,19 @@ CREATE TABLE IF NOT EXISTS exercises (
     CONSTRAINT fk_exercises_muscle_group FOREIGN KEY (muscle_group_id)
         REFERENCES muscle_groups(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 4. splits — a user's training splits; at most ONE active split per user
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS splits (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    split_name  VARCHAR(100) NOT NULL,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    -- Generated column: 1 when active, NULL otherwise. UNIQUE ignores NULLs, so
+    -- (user_id, active_slot) allows many inactive splits but only one active one.
+    active_slot TINYINT GENERATED ALWAYS AS (IF(is_active, 1, NULL)) STORED,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_splits_one_active_per_user UNIQUE (user_id, active_slot),
+    CONSTRAINT fk_splits_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
