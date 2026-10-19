@@ -76,4 +76,26 @@ BEGIN
     CALL sp_rebuild_personal_records(OLD.user_id);
 END$$
 
+-- =============================================================================
+-- sets: session volume + automatic personal-record detection
+-- =============================================================================
+
+-- 6. New set -> add its volume and check for a PR
+DROP TRIGGER IF EXISTS trg_sets_ai$$
+CREATE TRIGGER trg_sets_ai
+AFTER INSERT ON sets
+FOR EACH ROW
+BEGIN
+    DECLARE v_user_id INT;
+
+    IF NEW.is_warmup = FALSE THEN
+        UPDATE workout_sessions
+        SET total_volume = total_volume + NEW.weight * NEW.reps
+        WHERE id = NEW.session_id;
+    END IF;
+
+    SET v_user_id = (SELECT user_id FROM workout_sessions WHERE id = NEW.session_id);
+    CALL sp_check_and_update_pr(v_user_id, NEW.exercise_id);
+END$$
+
 DELIMITER ;
