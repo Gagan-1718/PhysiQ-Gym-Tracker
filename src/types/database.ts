@@ -23,6 +23,7 @@ export interface User {
   goal: Goal;
   height: number | null;
   starting_weight: number | null;
+  weekly_goal: number;
   created_at: string;
 }
 
