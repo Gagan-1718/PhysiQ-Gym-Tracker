@@ -28,3 +28,7 @@ CREATE INDEX idx_workout_sessions_split_day_date
 -- 3. Exercise history, overload targets and PR detection: WHERE exercise_id = ? (joined to sessions)
 CREATE INDEX idx_sets_exercise_session
     ON sets (exercise_id, session_id);
+
+-- 4. Exercise library browsing: WHERE muscle_group_id = ? ORDER BY name
+CREATE INDEX idx_exercises_muscle_group_name
+    ON exercises (muscle_group_id, name);
