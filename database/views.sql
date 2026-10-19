@@ -82,3 +82,25 @@ JOIN sets s              ON s.id = pr.set_id
 JOIN workout_sessions ws ON ws.id = s.session_id
 JOIN exercises e         ON e.id = pr.exercise_id
 JOIN muscle_groups mg    ON mg.id = e.muscle_group_id;
+
+-- -----------------------------------------------------------------------------
+-- 3. view_weekly_summary — sessions, volume, working sets and time per ISO week
+--    (weeks start on Monday)
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW view_weekly_summary AS
+SELECT
+    ws.user_id,
+    DATE_SUB(ws.session_date, INTERVAL WEEKDAY(ws.session_date) DAY) AS week_start,
+    COUNT(*)                                                         AS sessions_completed,
+    SUM(ws.total_volume)                                             AS total_volume,
+    SUM(COALESCE(sc.working_sets, 0))                                AS working_sets,
+    SUM(COALESCE(TIMESTAMPDIFF(MINUTE, ws.started_at, ws.ended_at), 0)) AS minutes_trained,
+    GROUP_CONCAT(DISTINCT ws.body_part ORDER BY ws.body_part SEPARATOR ', ') AS body_parts_trained
+FROM workout_sessions ws
+LEFT JOIN (
+    SELECT session_id, COUNT(*) AS working_sets
+    FROM sets
+    WHERE is_warmup = FALSE
+    GROUP BY session_id
+) AS sc ON sc.session_id = ws.id
+GROUP BY ws.user_id, week_start;
