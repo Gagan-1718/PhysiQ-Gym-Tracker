@@ -34,8 +34,13 @@ export function relativeDay(iso: string): string {
   return shortDate(iso);
 }
 
+export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** 'Mon 14 Sep' (fixed 3-letter names; en-GB locale would print "Sept") */
 export function shortDate(iso: string): string {
-  return parseLocalDate(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const d = parseLocalDate(iso);
+  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
 export function longDate(date = new Date()): string {
