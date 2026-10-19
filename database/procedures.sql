@@ -345,4 +345,22 @@ BEGIN
         calorie_target   = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.calorie_target,   user_daily_fuel.calorie_target);
 END$$
 
+-- -----------------------------------------------------------------------------
+-- sp_get_daily_fuel — returns one row: the day's targets, progress and the
+-- body weight they were derived from
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_get_daily_fuel$$
+CREATE PROCEDURE sp_get_daily_fuel(IN p_user_id INT, IN p_date DATE)
+BEGIN
+    CALL sp_ensure_daily_fuel(p_user_id, p_date);
+
+    SELECT f.fuel_date,
+           f.protein_target_g, f.protein_logged_g,
+           f.water_target_ml,  f.water_logged_ml,
+           f.calorie_target,
+           fn_current_weight(p_user_id, p_date) AS body_weight_kg
+    FROM user_daily_fuel f
+    WHERE f.user_id = p_user_id AND f.fuel_date = p_date;
+END$$
+
 DELIMITER ;
