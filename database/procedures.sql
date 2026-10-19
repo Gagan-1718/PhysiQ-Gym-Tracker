@@ -141,4 +141,39 @@ BEGIN
     END IF;
 END$$
 
+-- -----------------------------------------------------------------------------
+-- sp_check_and_update_pr — point personal_records at the user's best working
+-- set for one exercise (highest Epley 1RM; ties -> heavier -> earlier).
+-- Called by the sets triggers after every insert / update / delete.
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_check_and_update_pr$$
+CREATE PROCEDURE sp_check_and_update_pr(IN p_user_id INT, IN p_exercise_id INT)
+BEGIN
+    DECLARE v_best_set_id INT;
+
+    SET v_best_set_id = (
+        SELECT s.id
+        FROM sets s
+        JOIN workout_sessions ws ON ws.id = s.session_id
+        WHERE ws.user_id = p_user_id
+          AND s.exercise_id = p_exercise_id
+          AND s.is_warmup = FALSE
+        ORDER BY fn_calculate_1rm(s.weight, s.reps) DESC,
+                 s.weight DESC,
+                 s.reps DESC,
+                 ws.session_date ASC,
+                 s.id ASC
+        LIMIT 1
+    );
+
+    IF v_best_set_id IS NULL THEN
+        DELETE FROM personal_records
+        WHERE user_id = p_user_id AND exercise_id = p_exercise_id;
+    ELSE
+        INSERT INTO personal_records (user_id, exercise_id, set_id)
+        VALUES (p_user_id, p_exercise_id, v_best_set_id) AS new_pr
+        ON DUPLICATE KEY UPDATE set_id = new_pr.set_id;
+    END IF;
+END$$
+
 DELIMITER ;
