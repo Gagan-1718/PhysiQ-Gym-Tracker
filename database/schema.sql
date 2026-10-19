@@ -207,3 +207,19 @@ CREATE TABLE IF NOT EXISTS user_daily_fuel (
     CONSTRAINT chk_fuel_water CHECK (water_logged_ml <= 15000),
     CONSTRAINT fk_fuel_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 12. admin_audit_logs — written by triggers on the exercises master library.
+--     The app sets the session variable @app_user_id before admin writes, so the
+--     trigger knows WHO made the change. NULL admin_id = seed / direct SQL.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    admin_id     INT NULL,
+    action       ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+    target_table VARCHAR(64) NOT NULL,
+    target_id    INT NOT NULL,
+    details      JSON NULL,
+    created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_audit_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
