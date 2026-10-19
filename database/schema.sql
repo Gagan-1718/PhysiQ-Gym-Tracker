@@ -34,3 +34,13 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT chk_users_height CHECK (height IS NULL OR height BETWEEN 100 AND 250),
     CONSTRAINT chk_users_starting_weight CHECK (starting_weight IS NULL OR starting_weight BETWEEN 30 AND 300)
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 2. muscle_groups — lookup table (domain integrity instead of free-text labels)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS muscle_groups (
+    id     INT AUTO_INCREMENT PRIMARY KEY,
+    name   VARCHAR(30) NOT NULL,
+    region ENUM('upper', 'lower', 'core') NOT NULL,
+    CONSTRAINT uq_muscle_groups_name UNIQUE (name)
+) ENGINE=InnoDB;
