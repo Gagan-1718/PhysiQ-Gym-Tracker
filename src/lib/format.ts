@@ -81,3 +81,21 @@ export function greeting(date = new Date()): string {
 export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
+
+/** UUID v4. crypto.randomUUID only exists in secure contexts (https / localhost),
+ *  but the app is often opened over plain http on a phone in the same Wi-Fi. */
+export function uuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/** Epley estimated 1RM, same formula as fn_calculate_1rm in MySQL. */
+export function e1rm(weight: number, reps: number): number {
+  if (reps <= 0) return 0;
+  if (reps === 1) return weight;
+  return Math.round(weight * (1 + reps / 30) * 100) / 100;
+}
