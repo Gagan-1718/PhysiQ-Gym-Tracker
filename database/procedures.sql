@@ -55,4 +55,19 @@ BEGIN
     RETURN v_weight;
 END$$
 
+-- -----------------------------------------------------------------------------
+-- Daily fuel formulas (replace the PLAN's single fn_get_daily_fuel_targets,
+-- because a MySQL function can only return one value)
+--   protein  = 2.0 g per kg body weight
+--   water    = 0.04 L (40 ml) per kg, rounded to 50 ml
+--   calories = ~33 kcal per kg maintenance, adjusted by goal
+-- -----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS fn_protein_target_g$$
+CREATE FUNCTION fn_protein_target_g(p_weight DECIMAL(5,2))
+RETURNS SMALLINT UNSIGNED
+DETERMINISTIC NO SQL
+BEGIN
+    RETURN ROUND(p_weight * 2.0);
+END$$
+
 DELIMITER ;
