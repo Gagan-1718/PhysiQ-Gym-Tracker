@@ -97,11 +97,12 @@
 | `ended_at` | datetime | yes |  |  |  |
 | `total_volume` | decimal(10,2) | no | 0.00 |  | trigger-maintained: SUM(weight*reps) of working sets |
 | `notes` | varchar(500) | yes |  |  |  |
+| `client_ref` | char(36) | yes |  |  | idempotency key from the device: a retried submit cannot create a duplicate session |
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP |  |  |
 
 **Checks:** `chk_sessions_times`: `` ((`started_at` is null) or (`ended_at` is null) or (`ended_at` >= `started_at`)) `` · `chk_sessions_volume`: `` (`total_volume` >= 0) ``
 
-**Indexes:** `PRIMARY` (unique) (id) · `idx_workout_sessions_split_day_date` (split_day_id, session_date) · `idx_workout_sessions_user_date` (user_id, session_date DESC)
+**Indexes:** `PRIMARY` (unique) (id) · `idx_workout_sessions_split_day_date` (split_day_id, session_date) · `idx_workout_sessions_user_date` (user_id, session_date DESC) · `uq_sessions_client_ref` (unique) (user_id, client_ref)
 
 ## 8. `sets`
 
