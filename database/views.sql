@@ -59,3 +59,26 @@ FROM (
     JOIN split_days sd ON sd.split_id = s.id
     WHERE s.is_active = TRUE
 ) AS d;
+
+-- -----------------------------------------------------------------------------
+-- 2. view_personal_records_detailed — each PR joined to the set that holds it
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW view_personal_records_detailed AS
+SELECT
+    pr.user_id,
+    pr.exercise_id,
+    e.name                               AS exercise_name,
+    mg.name                              AS muscle_group,
+    e.equipment_needed,
+    s.id                                 AS set_id,
+    s.weight,
+    s.reps,
+    fn_calculate_1rm(s.weight, s.reps)   AS estimated_1rm,
+    ws.id                                AS session_id,
+    ws.session_date                      AS achieved_on,
+    pr.updated_at
+FROM personal_records pr
+JOIN sets s              ON s.id = pr.set_id
+JOIN workout_sessions ws ON ws.id = s.session_id
+JOIN exercises e         ON e.id = pr.exercise_id
+JOIN muscle_groups mg    ON mg.id = e.muscle_group_id;
