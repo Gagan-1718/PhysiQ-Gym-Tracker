@@ -17,10 +17,11 @@
 | `goal` | enum('hypertrophy','strength','fat_loss','maintenance') | no | hypertrophy |  |  |
 | `height` | decimal(5,2) | yes |  |  | cm |
 | `starting_weight` | decimal(5,2) | yes |  |  | kg, used until the first body measurement is logged |
+| `weekly_goal` | tinyint unsigned | no | 4 |  | target sessions per week (the Train ring) |
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP |  |  |
 | `updated_at` | timestamp | no | CURRENT_TIMESTAMP |  | on update CURRENT_TIMESTAMP |
 
-**Checks:** `chk_users_email`: `` (`email` like _utf8mb4'%_@_%._%') `` · `chk_users_height`: `` ((`height` is null) or (`height` between 100 and 250)) `` · `chk_users_starting_weight`: `` ((`starting_weight` is null) or (`starting_weight` between 30 and 300)) ``
+**Checks:** `chk_users_email`: `` (`email` like _utf8mb4'%_@_%._%') `` · `chk_users_height`: `` ((`height` is null) or (`height` between 100 and 250)) `` · `chk_users_starting_weight`: `` ((`starting_weight` is null) or (`starting_weight` between 30 and 300)) `` · `chk_users_weekly_goal`: `` (`weekly_goal` between 1 and 7) ``
 
 **Indexes:** `PRIMARY` (unique) (id) · `uq_users_email` (unique) (email)
 
