@@ -363,4 +363,26 @@ BEGIN
     WHERE f.user_id = p_user_id AND f.fuel_date = p_date;
 END$$
 
+-- -----------------------------------------------------------------------------
+-- sp_log_fuel — add (or subtract) protein grams / water ml for a day.
+-- Values are clamped to the table's valid range instead of failing.
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_log_fuel$$
+CREATE PROCEDURE sp_log_fuel(
+    IN p_user_id INT,
+    IN p_date DATE,
+    IN p_protein_delta_g INT,
+    IN p_water_delta_ml INT
+)
+BEGIN
+    CALL sp_ensure_daily_fuel(p_user_id, p_date);
+
+    UPDATE user_daily_fuel
+    SET protein_logged_g = LEAST(1000,  GREATEST(0, CAST(protein_logged_g AS SIGNED) + COALESCE(p_protein_delta_g, 0))),
+        water_logged_ml  = LEAST(15000, GREATEST(0, CAST(water_logged_ml  AS SIGNED) + COALESCE(p_water_delta_ml, 0)))
+    WHERE user_id = p_user_id AND fuel_date = p_date;
+
+    CALL sp_get_daily_fuel(p_user_id, p_date);
+END$$
+
 DELIMITER ;
