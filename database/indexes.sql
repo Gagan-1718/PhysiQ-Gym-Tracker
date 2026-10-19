@@ -24,3 +24,7 @@ CREATE INDEX idx_workout_sessions_user_date
 -- 2. Last-trained recomputation: MAX(session_date) WHERE split_day_id = ?
 CREATE INDEX idx_workout_sessions_split_day_date
     ON workout_sessions (split_day_id, session_date);
+
+-- 3. Exercise history, overload targets and PR detection: WHERE exercise_id = ? (joined to sessions)
+CREATE INDEX idx_sets_exercise_session
+    ON sets (exercise_id, session_id);
