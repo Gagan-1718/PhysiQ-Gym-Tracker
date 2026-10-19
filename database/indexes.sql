@@ -20,3 +20,7 @@ USE physiq_db;
 -- 1. Workout history: WHERE user_id = ? [AND session_date BETWEEN ...] ORDER BY session_date DESC
 CREATE INDEX idx_workout_sessions_user_date
     ON workout_sessions (user_id, session_date DESC);
+
+-- 2. Last-trained recomputation: MAX(session_date) WHERE split_day_id = ?
+CREATE INDEX idx_workout_sessions_split_day_date
+    ON workout_sessions (split_day_id, session_date);
