@@ -246,4 +246,75 @@ BEGIN
     END IF;
 END$$
 
+-- -----------------------------------------------------------------------------
+-- sp_estimate_next_target — progressive overload (double progression).
+-- Looks at the top working set of the most recent session with this exercise:
+--   reps >= 10  -> add 2.5 kg and reset to 8 reps
+--   reps <  10  -> same weight, one more rep
+--   bodyweight  -> one more rep
+--   no history  -> weight NULL (user picks), 10 reps
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_estimate_next_target$$
+CREATE PROCEDURE sp_estimate_next_target(
+    IN  p_user_id INT,
+    IN  p_exercise_id INT,
+    OUT p_suggested_weight DECIMAL(6,2),
+    OUT p_suggested_reps INT,
+    OUT p_last_weight DECIMAL(6,2),
+    OUT p_last_reps INT,
+    OUT p_last_date DATE,
+    OUT p_rationale VARCHAR(160)
+)
+BEGIN
+    DECLARE v_last_session_id INT;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND BEGIN END;
+
+    SET p_suggested_weight = NULL;
+    SET p_suggested_reps = NULL;
+    SET p_last_weight = NULL;
+    SET p_last_reps = NULL;
+    SET p_last_date = NULL;
+
+    SET v_last_session_id = (
+        SELECT s.session_id
+        FROM sets s
+        JOIN workout_sessions ws ON ws.id = s.session_id
+        WHERE ws.user_id = p_user_id
+          AND s.exercise_id = p_exercise_id
+          AND s.is_warmup = FALSE
+        ORDER BY ws.session_date DESC, ws.id DESC
+        LIMIT 1
+    );
+
+    IF v_last_session_id IS NULL THEN
+        SET p_suggested_reps = 10;
+        SET p_rationale = 'First time: pick a weight you can lift for 10 clean reps.';
+    ELSE
+        SELECT s.weight, s.reps
+        INTO p_last_weight, p_last_reps
+        FROM sets s
+        WHERE s.session_id = v_last_session_id
+          AND s.exercise_id = p_exercise_id
+          AND s.is_warmup = FALSE
+        ORDER BY s.weight DESC, s.reps DESC
+        LIMIT 1;
+
+        SET p_last_date = (SELECT session_date FROM workout_sessions WHERE id = v_last_session_id);
+
+        IF p_last_weight = 0 THEN
+            SET p_suggested_weight = 0.00;
+            SET p_suggested_reps = LEAST(p_last_reps + 1, 100);
+            SET p_rationale = 'Bodyweight: beat last time by one rep.';
+        ELSEIF p_last_reps >= 10 THEN
+            SET p_suggested_weight = LEAST(p_last_weight + 2.50, 999.99);
+            SET p_suggested_reps = 8;
+            SET p_rationale = CONCAT('You hit ', p_last_reps, ' reps last time. Add 2.5 kg and reset to 8.');
+        ELSE
+            SET p_suggested_weight = p_last_weight;
+            SET p_suggested_reps = p_last_reps + 1;
+            SET p_rationale = CONCAT('Same weight, aim for ', p_last_reps + 1, ' reps.');
+        END IF;
+    END IF;
+END$$
+
 DELIMITER ;
