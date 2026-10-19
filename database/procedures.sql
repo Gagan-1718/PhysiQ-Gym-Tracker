@@ -70,4 +70,12 @@ BEGIN
     RETURN ROUND(p_weight * 2.0);
 END$$
 
+DROP FUNCTION IF EXISTS fn_water_target_ml$$
+CREATE FUNCTION fn_water_target_ml(p_weight DECIMAL(5,2))
+RETURNS SMALLINT UNSIGNED
+DETERMINISTIC NO SQL
+BEGIN
+    RETURN ROUND(p_weight * 40 / 50) * 50;
+END$$
+
 DELIMITER ;
