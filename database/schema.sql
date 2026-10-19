@@ -165,3 +165,24 @@ CREATE TABLE IF NOT EXISTS personal_records (
     CONSTRAINT fk_pr_exercise FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT,
     CONSTRAINT fk_pr_set FOREIGN KEY (set_id) REFERENCES sets(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 10. body_measurements — time series, at most one entry per user per day
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS body_measurements (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    recorded_on DATE NOT NULL,
+    weight      DECIMAL(5,2) NULL COMMENT 'kg',
+    waist       DECIMAL(5,2) NULL COMMENT 'cm',
+    chest       DECIMAL(5,2) NULL COMMENT 'cm',
+    arms        DECIMAL(5,2) NULL COMMENT 'cm',
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_body_measurements_user_day UNIQUE (user_id, recorded_on),
+    CONSTRAINT chk_bm_any_value CHECK (weight IS NOT NULL OR waist IS NOT NULL OR chest IS NOT NULL OR arms IS NOT NULL),
+    CONSTRAINT chk_bm_weight CHECK (weight IS NULL OR weight BETWEEN 30 AND 300),
+    CONSTRAINT chk_bm_waist CHECK (waist IS NULL OR waist BETWEEN 40 AND 200),
+    CONSTRAINT chk_bm_chest CHECK (chest IS NULL OR chest BETWEEN 50 AND 200),
+    CONSTRAINT chk_bm_arms CHECK (arms IS NULL OR arms BETWEEN 15 AND 80),
+    CONSTRAINT fk_bm_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
