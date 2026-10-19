@@ -104,3 +104,23 @@ CREATE TABLE IF NOT EXISTS split_day_muscles (
     CONSTRAINT fk_sdm_split_day FOREIGN KEY (split_day_id) REFERENCES split_days(id) ON DELETE CASCADE,
     CONSTRAINT fk_sdm_muscle_group FOREIGN KEY (muscle_group_id) REFERENCES muscle_groups(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 7. workout_sessions — one row per workout (header)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS workout_sessions (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT NOT NULL,
+    split_day_id INT NULL COMMENT 'NULL for ad-hoc sessions or after the split is deleted',
+    session_date DATE NOT NULL,
+    body_part    VARCHAR(50) NOT NULL COMMENT 'label snapshot at training time, so history survives split edits',
+    started_at   DATETIME NULL,
+    ended_at     DATETIME NULL,
+    total_volume DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'trigger-maintained: SUM(weight*reps) of working sets',
+    notes        VARCHAR(500) NULL,
+    created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_sessions_times CHECK (started_at IS NULL OR ended_at IS NULL OR ended_at >= started_at),
+    CONSTRAINT chk_sessions_volume CHECK (total_volume >= 0),
+    CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sessions_split_day FOREIGN KEY (split_day_id) REFERENCES split_days(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
