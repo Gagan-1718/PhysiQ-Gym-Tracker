@@ -65,4 +65,15 @@ BEGIN
     END IF;
 END$$
 
+-- 5. Session deleted (its sets and their PR rows went with it via cascade):
+--    roll last_trained_date back and promote the next-best sets to PRs
+DROP TRIGGER IF EXISTS trg_workout_sessions_ad$$
+CREATE TRIGGER trg_workout_sessions_ad
+AFTER DELETE ON workout_sessions
+FOR EACH ROW
+BEGIN
+    CALL sp_refresh_last_trained(OLD.split_day_id);
+    CALL sp_rebuild_personal_records(OLD.user_id);
+END$$
+
 DELIMITER ;
