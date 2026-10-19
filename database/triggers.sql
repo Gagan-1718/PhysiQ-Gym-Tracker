@@ -38,4 +38,17 @@ BEGIN
     END IF;
 END$$
 
+-- 3. Mark the split day as trained (never moves the date backwards)
+DROP TRIGGER IF EXISTS trg_workout_sessions_ai$$
+CREATE TRIGGER trg_workout_sessions_ai
+AFTER INSERT ON workout_sessions
+FOR EACH ROW
+BEGIN
+    IF NEW.split_day_id IS NOT NULL THEN
+        UPDATE split_days
+        SET last_trained_date = GREATEST(COALESCE(last_trained_date, NEW.session_date), NEW.session_date)
+        WHERE id = NEW.split_day_id;
+    END IF;
+END$$
+
 DELIMITER ;
