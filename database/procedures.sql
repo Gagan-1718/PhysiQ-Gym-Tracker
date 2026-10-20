@@ -145,4 +145,98 @@ BEGIN
     END IF;
 END$$
 
+-- -----------------------------------------------------------------------------
+-- 5. Stored Function: Calculate Target Protein Based on Bodyweight & Goal
+-- -----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS fn_calculate_daily_protein$$
+CREATE FUNCTION fn_calculate_daily_protein (
+    p_weight DECIMAL(5,2),
+    p_goal VARCHAR(50)
+)
+RETURNS DECIMAL(5,1)
+DETERMINISTIC
+BEGIN
+    DECLARE v_wt DECIMAL(5,2);
+    SET v_wt = COALESCE(p_weight, 75.00);
+    IF v_wt <= 0 THEN SET v_wt = 75.00; END IF;
+
+    IF LOWER(COALESCE(p_goal, 'hypertrophy')) = 'strength' THEN
+        RETURN ROUND(v_wt * 2.2, 1);
+    ELSEIF LOWER(COALESCE(p_goal, 'hypertrophy')) = 'fat loss' THEN
+        RETURN ROUND(v_wt * 2.2, 1);
+    ELSE
+        RETURN ROUND(v_wt * 2.0, 1);
+    END IF;
+END$$
+
+-- -----------------------------------------------------------------------------
+-- 6. Stored Function: Calculate Target Hydration in Liters (40ml per kg)
+-- -----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS fn_calculate_daily_water$$
+CREATE FUNCTION fn_calculate_daily_water (
+    p_weight DECIMAL(5,2)
+)
+RETURNS DECIMAL(4,2)
+DETERMINISTIC
+BEGIN
+    DECLARE v_wt DECIMAL(5,2);
+    SET v_wt = COALESCE(p_weight, 75.00);
+    IF v_wt <= 0 THEN SET v_wt = 75.00; END IF;
+
+    RETURN ROUND(v_wt * 0.04, 2);
+END$$
+
+-- -----------------------------------------------------------------------------
+-- 7. Procedure: Get or Initialize User Daily Fuel & Recovery Protocol
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_get_daily_fuel_protocol$$
+CREATE PROCEDURE sp_get_daily_fuel_protocol (
+    IN p_user_id INT,
+    IN p_date DATE
+)
+BEGIN
+    DECLARE v_weight DECIMAL(5,2);
+    DECLARE v_goal VARCHAR(50);
+    DECLARE v_protein DECIMAL(5,1);
+    DECLARE v_water DECIMAL(4,2);
+    DECLARE v_cals INT;
+
+    -- Retrieve latest weight and goal
+    SELECT 
+        COALESCE(
+            (SELECT weight FROM body_measurements WHERE user_id = p_user_id ORDER BY recorded_on DESC LIMIT 1),
+            u.starting_weight,
+            75.00
+        ),
+        COALESCE(u.goal, 'hypertrophy')
+    INTO v_weight, v_goal
+    FROM users u
+    WHERE u.id = p_user_id;
+
+    SET v_protein = fn_calculate_daily_protein(v_weight, v_goal);
+    SET v_water = fn_calculate_daily_water(v_weight);
+
+    IF LOWER(v_goal) = 'hypertrophy' THEN
+        SET v_cals = ROUND(v_weight * 33 + 300);
+    ELSEIF LOWER(v_goal) = 'fat loss' THEN
+        SET v_cals = ROUND(v_weight * 30 - 400);
+    ELSE
+        SET v_cals = ROUND(v_weight * 32);
+    END IF;
+
+    -- Upsert daily record
+    INSERT INTO user_daily_fuel (user_id, log_date, protein_target_g, water_target_l, calorie_target)
+    VALUES (p_user_id, p_date, v_protein, v_water, v_cals)
+    ON DUPLICATE KEY UPDATE 
+        protein_target_g = VALUES(protein_target_g),
+        water_target_l = VALUES(water_target_l),
+        calorie_target = VALUES(calorie_target);
+
+    -- Return the active protocol
+    SELECT id, user_id, log_date, protein_target_g, water_target_l, calorie_target,
+           protein_completed, water_completed, sleep_hours, notes
+    FROM user_daily_fuel
+    WHERE user_id = p_user_id AND log_date = p_date;
+END$$
+
 DELIMITER ;

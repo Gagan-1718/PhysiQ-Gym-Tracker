@@ -4,6 +4,8 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'PhysiQ — Adaptive DBMS Gym Tracker',
   description: 'A database-driven fitness management system where historical data derives subsequent training decisions.',
+  manifest: '/manifest.json',
+  themeColor: '#090d16',
 };
 
 export default function RootLayout({

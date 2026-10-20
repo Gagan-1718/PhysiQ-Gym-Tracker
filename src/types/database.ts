@@ -126,3 +126,16 @@ export interface NextTargetEstimate {
   suggested_weight: number;
   suggested_reps: number;
 }
+
+export interface UserDailyFuel {
+  id: number;
+  user_id: number;
+  log_date: string;
+  protein_target_g: number;
+  water_target_l: number;
+  calorie_target: number;
+  protein_completed: boolean;
+  water_completed: boolean;
+  sleep_hours: number;
+  notes?: string | null;
+}

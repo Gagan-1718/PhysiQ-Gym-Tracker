@@ -164,3 +164,23 @@ CREATE TABLE IF NOT EXISTS progress_photos (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 12. User Daily Fuel & Recovery Protocol Table
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_daily_fuel (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    log_date DATE NOT NULL,
+    protein_target_g DECIMAL(5,1) NOT NULL COMMENT 'Calculated daily protein target in grams',
+    water_target_l DECIMAL(4,2) NOT NULL COMMENT 'Calculated daily hydration target in liters',
+    calorie_target INT NOT NULL COMMENT 'Estimated maintenance/surplus/deficit calories',
+    protein_completed BOOLEAN DEFAULT FALSE,
+    water_completed BOOLEAN DEFAULT FALSE,
+    sleep_hours DECIMAL(3,1) DEFAULT 7.0 COMMENT 'Reported sleep duration in hours',
+    notes VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_user_fuel_date (user_id, log_date)
+) ENGINE=InnoDB;
