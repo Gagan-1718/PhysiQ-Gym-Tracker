@@ -6,6 +6,8 @@ import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql
  * - One pool per process (kept on globalThis so dev hot-reload does not leak pools)
  * - DATE / DATETIME come back as strings ('2026-10-19'), never shifted by JS timezones
  * - DECIMAL comes back as number
+ * - Connects as the least-privilege application account (MYSQL_APP_USER, role physiq_app:
+ *   DML + EXECUTE, no DDL) when configured; the admin account is only for building the database
  * - multipleStatements is OFF: one statement per call limits SQL-injection blast radius
  * - All values go through placeholders (?), never string concatenation
  */
@@ -16,8 +18,8 @@ export function getPool(): Pool {
     globalForMySQL.physiqPool = mysql.createPool({
       host: process.env.MYSQL_HOST || '127.0.0.1',
       port: Number(process.env.MYSQL_PORT) || 3306,
-      user: process.env.MYSQL_USER || 'root',
-      password: process.env.MYSQL_PASSWORD || '',
+      user: process.env.MYSQL_APP_USER || process.env.MYSQL_USER || 'root',
+      password: process.env.MYSQL_APP_USER ? (process.env.MYSQL_APP_PASSWORD ?? '') : (process.env.MYSQL_PASSWORD ?? ''),
       database: process.env.MYSQL_DATABASE || 'physiq_db',
       connectionLimit: 10,
       waitForConnections: true,
