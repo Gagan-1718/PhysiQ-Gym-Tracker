@@ -104,7 +104,7 @@ from the repo files, runs `npm run test:db`, builds the app, then runs
 | Analytical suite: CTEs, window functions (`ROW_NUMBER`, `LAG`, running `MAX`), correlated subquery, anti-join, gaps-and-islands | `database/queries/` |
 | MongoDB: `custom_routines` and `journey_stories` with JSON-schema validators, compound / multikey / **text** indexes, keyset paging and a `$facet` aggregation | `database/mongodb/`, `src/app/api/journey`, `src/app/api/routines` |
 | RBAC: `member` / `admin`, bcrypt, every query scoped by the session user | `src/lib/auth.ts`, `src/lib/session.ts` |
-| **Least privilege in MySQL:** the web app connects as `physiq_app` (role `physiq_app`: row access + `EXECUTE`, no DDL, no `GRANT`); a `physiq_readonly` role exists for reporting. Privileges are tested. | `database/roles.sql`, `scripts/init-db.js`, `tests/db/privileges.test.js` |
+| **Least privilege in MySQL:** the web app connects as its own account (`MYSQL_APP_USER`) holding the `physiq_app` role: row access + `EXECUTE`, no DDL, no `GRANT`; a `physiq_readonly` role exists for reporting. Privileges are tested. | `database/roles.sql`, `scripts/init-db.js`, `tests/db/privileges.test.js` |
 | Security headers and a production Content-Security-Policy (same-origin only, no framing); API responses are never cached | `next.config.mjs` |
 
 <p align="center">
