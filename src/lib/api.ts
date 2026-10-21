@@ -42,6 +42,7 @@ function toResponse(err: unknown) {
   }
   if (dbErr?.code === 11000) return NextResponse.json({ error: 'That name is already taken.' }, { status: 409 });
   if (dbErr?.code === 121) return NextResponse.json({ error: 'Document failed validation.' }, { status: 400 });
+  if (dbErr?.code === 27) return NextResponse.json({ error: 'Search is not set up yet. Run npm run db:init.' }, { status: 503 });
 
   console.error('[api] unhandled error', err);
   return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
