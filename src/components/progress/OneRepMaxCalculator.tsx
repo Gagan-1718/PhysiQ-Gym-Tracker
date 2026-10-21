@@ -36,7 +36,8 @@ export function OneRepMaxCalculator({ defaultWeight = 60, defaultReps = 8 }: { d
       <SectionHeader title="1RM calculator" />
       <Card>
         <p className="text-footnote text-fg-3">Enter any set to see your estimated one-rep max and what you could lift for other rep counts.</p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        {/* Stacked on the very smallest phones, where two steppers side by side leave the number only ~16px wide */}
+        <div className="mt-4 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
           <div>
             <p className="mb-1.5 px-1 text-footnote font-medium text-fg-2">Weight</p>
             <Stepper size="md" label="calculator weight" value={weight} onChange={setWeight} step={2.5} min={0.5} max={999} unit="kg" decimals />
