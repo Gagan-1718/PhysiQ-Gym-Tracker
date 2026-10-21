@@ -5,8 +5,9 @@ import { Segmented } from '@/components/ui/Segmented';
 import { Overview } from '@/components/progress/Overview';
 import { Strength } from '@/components/progress/Strength';
 import { Body } from '@/components/progress/Body';
+import { JourneyView } from '@/components/journey/JourneyView';
 
-type Tab = 'overview' | 'strength' | 'body';
+type Tab = 'overview' | 'strength' | 'body' | 'journey';
 
 export default function ProgressPage() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -24,11 +25,13 @@ export default function ProgressPage() {
           { value: 'overview', label: 'Overview' },
           { value: 'strength', label: 'Strength' },
           { value: 'body', label: 'Body' },
+          { value: 'journey', label: 'Journey' },
         ]}
       />
       {tab === 'overview' && <Overview />}
       {tab === 'strength' && <Strength />}
       {tab === 'body' && <Body />}
+      {tab === 'journey' && <JourneyView />}
     </>
   );
 }
