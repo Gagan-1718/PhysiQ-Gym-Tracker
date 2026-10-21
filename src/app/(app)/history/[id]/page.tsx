@@ -65,8 +65,9 @@ export default function WorkoutDetailPage() {
     try {
       await send(`/api/workouts/${id}`, 'PATCH', { sets: changes.updates, deleteSetIds: changes.deleteSetIds });
       toast('Workout updated');
-      setEditing(false);
+      // Refresh first, then leave edit mode, so the old numbers never flash back on screen
       await mutate(`/api/workouts/${id}`);
+      setEditing(false);
       void mutate((key) => typeof key === 'string' && (key.startsWith('/api/workouts') || key.startsWith('/api/splits') || key.startsWith('/api/progress') || key.startsWith('/api/train')));
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not save the changes', 'error');
