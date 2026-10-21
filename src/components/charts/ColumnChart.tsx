@@ -73,6 +73,7 @@ export function ColumnChart({ data, color, unit, height = 180, title }: { data: 
               height={H - pad.top - pad.bottom}
               fill="transparent"
               tabIndex={0}
+              role="img"
               aria-label={`${d.label}: ${d.value.toLocaleString()} ${unit}. ${d.detail}`}
               onPointerEnter={() => setActive(i)}
               onFocus={() => setActive(i)}
