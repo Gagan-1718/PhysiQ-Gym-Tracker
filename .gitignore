@@ -37,3 +37,6 @@ dump.rdb
 # TypeScript / Next generated
 *.tsbuildinfo
 next-env.d.ts
+
+# Private progress-photo uploads (served only through /api/photos)
+/uploads/
