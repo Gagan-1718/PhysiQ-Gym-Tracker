@@ -5,7 +5,7 @@
 > **Architecture:** Mobile-first PWA (Next.js 14) + polyglot persistence (MySQL 8.0+ & MongoDB)
 > **Closed feedback loop:** `PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN`
 
-> **Status (19 Oct 2026):** phases 1–5 of the revised roadmap are built and tested
+> **Status (21 Oct 2026):** phases 1–6 of the revised roadmap are built and tested
 > on the `Gagan-iterations` branch. See [§6](#6-roadmap--status).
 
 ---
@@ -91,10 +91,14 @@ flowchart LR
 
 ### Feature 5: Journey timeline (MongoDB)
 * Finishing a workout stores mood, tags and journal text in `journey_stories`, linked by `session_id`, with PR highlights embedded.
-* *Next:* a timeline view and progress photos (phase 6).
+* **Journey view** (Progress → Journey): chronological feed with kind and tag filters, whole-word text search (MongoDB text index), keyset paging, a mood-by-week chart and top tags from one `$facet` aggregation.
+* **Progress photos:** taken or chosen on the phone, shrunk and stripped of location data in the browser, stored privately on disk and served only to their owner. Each photo records the body weight from MySQL (`fn_current_weight`). A *Then and now* slider compares the first and latest photo.
+* **Milestones:** the 1st, 10th, 25th, 50th, 100th and 250th session add a story automatically.
 
 ### Feature 6: Overdue alerts
-* The status already exists (`overdue` in the view, shown on Today). *Next:* banner and browser notifications (phase 6).
+* "Overdue" is defined once, in `view_split_day_status` (recovery window + 2 days). `GET /api/alerts` only reads it.
+* A banner at the top of every screen (except the live logger) names the worst overdue day with a one-tap *Train* button; dismissing it hides it until tomorrow.
+* Optional **browser notification** (Profile → Reminders), shown through a service worker at most once a day when the app is opened or returns to the foreground. True background push would need a push server and stored subscriptions, which this project does not run.
 
 ---
 
@@ -135,7 +139,7 @@ in a final feed.
 | 3 | **Design system & PWA shell**: tokens, UI kit, tab bar / sidebar, manifest + icons, login, register, onboarding | 6 | ✅ done |
 | 4 | **Gym-floor logger**: pre-filled plans, live logger, rest timer, PR badges, finish + journal, routines, history | 7, part of 8 | ✅ done |
 | 5 | **Dashboard & insights**: activity rings + fuel, weekly stats, streak, strength and body progress, profile, admin console | 8, part of 9 | ✅ done |
-| 6 | **Journey timeline & alerts**: MongoDB story feed with photos, overdue banner, browser notifications | 9 | ⏳ next |
+| 6 | **Journey timeline & alerts**: MongoDB story feed with search, photos and milestones, overdue banner, browser notifications | 9 | ✅ done |
 | 7 | **Viva prep**: ER diagram image, demo script rehearsal, screenshots, team contribution summary | 10.3 | ⏳ next |
 
 Every phase was verified against real MySQL 8.0.46 and MongoDB 8.2:
