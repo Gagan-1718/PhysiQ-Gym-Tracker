@@ -90,7 +90,7 @@ out.push('');
 out.push('## Reading these numbers');
 out.push('');
 out.push('- **Commit counts depend on commit size.** The history on this branch was deliberately split into small commits (one table, procedure, route or component each), so counts say little about effort. Lines per area are a fairer view.');
-out.push('- **The foundation is the first member\'s schema, Mongo model, Next.js scaffold and the 10-phase plan** (`PLAN.md`). Much of that code was later rewritten or replaced as the design changed, so surviving lines understate what it provided.');
+out.push('- **The foundation is Dhruvanth\'s original schema, Mongo model, Next.js scaffold and the 10-phase plan** (`PLAN.md`). Much of that code was later rewritten or replaced as the design changed, so surviving lines understate what it provided.');
 out.push('- **Both members worked on the database and on the application**, as the course requires (see the area table).');
 
 // Commits that exist on other branches but are not part of this branch yet
