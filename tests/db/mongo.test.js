@@ -66,3 +66,25 @@ test('journey_stories validates dates and moods but allows extra fields', async 
   await assert.rejects(db.collection('journey_stories').insertOne({ ...base, mood: 9 }), isValidationError);
   await assert.rejects(db.collection('journey_stories').insertOne({ ...base, kind: 'selfie' }), isValidationError);
 });
+
+test('the journey feed is served entirely by idx_user_timeline: no collection scan, no in-memory sort', async () => {
+  // Same shape as GET /api/journey: newest first, keyset cursor on (date, _id)
+  const plan = await db
+    .collection('journey_stories')
+    .find({ user_id: TEST_USER, $or: [{ date: { $lt: '2026-12-31' } }, { date: '2026-12-31', _id: { $lt: new (require('mongodb').ObjectId)() } }] })
+    .sort({ date: -1, _id: -1 })
+    .limit(10)
+    .explain('queryPlanner');
+  const stages = JSON.stringify(plan.queryPlanner.winningPlan);
+  assert.ok(stages.includes('IXSCAN'), 'uses an index');
+  assert.ok(stages.includes('idx_user_timeline'), 'the timeline index');
+  assert.ok(!stages.includes('"SORT"'), 'index order already matches the sort');
+  assert.ok(!stages.includes('COLLSCAN'), 'no collection scan');
+});
+
+test('journey_stories has a text index and a (user, kind, date) index', async () => {
+  const names = (await db.collection('journey_stories').indexes()).map((i) => i.name);
+  for (const expected of ['idx_user_timeline', 'idx_user_kind_date', 'idx_user_tags', 'txt_caption_tags']) {
+    assert.ok(names.includes(expected), `missing index ${expected}`);
+  }
+});
