@@ -2,7 +2,7 @@
 
 > Generated from the live `information_schema` by `npm run docs:dictionary`. Do not edit by hand.
 
-**MySQL:** 12 tables, 5 views, 9 procedures, 5 functions, 11 triggers.
+**MySQL:** 12 tables, 5 views, 11 procedures, 5 functions, 11 triggers.
 **MongoDB:** `custom_routines`, `journey_stories` (validators in `database/mongodb/`).
 
 ## 1. `users`
@@ -206,6 +206,8 @@
 - procedure `sp_log_fuel`
 - procedure `sp_rebuild_personal_records`
 - procedure `sp_refresh_last_trained`
+- procedure `sp_rep_max_table`
+- procedure `sp_schema_stats`
 
 ## Triggers
 
