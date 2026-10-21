@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/Field';
 import { Skeleton } from '@/components/ui/Feedback';
 import { Sheet } from '@/components/ui/Sheet';
 import { Stepper } from '@/components/ui/Stepper';
+import { ReminderSettings } from '@/components/alerts/ReminderSettings';
 import { useToast } from '@/components/ui/Toast';
 import { send } from '@/lib/client';
 import { cn } from '@/lib/format';
@@ -168,6 +169,9 @@ export default function ProfilePage() {
           </Button>
         </Card>
       )}
+
+      <SectionHeader title="Reminders" />
+      <ReminderSettings />
 
       {session?.user?.role === 'admin' && (
         <>
