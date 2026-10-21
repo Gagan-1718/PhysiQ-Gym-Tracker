@@ -25,6 +25,10 @@ PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN
   <img src="docs/screenshots/07-journey.png" width="200" alt="Journey timeline backed by MongoDB">
 </p>
 <p align="center">
+  <img src="docs/screenshots/13-one-rep-max.png" width="200" alt="1RM calculator with the rep-max table from a stored procedure">
+  <img src="docs/screenshots/14-edit-workout.png" width="200" alt="Editing a saved workout: steppers per set, trash or restore">
+</p>
+<p align="center">
   <img src="docs/screenshots/11-laptop-today.png" width="620" alt="Laptop layout">
 </p>
 
