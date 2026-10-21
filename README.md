@@ -12,7 +12,7 @@ transaction, and triggers keep volume, personal records and recovery status
 correct no matter which client writes to the database.
 
 > DBMS course project (PES University). **MySQL 8** holds the relational core and
-> **MongoDB** holds the flexible documents. Next.js 14 serves a mobile-first PWA.
+> **MongoDB** holds the flexible documents. Next.js 16 serves a mobile-first PWA.
 
 ```
 PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN
@@ -36,8 +36,8 @@ PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN
 
 ```bash
 npm install
-cp .env.example .env          # fill in MYSQL_PASSWORD and a NEXTAUTH_SECRET
-npm run db:init               # builds MySQL + MongoDB and loads demo data
+cp .env.example .env          # fill in MYSQL_PASSWORD, MYSQL_APP_PASSWORD and a NEXTAUTH_SECRET
+npm run db:init               # builds MySQL + MongoDB, creates the app account, loads demo data
 npm run dev                   # http://localhost:3000
 ```
 
