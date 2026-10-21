@@ -49,7 +49,8 @@ const MONGO_COLLECTIONS = [
     name: 'journey_stories',
     schema: 'database/mongodb/journey_stories.schema.json',
     indexes: [
-      { key: { user_id: 1, date: -1, created_at: -1 }, name: 'idx_user_timeline' },
+      // (user_id, date, _id) matches the feed's ORDER BY and keyset cursor exactly, so no in-memory sort
+      { key: { user_id: 1, date: -1, _id: -1 }, name: 'idx_user_timeline' },
       { key: { user_id: 1, tags: 1 }, name: 'idx_user_tags' },
       { key: { session_id: 1 }, name: 'idx_session', sparse: true },
       // Feed filtered by kind (journals / photos / milestones), newest first
