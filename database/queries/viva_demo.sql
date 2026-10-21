@@ -13,7 +13,7 @@ SET @alex  = (SELECT id FROM users WHERE email = 'alex@physiq.test');
 SET @admin = (SELECT id FROM users WHERE email = 'admin@physiq.test');
 
 -- -----------------------------------------------------------------------------
--- 1. The design at a glance: 12 tables, 5 views, 11 triggers, 14 routines
+-- 1. The design at a glance: 12 tables, 5 views, 11 triggers, 16 routines
 -- -----------------------------------------------------------------------------
 SELECT 'tables'   AS object, COUNT(*) AS n FROM information_schema.TABLES   WHERE TABLE_SCHEMA = 'physiq_db' AND TABLE_TYPE = 'BASE TABLE'
 UNION ALL SELECT 'views',    COUNT(*) FROM information_schema.VIEWS     WHERE TABLE_SCHEMA = 'physiq_db'
@@ -76,12 +76,16 @@ SELECT 'after rollback' AS moment, sd.last_trained_date,
 FROM split_days sd WHERE sd.id = @pull;
 
 -- -----------------------------------------------------------------------------
--- 4. Progressive overload and the Epley 1RM function
+-- 4. Progressive overload, the Epley 1RM function and the 1RM calculator procedure
 -- -----------------------------------------------------------------------------
 CALL sp_estimate_next_target(@alex, @deadlift, @w, @r, @lw, @lr, @ld, @why);
 SELECT @lw AS last_weight, @lr AS last_reps, @ld AS last_date, @w AS next_weight, @r AS next_reps, @why AS rationale;
 
 SELECT fn_calculate_1rm(100, 1) AS one_rep, fn_calculate_1rm(100, 10) AS ten_reps, fn_calculate_1rm(80, 5) AS five_reps;
+
+-- The Progress > Strength calculator is this procedure: a recursive CTE builds the rep table (1..12)
+-- and it SIGNALs on impossible input (weight <= 0, reps outside 1..30).
+CALL sp_rep_max_table(100, 5);
 
 -- -----------------------------------------------------------------------------
 -- 5. Daily fuel: targets from body weight and goal, with clamped logging
@@ -172,3 +176,30 @@ ORDER BY session_date DESC;
 -- Deleting an exercise that has been trained (FK ON DELETE RESTRICT):
 --   DELETE FROM exercises WHERE id = @deadlift;
 --   -- ERROR 1451: Cannot delete or update a parent row
+
+-- =============================================================================
+-- 10. Editing a saved workout: UPDATE / DELETE triggers keep volume and PRs correct
+--     (the app's "Edit" button does exactly these statements; rolled back here)
+-- =============================================================================
+START TRANSACTION;
+SET @s = (SELECT id FROM workout_sessions WHERE user_id = @alex ORDER BY session_date DESC, id DESC LIMIT 1);
+SELECT total_volume AS volume_before FROM workout_sessions WHERE id = @s;
+UPDATE sets SET weight = weight + 10 WHERE session_id = @s AND is_warmup = FALSE ORDER BY id LIMIT 1;   -- warm-ups never count towards volume
+SELECT total_volume AS volume_after_edit FROM workout_sessions WHERE id = @s;
+DELETE FROM sets WHERE session_id = @s AND is_warmup = FALSE ORDER BY id DESC LIMIT 1;
+SELECT total_volume AS volume_after_delete FROM workout_sessions WHERE id = @s;
+ROLLBACK;
+SELECT total_volume AS volume_restored FROM workout_sessions WHERE id = @s;
+
+-- =============================================================================
+-- 11. Least privilege: the web app does not connect as root
+--     The roles exist in MySQL; the app logs in as MYSQL_APP_USER (role physiq_app).
+-- =============================================================================
+SHOW GRANTS FOR 'physiq_app'@'%';
+SHOW GRANTS FOR 'physiq_readonly'@'%';
+-- Then, in a second connection as the app account (mysql -u <MYSQL_APP_USER> -p physiq_db), one at a time:
+--   SELECT COUNT(*) FROM users;                          -- works
+--   CALL sp_get_next_body_part(@alex, @bp, @day, @why);   -- works: EXECUTE is granted
+--   DROP TABLE users;                                    -- ERROR 1142: DROP command denied
+--   ALTER TABLE users ADD COLUMN hacked INT;             -- ERROR 1142: ALTER command denied
+--   CREATE USER 'intruder'@'%' IDENTIFIED BY 'x';        -- ERROR 1227: needs the CREATE USER privilege
