@@ -58,15 +58,17 @@ on the same Wi-Fi, then use *Add to Home Screen*.
 |---|---|
 | `npm run db:init` | First-time build. Refuses to touch an existing `physiq_db`. |
 | `npm run db:reset` | **Drops** and rebuilds both databases (all data is lost) |
-| `npm run test:db` | 39 database tests (constraints, triggers, procedures, views, Mongo validators and indexes). Each runs in a rolled-back transaction. |
-| `npm run test:api` | 32 API tests against the running app (auth, roles, workouts, rollback, journey, photos, fuel, progress). Needs `npm run dev` or `npm start` running on a fresh `db:init`. |
-| `npm test` | Both suites |
+| `npm run test:db` | 45 database tests (constraints, triggers, procedures, views, Mongo validators and indexes, least-privilege account). Each runs in a rolled-back transaction. |
+| `npm run test:api` | 35 API tests against the running app (auth, roles, workouts and edits, rollback, journey, photos, export, 1RM calculator, progress). Needs `npm run dev` or `npm start` running on a fresh `db:init`. |
+| `npm run test:e2e` | 16 browser tests in a real Chromium: a whole workout, Journey photos and search, sign-up and onboarding, admin, and an **accessibility + overflow audit of every screen at 320, 390 and 1280 px**. Needs the app running on a fresh `db:reset`; set `PW_EXECUTABLE` to use an installed Chrome or Edge, otherwise run `npx playwright-core install chromium` once. |
+| `npm test` | All three suites |
 | `npm run viva:mongo` | MongoDB half of the viva demo (validator, indexes, plans, text search, aggregation) |
 | `npm run docs:dictionary` / `docs:er` / `docs:contributions` | Regenerate the data dictionary, ER diagram source and contribution summary from the live database / git |
 | `npm run typecheck` / `build` | TypeScript check / production build |
 
-GitHub Actions runs the type-check, builds both databases from the repo files,
-runs `npm run test:db`, builds the app and runs `npm run test:api` on every push.
+GitHub Actions audits the runtime dependencies, type-checks, builds both databases
+from the repo files, runs `npm run test:db`, builds the app, then runs
+`npm run test:api` and `npm run test:e2e` against the production build on every push.
 
 ---
 
