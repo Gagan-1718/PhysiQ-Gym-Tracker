@@ -197,5 +197,17 @@ export interface JourneyStory {
   energy: number | null;
   tags: string[];
   weight_snapshot: number | null;
+  photo_url: string | null;
+  photo_angle: 'front' | 'side' | 'back' | 'other' | null;
+  milestone: { type: 'sessions'; value: number } | null;
+  highlights: { type: string; label?: string; exercise?: string; weight?: number; reps?: number }[];
   created_at: string;
+}
+
+export interface JourneyInsights {
+  counts: Record<string, number>;
+  moodByWeek: { week: string; mood: number | null; energy: number | null; entries: number }[];
+  topTags: { tag: string; count: number }[];
+  firstPhoto: JourneyStory | null;
+  latestPhoto: JourneyStory | null;
 }
