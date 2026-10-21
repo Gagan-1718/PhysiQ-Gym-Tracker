@@ -72,3 +72,17 @@ test("members cannot delete each other's measurements", async () => {
   const row = (await alex.get('/api/body')).body[0];
   assert.equal((await admin.del(`/api/body/${row.id}`)).status, 404);
 });
+
+test('1RM calculator is computed by the database (sp_rep_max_table) and validated', async () => {
+  const res = await alex.get('/api/calc/one-rep-max?weight=100&reps=10');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.oneRm, 133.33);
+  assert.equal(res.body.table.length, 12);
+  assert.equal(res.body.table[9].weight_kg, 100, 'the 10-rep row returns the input weight');
+  assert.equal(res.body.table[0].pct_of_one_rm, 100);
+
+  for (const bad of ['weight=0&reps=5', 'weight=100&reps=0', 'weight=100&reps=31', 'weight=abc&reps=5', 'weight=100', 'weight=1000&reps=5']) {
+    assert.equal((await alex.get(`/api/calc/one-rep-max?${bad}`)).status, 400, bad);
+  }
+  assert.equal((await client().get('/api/calc/one-rep-max?weight=100&reps=10')).status, 401);
+});
