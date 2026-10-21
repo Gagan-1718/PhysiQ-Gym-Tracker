@@ -2,7 +2,7 @@
 
 > **Course:** DBMS Level 3 Project &bull; **Institution:** PES University &bull; **Instructor:** Dr. Nagasundari S
 > **Core concept:** A database-driven personal fitness system with adaptive scheduling and progressive overload
-> **Architecture:** Mobile-first PWA (Next.js 14) + polyglot persistence (MySQL 8.0+ & MongoDB)
+> **Architecture:** Mobile-first PWA (Next.js 16) + polyglot persistence (MySQL 8.0+ & MongoDB)
 > **Closed feedback loop:** `PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN`
 
 > **Status (21 Oct 2026):** all 7 phases of the revised roadmap are built and tested
@@ -29,15 +29,15 @@ Gym-goers track workouts, splits and body changes across fragmented apps or pape
 | **SQL database (mandatory)** | MySQL 8.0+, 12 tables in 3NF (`personal_records` in BCNF) | [`database/schema.sql`](database/schema.sql) |
 | **NoSQL database (mandatory)** | MongoDB `custom_routines` (nested templates) + `journey_stories` (sparse journals), JSON-schema validators, indexes, cross-store id checks | [`database/mongodb/`](database/mongodb), [`src/lib/mongodb.ts`](src/lib/mongodb.ts), [`src/app/api/routines`](src/app/api/routines) |
 | **Normalization** | 1NF→BCNF analysis, documented controlled denormalisation | [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) |
-| **Role-based access (min 2 roles)** | `member` / `admin`; NextAuth + bcrypt; every query scoped by the session user; admin-only library writes | [`src/lib/auth.ts`](src/lib/auth.ts), [`src/lib/session.ts`](src/lib/session.ts) |
-| **Transactions** | Workout = session + all sets in one transaction, idempotent via `UNIQUE(user_id, client_ref)`; split switching; audited admin writes | [`src/app/api/workouts/route.ts`](src/app/api/workouts/route.ts), [`src/lib/mysql.ts`](src/lib/mysql.ts) |
+| **Role-based access (min 2 roles)** | `member` / `admin`; NextAuth + bcrypt; every query scoped by the session user; admin-only library writes. In MySQL itself the app runs as a least-privilege account (role `physiq_app`: no DDL / GRANT) and a `physiq_readonly` role exists | [`src/lib/auth.ts`](src/lib/auth.ts), [`src/lib/session.ts`](src/lib/session.ts), [`database/roles.sql`](database/roles.sql) |
+| **Transactions** | Workout = session + all sets in one transaction, idempotent via `UNIQUE(user_id, client_ref)`; editing a saved workout (row lock + trigger recompute); split switching; audited admin writes | [`src/app/api/workouts/route.ts`](src/app/api/workouts/route.ts), [`src/lib/mysql.ts`](src/lib/mysql.ts) |
 | **Triggers** | 11: volume, last-trained date, PR detection, `SIGNAL` validation, audit trail | [`database/triggers.sql`](database/triggers.sql) |
-| **Stored procedures & functions** | `sp_get_next_body_part`, `sp_estimate_next_target`, `sp_check_and_update_pr`, `sp_rebuild_personal_records`, `sp_get_daily_fuel`, `sp_log_fuel`, `fn_calculate_1rm`, fuel functions… (9 + 5) | [`database/procedures.sql`](database/procedures.sql) |
+| **Stored procedures & functions** | `sp_get_next_body_part`, `sp_estimate_next_target`, `sp_check_and_update_pr`, `sp_rebuild_personal_records`, `sp_get_daily_fuel`, `sp_log_fuel`, `sp_rep_max_table` (recursive CTE), `sp_schema_stats` (`SQL SECURITY DEFINER`), `fn_calculate_1rm`, fuel functions… (11 + 5) | [`database/procedures.sql`](database/procedures.sql) |
 | **Views** | `view_split_day_status`, `view_personal_records_detailed`, `view_weekly_summary`, `view_weekly_muscle_volume`, `view_exercise_session_best` | [`database/views.sql`](database/views.sql) |
 | **Indexing & EXPLAIN** | Composite B-Tree indexes; measured 7 vs 60,019 rows examined, 0.07 ms vs 27.5 ms | [`database/indexes.sql`](database/indexes.sql), [`docs/QUERY_PERFORMANCE_EXPLAIN.md`](docs/QUERY_PERFORMANCE_EXPLAIN.md) |
 | **Complex queries** | CTEs, window functions, correlated subquery, anti-join, gaps-and-islands streak, keyset pagination | [`database/queries/`](database/queries) |
-| **Web interface** | Next.js 14 PWA: Today, Train/logger, Progress, History, Profile, Admin | [`src/app/`](src/app) |
-| **Testing** | 39 database tests (each in a rolled-back transaction) + 32 API tests, run on every push by GitHub Actions | [`tests/`](tests), [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| **Web interface** | Next.js 16 PWA: Today, Train/logger, Progress (incl. 1RM calculator), History (incl. edit), Profile (incl. data export), Admin | [`src/app/`](src/app) |
+| **Testing** | 45 database tests (each in a rolled-back transaction) + 35 API tests + 16 browser tests (Playwright; axe-core accessibility and overflow audit of every screen at 320 / 390 / 1280 px), run on every push by GitHub Actions | [`tests/`](tests), [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 
 ---
 
@@ -128,7 +128,7 @@ Details: [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md) (generated from `i
 
 ## 6. Roadmap & Status
 
-The original 10 phases were regrouped into 7 so that something runnable exists
+The original 10 phases were regrouped into 7 (plus a final hardening phase) so that something runnable exists
 after each phase, and MongoDB is used inside the main workflow rather than only
 in a final feed.
 
@@ -140,11 +140,12 @@ in a final feed.
 | 4 | **Gym-floor logger**: pre-filled plans, live logger, rest timer, PR badges, finish + journal, routines, history | 7, part of 8 | ✅ done |
 | 5 | **Dashboard & insights**: activity rings + fuel, weekly stats, streak, strength and body progress, profile, admin console | 8, part of 9 | ✅ done |
 | 6 | **Journey timeline & alerts**: MongoDB story feed with search, photos and milestones, overdue banner, browser notifications | 9 | ✅ done |
-| 7 | **Viva prep**: ER and architecture diagrams generated from the live schema, runnable SQL and MongoDB demos, 5-minute script and 24-step walkthrough, screenshots, contribution summary, API tests and CI | 10.3 | ✅ done |
+| 7 | **Viva prep**: ER and architecture diagrams generated from the live schema, runnable SQL and MongoDB demos, 5-minute script and 27-step walkthrough, screenshots, contribution summary, API tests and CI | 10.3 | ✅ done |
+| 8 | **Hardening & quality**: 1RM calculator (`sp_rep_max_table`), edit a saved workout, least-privilege MySQL account and roles, data export, security headers + CSP, offline and error states, Next.js 16 / React 19 upgrade, Playwright + axe browser suite in CI | quality pass on 4, 5 and 10 | ✅ done |
 
 Every phase was verified against real MySQL 8.0.46 and MongoDB 8.2:
-`npm test` (39 database tests + 32 API tests, also run by GitHub Actions on every push), and scripted
-browser walkthroughs of onboarding, a full workout, progress, profile and admin.
+`npm test` (45 database tests + 35 API tests + 16 browser tests, also run by GitHub Actions on every push). The browser suite walks
+onboarding, a full workout, editing, the Journey, profile and admin, and audits every screen for accessibility.
 
 ---
 
