@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { signOut, useSession } from 'next-auth/react';
-import { Check, ChevronRight, LogOut, ShieldCheck, Trash2 } from 'lucide-react';
+import { Check, ChevronRight, Download, LogOut, ShieldCheck, Trash2 } from 'lucide-react';
 import { Card, SectionHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
@@ -186,6 +186,22 @@ export default function ProfilePage() {
           </Link>
         </>
       )}
+
+      <SectionHeader title="Your data" />
+      <a
+        href="/api/me/export"
+        download
+        className="press flex items-center gap-3 rounded-card border border-line bg-surface-1 p-4 hover:bg-surface-2"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-water/15 text-water">
+          <Download className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-headline">Download my data</span>
+          <span className="text-footnote text-fg-3">Workouts, records, measurements, journal and routines as one JSON file</span>
+        </span>
+        <ChevronRight className="h-5 w-5 text-fg-3" />
+      </a>
 
       <div className="mt-8 grid gap-3">
         <Button variant="secondary" size="lg" block onClick={() => signOut({ callbackUrl: '/login' })}>
