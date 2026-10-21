@@ -159,7 +159,7 @@ export default function ProfilePage() {
           <Stepper label="height" value={height} onChange={setHeight} step={1} min={100} max={250} unit="cm" size="md" />
           <p className="mt-3 text-footnote text-fg-3">
             Log body weight in{' '}
-            <Link href="/progress" className="text-accent">
+            <Link href="/progress" className="text-accent underline underline-offset-2">
               Progress → Body
             </Link>
             ; protein and water targets follow it.
