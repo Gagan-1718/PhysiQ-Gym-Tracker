@@ -19,6 +19,9 @@ type DbError = Error & { code?: string | number; sqlMessage?: string };
  * 4xx with a readable message instead of a generic 500.
  */
 function toResponse(err: unknown) {
+  // Next.js signals "this route is dynamic" (it reads cookies/headers) by throwing; that is
+  // framework control flow, not a failure, so it must never be turned into a response.
+  if ((err as { digest?: string } | null)?.digest === 'DYNAMIC_SERVER_USAGE') throw err;
   if (err instanceof ApiError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
