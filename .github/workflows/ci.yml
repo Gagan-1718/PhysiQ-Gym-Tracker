@@ -112,8 +112,20 @@ jobs:
           done
 
       - name: Browser tests (accessibility at 320 / 390 / 1280 px, full workout, Journey, account)
-        run: npm run test:e2e
+        run: |
+          npm run test:e2e 2>&1 | tee e2e.log
+          exit ${PIPESTATUS[0]}
 
       - name: Server log (on failure)
         if: failure()
         run: cat server.log || true
+
+      # Workflow logs need a sign-in to read; annotations are visible on the run page and through the API.
+      - name: Failure details as annotations
+        if: failure()
+        run: |
+          for f in e2e.log server.log; do
+            [ -s "$f" ] || continue
+            body=$(tail -c 4000 "$f" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Tail of $f::$body"
+          done
