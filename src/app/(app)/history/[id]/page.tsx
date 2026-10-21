@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import useSWR, { useSWRConfig } from 'swr';
-import { ChevronLeft, Trash2, Trophy } from 'lucide-react';
+import { ChevronLeft, Pencil, Trash2, Trophy } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ErrorNote, Skeleton } from '@/components/ui/Feedback';
 import { Sheet } from '@/components/ui/Sheet';
+import { EditableSets, type SetDraft } from '@/components/history/EditableSets';
 import { useToast } from '@/components/ui/Toast';
 import { send } from '@/lib/client';
 import { cn, compact, kg, minutesBetween, shortDate } from '@/lib/format';
@@ -30,13 +31,59 @@ export default function WorkoutDetailPage() {
   const { data, error } = useSWR<Detail>(`/api/workouts/${id}`);
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [drafts, setDrafts] = useState<Record<number, SetDraft>>({});
+  const [saving, setSaving] = useState(false);
+
+  function startEdit() {
+    if (!data) return;
+    setDrafts(Object.fromEntries(data.sets.map((s) => [s.id, { weight: s.weight, reps: s.reps, warmup: s.is_warmup, deleted: false }])));
+    setEditing(true);
+  }
+  const patchDraft = (setId: number, patch: Partial<SetDraft>) => setDrafts((d) => ({ ...d, [setId]: { ...d[setId], ...patch } }));
+
+  // What actually changed versus the saved workout
+  const changes = useMemo(() => {
+    const updates: { id: number; weight: number; reps: number; warmup: boolean }[] = [];
+    const deleteSetIds: number[] = [];
+    for (const s of data?.sets ?? []) {
+      const d = drafts[s.id];
+      if (!d) continue;
+      if (d.deleted) deleteSetIds.push(s.id);
+      else if (d.weight !== null && d.reps !== null && (d.weight !== s.weight || d.reps !== s.reps || d.warmup !== s.is_warmup)) {
+        updates.push({ id: s.id, weight: d.weight, reps: d.reps, warmup: d.warmup });
+      }
+    }
+    const remaining = (data?.sets.length ?? 0) - deleteSetIds.length;
+    const incomplete = (data?.sets ?? []).some((s) => drafts[s.id] && !drafts[s.id].deleted && (drafts[s.id].weight === null || !drafts[s.id].reps));
+    return { updates, deleteSetIds, remaining, incomplete };
+  }, [data, drafts]);
+
+  async function saveEdit() {
+    if (changes.updates.length === 0 && changes.deleteSetIds.length === 0) return setEditing(false);
+    setSaving(true);
+    try {
+      await send(`/api/workouts/${id}`, 'PATCH', { sets: changes.updates, deleteSetIds: changes.deleteSetIds });
+      toast('Workout updated');
+      setEditing(false);
+      await mutate(`/api/workouts/${id}`);
+      void mutate((key) => typeof key === 'string' && (key.startsWith('/api/workouts') || key.startsWith('/api/splits') || key.startsWith('/api/progress') || key.startsWith('/api/train')));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not save the changes', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function remove() {
     setDeleting(true);
     try {
       await send(`/api/workouts/${id}`, 'DELETE');
       toast('Workout deleted');
-      void mutate((key) => typeof key === 'string' && (key.startsWith('/api/workouts') || key.startsWith('/api/splits') || key.startsWith('/api/progress')));
+      // Drop this workout's cache entry without refetching it (it no longer exists), refresh the lists
+      const own = `/api/workouts/${id}`;
+      await mutate(own, undefined, { revalidate: false });
+      void mutate((key) => typeof key === 'string' && key !== own && (key.startsWith('/api/workouts') || key.startsWith('/api/splits') || key.startsWith('/api/progress')));
       router.replace('/history');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not delete', 'error');
@@ -61,8 +108,17 @@ export default function WorkoutDetailPage() {
       {!data && !error && <Skeleton className="h-96" />}
       {data && (
         <>
-          <p className="text-eyebrow uppercase text-fg-3">{shortDate(data.session.session_date)}</p>
-          <h1 className="mt-1 text-large-title">{data.session.body_part}</h1>
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-eyebrow uppercase text-fg-3">{shortDate(data.session.session_date)}</p>
+              <h1 className="mt-1 text-large-title">{data.session.body_part}</h1>
+            </div>
+            {!editing && (
+              <Button variant="secondary" size="sm" onClick={startEdit}>
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Button>
+            )}
+          </div>
 
           <div className="mt-5 grid grid-cols-3 gap-2">
             {[
@@ -107,6 +163,9 @@ export default function WorkoutDetailPage() {
                     <h2 className="text-headline">{sets[0].exercise_name}</h2>
                     <span className="text-footnote text-fg-3">{sets[0].muscle_group}</span>
                   </div>
+                  {editing ? (
+                    <EditableSets sets={sets} drafts={drafts} onChange={patchDraft} />
+                  ) : (
                   <ul className="mt-3 space-y-1.5">
                     {sets.map((s) => (
                       <li key={s.id} className="flex items-center gap-3 text-[15px]">
@@ -123,15 +182,35 @@ export default function WorkoutDetailPage() {
                       </li>
                     ))}
                   </ul>
+                  )}
                 </Card>
               );
             })}
           </div>
 
-          <Button variant="danger" block className="mt-8" onClick={() => setConfirm(true)}>
-            <Trash2 className="h-4 w-4" /> Delete workout
-          </Button>
+          {!editing && (
+            <Button variant="danger" block className="mt-8" onClick={() => setConfirm(true)}>
+              <Trash2 className="h-4 w-4" /> Delete workout
+            </Button>
+          )}
+          {editing && <div className="h-24" aria-hidden />}
         </>
+      )}
+
+      {editing && (
+        <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+var(--safe-bottom))] z-40 border-t border-line bg-black/85 px-4 py-3 backdrop-blur-2xl md:bottom-0 md:left-64">
+          <div className="mx-auto max-w-3xl">
+            {changes.remaining <= 0 && <p className="mb-2 text-footnote text-train">A workout needs at least one set. Restore one, or delete the whole workout instead.</p>}
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="secondary" size="lg" onClick={() => setEditing(false)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button size="lg" loading={saving} disabled={changes.remaining <= 0 || changes.incomplete} onClick={saveEdit}>
+                Save{changes.updates.length + changes.deleteSetIds.length > 0 ? ` (${changes.updates.length + changes.deleteSetIds.length})` : ''}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       <Sheet open={confirm} onClose={() => setConfirm(false)} title="Delete this workout?">
