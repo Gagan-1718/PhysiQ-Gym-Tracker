@@ -385,4 +385,35 @@ BEGIN
     CALL sp_get_daily_fuel(p_user_id, p_date);
 END$$
 
+-- -----------------------------------------------------------------------------
+-- sp_rep_max_table — 1RM calculator. Given a set (weight x reps) it returns the
+-- estimated one-rep max and the weight you could lift for 1..12 reps, using the
+-- same Epley formula as fn_calculate_1rm (inverted: weight = 1RM / (1 + reps/30)).
+-- A recursive CTE generates the rep counts, so the whole table is one query.
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_rep_max_table$$
+CREATE PROCEDURE sp_rep_max_table(IN p_weight DECIMAL(6,2), IN p_reps INT)
+BEGIN
+    DECLARE v_one_rm DECIMAL(7,2);
+
+    IF p_weight IS NULL OR p_weight <= 0 OR p_reps IS NULL OR p_reps < 1 OR p_reps > 30 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'weight must be above 0 and reps between 1 and 30';
+    END IF;
+
+    SET v_one_rm = fn_calculate_1rm(p_weight, p_reps);
+
+    WITH RECURSIVE n (reps) AS (
+        SELECT 1
+        UNION ALL
+        SELECT reps + 1 FROM n WHERE reps < 12
+    )
+    SELECT reps,
+           v_one_rm AS one_rm,
+           CASE WHEN reps = 1 THEN v_one_rm
+                ELSE ROUND(v_one_rm / (1 + reps / 30), 1) END AS weight_kg,
+           ROUND(100 * CASE WHEN reps = 1 THEN 1 ELSE 1 / (1 + reps / 30) END) AS pct_of_one_rm
+    FROM n
+    ORDER BY reps;
+END$$
+
 DELIMITER ;
