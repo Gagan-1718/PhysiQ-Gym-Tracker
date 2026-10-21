@@ -78,12 +78,13 @@ from the repo files, runs `npm run test:db`, builds the app, then runs
 - **Today:** the adaptive *Up Next* recommendation, an **overdue banner** and activity rings (sessions this week, protein, water) with one-tap fuel logging. Also the recovery status of every split day, an 8-week volume chart, recent PRs and an activity streak.
 - **Train:** start the recommended day, already filled with last session's exercises and today's targets. You can also start a saved routine or an empty workout.
 - **Live logger:** big one-thumb steppers, tap ✓ per set, an automatic rest timer (vibration and chime), live PR badges, and the screen stays awake. The workout lives on the device until *Finish*, so a refresh or bad gym signal never loses sets.
-- **Progress:** weekly volume, sets per muscle against the 10–20 set range, e1RM trend per exercise with the next target, body weight, and the **Journey**.
+- **Progress:** weekly volume, sets per muscle against the 10–20 set range, e1RM trend per exercise with the next target, body weight, and the **Journey**. The **1RM calculator** takes any weight × reps and shows your estimated max plus what you could lift for 1–12 reps, all computed by a stored procedure.
 - **Journey (MongoDB):** a timeline of workout journals, notes, **progress photos** and automatic milestones, with filters, whole-word search, a mood-by-week chart, and a *Then and now* photo slider. Photos are private, resized on the phone, and stripped of location data.
-- **History:** every session with sets, PR flags and the journal. Deleting a session rolls back PRs and recovery automatically.
-- **Profile:** goal, weekly session goal, height, split switching, reminders, account deletion (both databases).
+- **History:** every session with sets, PR flags and the journal. **Edit** a saved workout (weights, reps, warm-up flags, removed sets) and the UPDATE / DELETE triggers recompute volume and PRs. Deleting a session rolls back PRs and recovery automatically.
+- **Profile:** goal, weekly session goal, height, split switching, reminders, **download all your data as JSON**, account deletion (both databases).
 - **Admin:** manage the exercise library and read the audit log.
 - **Reminders:** an optional once-a-day browser notification when a split day is overdue.
+- **Built for the gym floor:** an offline badge (anything you were logging stays on the device), friendly error and 404 pages, and a layout that holds from 320 px phones to a laptop (set rows stack weight and reps on the narrowest screens).
 
 ### The database (the point of the project)
 
