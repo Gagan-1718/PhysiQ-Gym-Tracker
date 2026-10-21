@@ -64,7 +64,7 @@ test('body measurements: one entry per day, later logs merge, validated ranges',
   assert.equal((await alex.post('/api/body', { date: day })).status, 400, 'at least one value');
   assert.equal((await alex.post('/api/body', { date: day, weight: 5 })).status, 400, 'range aligned with the CHECK constraint');
   assert.equal((await client().del('/api/body/1')).status, 401);
-  assert.equal((await alex.del()).status, 200, 'cleanup');
+  assert.equal((await alex.del(`/api/body/${rows[0].id}`)).status, 200, 'cleanup');
 });
 
 test("members cannot delete each other's measurements", async () => {
