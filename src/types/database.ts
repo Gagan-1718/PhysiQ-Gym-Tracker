@@ -58,6 +58,15 @@ export interface SplitDayStatus {
   muscles: string[];
 }
 
+/** Row of view_split_day_status where status = overdue (GET /api/alerts) */
+export interface OverdueAlert {
+  split_day_id: number;
+  body_part: string;
+  days_since: number;
+  last_trained_date: string;
+  min_rest_days: number;
+}
+
 export interface Recommendation {
   split_day_id: number | null;
   body_part: string;

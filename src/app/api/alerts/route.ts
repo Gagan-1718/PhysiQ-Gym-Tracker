@@ -1,14 +1,7 @@
 import { ok, route } from '@/lib/api';
 import { select } from '@/lib/mysql';
 import { requireUser } from '@/lib/session';
-
-export interface OverdueAlert {
-  split_day_id: number;
-  body_part: string;
-  days_since: number;
-  last_trained_date: string;
-  min_rest_days: number;
-}
+import type { OverdueAlert } from '@/types/database';
 
 // GET /api/alerts — split days that are overdue, worst first.
 // "Overdue" is defined once, inside view_split_day_status: the day's recovery
