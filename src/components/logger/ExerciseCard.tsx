@@ -2,7 +2,8 @@
 
 import { AnimatePresence } from 'framer-motion';
 import { MoreHorizontal, Plus, Target, Trophy } from 'lucide-react';
-import { kg, shortDate } from '@/lib/format';
+import { SET_ROW } from '@/components/ui/set-row-layout';
+import { cn, kg, shortDate } from '@/lib/format';
 import type { DraftExercise, DraftSet } from '@/lib/workout-draft';
 import { SetRow } from './SetRow';
 
@@ -58,11 +59,14 @@ export function ExerciseCard({ exercise: ex, onSetChange, onToggle, onSetMenu, o
         </p>
       )}
 
-      <div className="mt-3 flex items-center gap-1.5 px-1 text-eyebrow uppercase text-fg-3 sm:gap-2" aria-hidden>
-        <span className="w-9 text-center">Set</span>
-        <span className="flex-[1.2] text-center">kg</span>
-        <span className="flex-1 text-center">Reps</span>
-        <span className="w-11 text-center">Done</span>
+      <div className={cn(SET_ROW, 'mt-3 px-1 text-eyebrow uppercase text-fg-3')} aria-hidden>
+        <span className="text-center">Set</span>
+        {/* Below 380px weight and reps are stacked, so one heading covers both */}
+        <span className="text-center">
+          kg<span className="hidden max-[379px]:inline"> / Reps</span>
+        </span>
+        <span className="text-center max-[379px]:hidden">Reps</span>
+        <span className="text-center">Done</span>
       </div>
       <div className="mt-1 space-y-1">
         <AnimatePresence initial={false}>
