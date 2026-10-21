@@ -4,7 +4,7 @@
 
 | Member | Commits | Share | Active days | First → last commit | Lines added / removed* |
 |---|---:|---:|---:|---|---:|
-| Gagandeep N (Gagan-1718) | 281 | 98% | 3 | 2026-10-01 → 2026-10-21 | +12,770 / −3,080 |
+| Gagandeep N (Gagan-1718) | 362 | 98% | 4 | 2026-10-01 → 2026-10-22 | +14,761 / −3,285 |
 | Dhruvanth (theDEMIGOD600) | 7 | 2% | 5 | 2026-10-01 → 2026-10-15 | +3,629 / −237 |
 
 \* Excluding the lockfile, screenshots, rendered diagrams, the generated data dictionary and the generated demo seed.
@@ -15,15 +15,15 @@ Lines added plus removed per area (same exclusions).
 
 | Area | Gagandeep N (Gagan-1718) | Dhruvanth (theDEMIGOD600) |
 |---|---:|---:|
-| Database (SQL, Mongo validators, seeds) | 2,296 | 862 |
-| Database tests | 647 | 0 |
-| API routes | 1,775 | 547 |
-| Pages and UI components | 6,637 | 1,256 |
-| Libraries and types | 1,450 | 230 |
-| API tests and CI | 682 | 0 |
-| Scripts and tooling | 1,034 | 148 |
-| Documentation | 1,254 | 767 |
-| Other | 75 | 56 |
+| Database (SQL, Mongo validators, seeds) | 2,401 | 862 |
+| Database tests | 761 | 0 |
+| API routes | 2,018 | 547 |
+| Pages and UI components | 7,172 | 1,256 |
+| Libraries and types | 1,515 | 230 |
+| API tests and CI | 812 | 0 |
+| Scripts and tooling | 1,155 | 148 |
+| Documentation | 1,596 | 767 |
+| Other | 616 | 56 |
 
 ## Reading these numbers
 
