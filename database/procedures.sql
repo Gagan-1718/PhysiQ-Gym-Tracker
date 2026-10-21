@@ -386,6 +386,24 @@ BEGIN
 END$$
 
 -- -----------------------------------------------------------------------------
+-- sp_schema_stats — how many tables, views, triggers and routines the database
+-- has. Used by /api/health. SQL SECURITY DEFINER: it reads the system catalogue
+-- with the owner's rights, so the least-privilege application account (which can
+-- not see triggers in information_schema) still gets the right answer.
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_schema_stats$$
+CREATE PROCEDURE sp_schema_stats()
+SQL SECURITY DEFINER
+READS SQL DATA
+BEGIN
+    SELECT
+        (SELECT COUNT(*) FROM information_schema.TABLES   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE') AS tables_count,
+        (SELECT COUNT(*) FROM information_schema.VIEWS    WHERE TABLE_SCHEMA = DATABASE()) AS views_count,
+        (SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE()) AS triggers_count,
+        (SELECT COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE()) AS routines_count;
+END$$
+
+-- -----------------------------------------------------------------------------
 -- sp_rep_max_table — 1RM calculator. Given a set (weight x reps) it returns the
 -- estimated one-rep max and the weight you could lift for 1..12 reps, using the
 -- same Epley formula as fn_calculate_1rm (inverted: weight = 1RM / (1 + reps/30)).
