@@ -5,7 +5,7 @@
 > **Architecture:** Mobile-first PWA (Next.js 14) + polyglot persistence (MySQL 8.0+ & MongoDB)
 > **Closed feedback loop:** `PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN`
 
-> **Status (21 Oct 2026):** phases 1–6 of the revised roadmap are built and tested
+> **Status (21 Oct 2026):** all 7 phases of the revised roadmap are built and tested
 > on the `Gagan-iterations` branch. See [§6](#6-roadmap--status).
 
 ---
@@ -140,7 +140,7 @@ in a final feed.
 | 4 | **Gym-floor logger**: pre-filled plans, live logger, rest timer, PR badges, finish + journal, routines, history | 7, part of 8 | ✅ done |
 | 5 | **Dashboard & insights**: activity rings + fuel, weekly stats, streak, strength and body progress, profile, admin console | 8, part of 9 | ✅ done |
 | 6 | **Journey timeline & alerts**: MongoDB story feed with search, photos and milestones, overdue banner, browser notifications | 9 | ✅ done |
-| 7 | **Viva prep**: ER diagram image, demo script rehearsal, screenshots, team contribution summary | 10.3 | ⏳ next |
+| 7 | **Viva prep**: ER and architecture diagrams generated from the live schema, runnable SQL and MongoDB demos, 5-minute script and 24-step walkthrough, screenshots, contribution summary, API tests and CI | 10.3 | ✅ done |
 
 Every phase was verified against real MySQL 8.0.46 and MongoDB 8.2:
 `npm test` (39 database tests + 32 API tests, also run by GitHub Actions on every push), and scripted
@@ -148,16 +148,9 @@ browser walkthroughs of onboarding, a full workout, progress, profile and admin.
 
 ---
 
-## 7. Five-Minute Faculty Evaluation Script
+## 7. Faculty Evaluation Script
 
-| Time | On screen | Database feature to explain |
-|---|---|---|
-| 0:00–1:00 | Log in as `alex@physiq.test`; Today | 3NF schema; **`sp_get_next_body_part`** + `view_split_day_status` choose *Pull (overdue)* |
-| 1:00–2:15 | Start Pull → tick sets, beat the deadlift PR → Finish | **ACID transaction**; in Workbench show `total_volume` (trigger) and the new `personal_records` row (trigger + procedure); `client_ref` idempotency |
-| 2:15–3:00 | Progress → Strength; the logger's targets | **`sp_estimate_next_target`** and **`fn_calculate_1rm`**; `view_exercise_session_best` |
-| 3:00–3:45 | History → workout detail (journal) | **Polyglot**: sets from MySQL, journal from MongoDB `journey_stories`; validators |
-| 3:45–4:15 | Today rings → +25 g protein; Admin → audit log | `sp_log_fuel` clamping; audit trigger using `@app_user_id` |
-| 4:15–5:00 | Terminal: `explain_benchmark.sql` | **EXPLAIN**: `range` on `idx_workout_sessions_user_date` (7 rows) vs `ALL` + filesort (60,019 rows) |
+The rehearsed 5-minute script, the 24-step walkthrough, the likely questions and answers, and the known limitations are in [docs/VIVA_DEMO.md](docs/VIVA_DEMO.md). The SQL and MongoDB parts are runnable: `database/queries/viva_demo.sql` (every write is rolled back) and `npm run viva:mongo`.
 
 ---
 
