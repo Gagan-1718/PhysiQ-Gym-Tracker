@@ -90,6 +90,14 @@ export interface ExerciseContext {
   pr: { weight: number; reps: number; estimated_1rm: number } | null;
 }
 
+/** Row of CALL sp_rep_max_table: the weight you could lift for `reps` reps */
+export interface RepMaxRow {
+  reps: number;
+  one_rm: number;
+  weight_kg: number;
+  pct_of_one_rm: number;
+}
+
 export interface LastPerformanceSet {
   set_number: number;
   weight: number;
