@@ -8,6 +8,7 @@ import { cn } from '@/lib/format';
 import { LogoMark, Wordmark } from './Logo';
 import { NAV_ITEMS, isActive } from './nav';
 import { ActiveWorkoutBar } from './ActiveWorkoutBar';
+import { OverdueBanner } from '@/components/alerts/OverdueBanner';
 import { useWorkoutDraft } from '@/lib/workout-draft';
 
 /**
@@ -64,6 +65,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className={cn('mx-auto w-full max-w-3xl px-4 pt-safe sm:px-6', hideChrome ? 'pb-safe' : draft ? 'pb-[calc(var(--tabbar-h)+var(--safe-bottom)+6rem)] md:pb-28' : 'pb-tabbar md:pb-12')}>
+        {!hideChrome && (
+          <div className="pt-3 empty:hidden">
+            <OverdueBanner />
+          </div>
+        )}
         {children}
       </main>
 
