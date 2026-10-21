@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --tabbar-h: 4.25rem;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+@layer base {
+  html {
+    background: #000;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-fg antialiased;
+    font-feature-settings: 'cv11', 'ss01'; /* Inter: single-storey a, open digits */
+    overscroll-behavior-y: none;
+  }
+
+  ::selection {
+    @apply bg-accent text-black;
+  }
+
+  /* Number inputs: no spinners; we provide big steppers instead */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/70 ring-offset-2 ring-offset-black;
+  }
+  /* Text fields show focus through their own border colour */
+  input:focus-visible,
+  textarea:focus-visible {
+    @apply ring-0 ring-offset-0;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .pb-tabbar {
+    padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 1.5rem);
+  }
+  .pt-safe {
+    padding-top: max(var(--safe-top), 0.75rem);
+  }
+  .pb-safe {
+    padding-bottom: max(var(--safe-bottom), 0.75rem);
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .press {
+    @apply transition-transform duration-150 ease-out active:scale-[0.97];
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

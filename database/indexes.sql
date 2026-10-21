@@ -1,48 +1,38 @@
 -- =============================================================================
--- PhysiQ Indexes & Performance Optimization
--- Specifically designed for frequent query patterns (time-series, user lookups, aggregations)
+-- PhysiQ Performance Indexes (MySQL 8.0+)
+-- Composite B-Tree indexes for the app's hot query paths. Each one is
+-- left-prefixed by a foreign key column, so MySQL also uses it to enforce that
+-- FK and silently drops the single-column index it created implicitly.
+--
+-- Indexes that come from constraints are declared in schema.sql instead:
+--   uq_sets_session_exercise_number (session_id, exercise_id, set_number)
+--       -> serves "sets of this session" (replaces idx_sets_session_exercise)
+--   uq_body_measurements_user_day (user_id, recorded_on)
+--       -> serves body-weight history (replaces idx_body_measurements_user_date)
+--   personal_records PRIMARY KEY (user_id, exercise_id)
+--       -> serves PR lookups (replaces idx_personal_records_user_exercise)
+--
+-- See docs/QUERY_PERFORMANCE_EXPLAIN.md for EXPLAIN output.
 -- =============================================================================
 
 USE physiq_db;
 
--- -----------------------------------------------------------------------------
--- 1. Composite Index on Workout Sessions (User ID + Session Date)
--- Optimizes workout history retrieval, calendar lookups, and date range filters
--- -----------------------------------------------------------------------------
-CREATE INDEX idx_workout_sessions_user_date 
-ON workout_sessions (user_id, session_date DESC);
+-- 1. Workout history: WHERE user_id = ? [AND session_date BETWEEN ...] ORDER BY session_date DESC
+CREATE INDEX idx_workout_sessions_user_date
+    ON workout_sessions (user_id, session_date DESC);
 
--- -----------------------------------------------------------------------------
--- 2. Composite Index on Nutrition Logs (User ID + Log Date)
--- Optimizes daily macro aggregation and nutrition timeline queries
--- -----------------------------------------------------------------------------
-CREATE INDEX idx_nutrition_logs_user_date 
-ON nutrition_logs (user_id, log_date DESC);
+-- 2. Last-trained recomputation: MAX(session_date) WHERE split_day_id = ?
+CREATE INDEX idx_workout_sessions_split_day_date
+    ON workout_sessions (split_day_id, session_date);
 
--- -----------------------------------------------------------------------------
--- 3. Composite Index on Sets (Session ID + Exercise ID)
--- Speeds up set retrieval during workout reviews and volume calculations
--- -----------------------------------------------------------------------------
-CREATE INDEX idx_sets_session_exercise 
-ON sets (session_id, exercise_id);
+-- 3. Exercise history, overload targets and PR detection: WHERE exercise_id = ? (joined to sessions)
+CREATE INDEX idx_sets_exercise_session
+    ON sets (exercise_id, session_id);
 
--- -----------------------------------------------------------------------------
--- 4. Composite Index on Personal Records (User ID + Exercise ID)
--- Speeds up PR lookups when validating personal bests during workout submission
--- -----------------------------------------------------------------------------
-CREATE INDEX idx_personal_records_user_exercise 
-ON personal_records (user_id, exercise_id);
+-- 4. Exercise library browsing: WHERE muscle_group_id = ? ORDER BY name
+CREATE INDEX idx_exercises_muscle_group_name
+    ON exercises (muscle_group_id, name);
 
--- -----------------------------------------------------------------------------
--- 5. Index on Body Measurements (User ID + Recorded Date)
--- Speeds up progress charts and body weight progression queries
--- -----------------------------------------------------------------------------
-CREATE INDEX idx_body_measurements_user_date 
-ON body_measurements (user_id, recorded_on DESC);
-
--- -----------------------------------------------------------------------------
--- 6. Index on Exercises (Muscle Group)
--- Optimizes filtering exercises by muscle group in the exercise library
--- -----------------------------------------------------------------------------
-CREATE INDEX idx_exercises_muscle_group 
-ON exercises (muscle_group);
+-- 5. Admin audit feed: ORDER BY created_at DESC LIMIT n
+CREATE INDEX idx_admin_audit_logs_created
+    ON admin_audit_logs (created_at DESC);

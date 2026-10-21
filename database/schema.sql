@@ -1,150 +1,229 @@
 -- =============================================================================
--- PhysiQ Relational Schema (MySQL)
--- Normalized to 3NF
+-- PhysiQ Relational Schema (MySQL 8.0+)
+-- 12 tables, normalised to 3NF (personal_records is in BCNF).
+--
+-- Run order (scripts/init-db.js does this for you):
+--   schema.sql -> procedures.sql -> triggers.sql -> views.sql -> indexes.sql -> seeds/*
+--
+-- Two columns are deliberate, trigger-maintained caches of derivable values:
+--   split_days.last_trained_date   = MAX(workout_sessions.session_date) for that day
+--   workout_sessions.total_volume  = SUM(weight * reps) of that session's working sets
+-- They make the dashboard an O(1) read; triggers keep them consistent on every
+-- INSERT / UPDATE / DELETE (see triggers.sql and docs/DATABASE_DESIGN.md).
 -- =============================================================================
 
 CREATE DATABASE IF NOT EXISTS physiq_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE physiq_db;
 
 -- -----------------------------------------------------------------------------
--- 1. Users Table
+-- 1. users — members and admins (RBAC: role column)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role ENUM('member', 'admin') DEFAULT 'member' NOT NULL,
-    goal VARCHAR(50) DEFAULT 'hypertrophy', -- e.g., 'hypertrophy', 'strength', 'fat loss', 'maintenance'
-    height DECIMAL(5,2) NULL COMMENT 'Height in cm',
-    starting_weight DECIMAL(5,2) NULL COMMENT 'Starting weight in kg',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL,
+    email           VARCHAR(150) NOT NULL,
+    password_hash   VARCHAR(255) NOT NULL COMMENT 'bcrypt hash (10 rounds), never plaintext',
+    role            ENUM('member', 'admin') NOT NULL DEFAULT 'member',
+    goal            ENUM('hypertrophy', 'strength', 'fat_loss', 'maintenance') NOT NULL DEFAULT 'hypertrophy',
+    height          DECIMAL(5,2) NULL COMMENT 'cm',
+    starting_weight DECIMAL(5,2) NULL COMMENT 'kg, used until the first body measurement is logged',
+    weekly_goal     TINYINT UNSIGNED NOT NULL DEFAULT 4 COMMENT 'target sessions per week (the Train ring)',
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT chk_users_email CHECK (email LIKE '%_@_%._%'),
+    CONSTRAINT chk_users_height CHECK (height IS NULL OR height BETWEEN 100 AND 250),
+    CONSTRAINT chk_users_starting_weight CHECK (starting_weight IS NULL OR starting_weight BETWEEN 30 AND 300),
+    CONSTRAINT chk_users_weekly_goal CHECK (weekly_goal BETWEEN 1 AND 7)
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
--- 2. Splits Table
+-- 2. muscle_groups — lookup table (domain integrity instead of free-text labels)
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS splits (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    split_name VARCHAR(100) NOT NULL, -- e.g., 'PPL', 'Upper/Lower', 'Bro Split', 'Custom'
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS muscle_groups (
+    id     INT AUTO_INCREMENT PRIMARY KEY,
+    name   VARCHAR(30) NOT NULL,
+    region ENUM('upper', 'lower', 'core') NOT NULL,
+    CONSTRAINT uq_muscle_groups_name UNIQUE (name)
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
--- 3. Split Days Table
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS split_days (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    split_id INT NOT NULL,
-    body_part VARCHAR(50) NOT NULL, -- e.g., 'Push', 'Pull', 'Legs', 'Chest', 'Back'
-    day_order INT DEFAULT 1,
-    last_trained_date DATE NULL COMMENT 'Updated automatically via triggers',
-    FOREIGN KEY (split_id) REFERENCES splits(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- -----------------------------------------------------------------------------
--- 4. Exercises Table (Master Library)
+-- 3. exercises — master library (only admins may change it; audited by triggers)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS exercises (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(150) NOT NULL UNIQUE,
-    muscle_group VARCHAR(50) NOT NULL, -- e.g., 'Chest', 'Back', 'Quads', 'Hamstrings', 'Shoulders', 'Biceps', 'Triceps', 'Core'
-    equipment_needed VARCHAR(100) DEFAULT 'Bodyweight', -- e.g., 'Barbell', 'Dumbbell', 'Machine', 'Cable', 'Bodyweight'
-    instructions TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    name             VARCHAR(150) NOT NULL,
+    muscle_group_id  INT NOT NULL,
+    equipment_needed ENUM('Barbell', 'Dumbbell', 'Machine', 'Cable', 'Bodyweight', 'Kettlebell', 'Band', 'Other')
+                     NOT NULL DEFAULT 'Bodyweight',
+    instructions     TEXT NULL,
+    created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_exercises_name UNIQUE (name),
+    CONSTRAINT fk_exercises_muscle_group FOREIGN KEY (muscle_group_id)
+        REFERENCES muscle_groups(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
--- 5. Workout Sessions Table
+-- 4. splits — a user's training splits; at most ONE active split per user
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS splits (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    split_name  VARCHAR(100) NOT NULL,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    -- Generated column: 1 when active, NULL otherwise. UNIQUE ignores NULLs, so
+    -- (user_id, active_slot) allows many inactive splits but only one active one.
+    active_slot TINYINT GENERATED ALWAYS AS (IF(is_active, 1, NULL)) STORED,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_splits_one_active_per_user UNIQUE (user_id, active_slot),
+    CONSTRAINT fk_splits_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 5. split_days — ordered days of a split (e.g. Push / Pull / Legs)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS split_days (
+    id                INT AUTO_INCREMENT PRIMARY KEY,
+    split_id          INT NOT NULL,
+    body_part         VARCHAR(50) NOT NULL COMMENT 'day label, e.g. Push, Pull, Legs, Upper',
+    day_order         TINYINT UNSIGNED NOT NULL,
+    min_rest_days     TINYINT UNSIGNED NOT NULL DEFAULT 2 COMMENT 'recovery window before this day is ready again',
+    last_trained_date DATE NULL COMMENT 'trigger-maintained cache of MAX(workout_sessions.session_date)',
+    CONSTRAINT uq_split_days_order UNIQUE (split_id, day_order),
+    CONSTRAINT uq_split_days_label UNIQUE (split_id, body_part),
+    CONSTRAINT chk_split_days_order CHECK (day_order BETWEEN 1 AND 14),
+    CONSTRAINT chk_split_days_rest CHECK (min_rest_days BETWEEN 0 AND 7),
+    CONSTRAINT fk_split_days_split FOREIGN KEY (split_id) REFERENCES splits(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 6. split_day_muscles — M:N between split days and the muscle groups they train
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS split_day_muscles (
+    split_day_id    INT NOT NULL,
+    muscle_group_id INT NOT NULL,
+    PRIMARY KEY (split_day_id, muscle_group_id),
+    CONSTRAINT fk_sdm_split_day FOREIGN KEY (split_day_id) REFERENCES split_days(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sdm_muscle_group FOREIGN KEY (muscle_group_id) REFERENCES muscle_groups(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 7. workout_sessions — one row per workout (header)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS workout_sessions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT NOT NULL,
+    split_day_id INT NULL COMMENT 'NULL for ad-hoc sessions or after the split is deleted',
     session_date DATE NOT NULL,
-    body_part VARCHAR(50) NOT NULL,
-    total_volume DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Sum of weight x reps for non-warmup sets',
-    notes TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    body_part    VARCHAR(50) NOT NULL COMMENT 'label snapshot at training time, so history survives split edits',
+    started_at   DATETIME NULL,
+    ended_at     DATETIME NULL,
+    total_volume DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'trigger-maintained: SUM(weight*reps) of working sets',
+    notes        VARCHAR(500) NULL,
+    client_ref   CHAR(36) NULL COMMENT 'idempotency key from the device: a retried submit cannot create a duplicate session',
+    created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_sessions_client_ref UNIQUE (user_id, client_ref),
+    CONSTRAINT chk_sessions_times CHECK (started_at IS NULL OR ended_at IS NULL OR ended_at >= started_at),
+    CONSTRAINT chk_sessions_volume CHECK (total_volume >= 0),
+    CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sessions_split_day FOREIGN KEY (split_day_id) REFERENCES split_days(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
--- 6. Sets Table
+-- 8. sets — individual sets performed in a session
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sets (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    session_id INT NOT NULL,
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    session_id  INT NOT NULL,
     exercise_id INT NOT NULL,
-    set_number INT DEFAULT 1,
-    reps INT NOT NULL CHECK (reps > 0),
-    weight DECIMAL(6,2) NOT NULL CHECK (weight >= 0),
-    is_warmup BOOLEAN DEFAULT FALSE,
-    rpe DECIMAL(3,1) NULL COMMENT 'Rate of Perceived Exertion (1-10)',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
-    FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT
+    set_number  TINYINT UNSIGNED NOT NULL COMMENT '1-based, per exercise within the session',
+    reps        SMALLINT UNSIGNED NOT NULL,
+    weight      DECIMAL(6,2) NOT NULL DEFAULT 0.00 COMMENT 'kg; 0 for bodyweight',
+    is_warmup   BOOLEAN NOT NULL DEFAULT FALSE,
+    rpe         DECIMAL(3,1) NULL COMMENT 'Rate of Perceived Exertion 1-10',
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_sets_session_exercise_number UNIQUE (session_id, exercise_id, set_number),
+    CONSTRAINT chk_sets_reps CHECK (reps BETWEEN 1 AND 100),
+    CONSTRAINT chk_sets_weight CHECK (weight BETWEEN 0 AND 999.99),
+    CONSTRAINT chk_sets_rpe CHECK (rpe IS NULL OR rpe BETWEEN 1 AND 10),
+    CONSTRAINT chk_sets_number CHECK (set_number BETWEEN 1 AND 50),
+    CONSTRAINT fk_sets_session FOREIGN KEY (session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sets_exercise FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
--- 7. Personal Records Table
+-- 9. personal_records — points at each user's best set per exercise (BCNF)
+--    Candidate keys: (user_id, exercise_id) and set_id. Weight, reps and date
+--    are NOT copied here; they are read through set_id (no update anomalies).
+--    "Best" = highest Epley 1RM, ties go to the heavier, then the earlier set.
+--    Maintained automatically by triggers on sets / workout_sessions.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS personal_records (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id     INT NOT NULL,
     exercise_id INT NOT NULL,
-    weight DECIMAL(6,2) NOT NULL,
-    reps INT NOT NULL,
-    achieved_on DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT,
-    UNIQUE KEY uq_user_exercise_pr (user_id, exercise_id, weight, reps)
+    set_id      INT NOT NULL,
+    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, exercise_id),
+    CONSTRAINT uq_personal_records_set UNIQUE (set_id),
+    CONSTRAINT fk_pr_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pr_exercise FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_pr_set FOREIGN KEY (set_id) REFERENCES sets(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
--- 8. Foods Table (Master Nutrition Library)
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS foods (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(150) NOT NULL UNIQUE,
-    calories DECIMAL(6,2) NOT NULL COMMENT 'kcal per 100g',
-    protein DECIMAL(6,2) NOT NULL COMMENT 'grams per 100g',
-    carbs DECIMAL(6,2) NOT NULL COMMENT 'grams per 100g',
-    fat DECIMAL(6,2) NOT NULL COMMENT 'grams per 100g',
-    serving_unit VARCHAR(50) DEFAULT '100g',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- -----------------------------------------------------------------------------
--- 9. Nutrition Logs Table
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS nutrition_logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    food_id INT NOT NULL,
-    quantity DECIMAL(6,2) NOT NULL COMMENT 'Quantity in grams or standard serving',
-    meal_type ENUM('Breakfast', 'Lunch', 'Dinner', 'Snack') DEFAULT 'Snack',
-    log_date DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE RESTRICT
-) ENGINE=InnoDB;
-
--- -----------------------------------------------------------------------------
--- 10. Body Measurements Table
+-- 10. body_measurements — time series, at most one entry per user per day
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS body_measurements (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    weight DECIMAL(5,2) NULL COMMENT 'Weight in kg',
-    waist DECIMAL(5,2) NULL COMMENT 'Waist circumference in cm',
-    chest DECIMAL(5,2) NULL COMMENT 'Chest circumference in cm',
-    arms DECIMAL(5,2) NULL COMMENT 'Arms circumference in cm',
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
     recorded_on DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    weight      DECIMAL(5,2) NULL COMMENT 'kg',
+    waist       DECIMAL(5,2) NULL COMMENT 'cm',
+    chest       DECIMAL(5,2) NULL COMMENT 'cm',
+    arms        DECIMAL(5,2) NULL COMMENT 'cm',
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_body_measurements_user_day UNIQUE (user_id, recorded_on),
+    CONSTRAINT chk_bm_any_value CHECK (weight IS NOT NULL OR waist IS NOT NULL OR chest IS NOT NULL OR arms IS NOT NULL),
+    CONSTRAINT chk_bm_weight CHECK (weight IS NULL OR weight BETWEEN 30 AND 300),
+    CONSTRAINT chk_bm_waist CHECK (waist IS NULL OR waist BETWEEN 40 AND 200),
+    CONSTRAINT chk_bm_chest CHECK (chest IS NULL OR chest BETWEEN 50 AND 200),
+    CONSTRAINT chk_bm_arms CHECK (arms IS NULL OR arms BETWEEN 15 AND 80),
+    CONSTRAINT fk_bm_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 11. user_daily_fuel — daily protein / water / calorie targets and progress
+--     Targets are a snapshot computed when the day's row is created (from the
+--     body weight and goal at that date), so past days keep the targets that
+--     were actually in force. Created by sp_get_daily_fuel.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_daily_fuel (
+    user_id          INT NOT NULL,
+    fuel_date        DATE NOT NULL,
+    protein_target_g SMALLINT UNSIGNED NOT NULL,
+    water_target_ml  SMALLINT UNSIGNED NOT NULL,
+    calorie_target   SMALLINT UNSIGNED NOT NULL,
+    protein_logged_g SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    water_logged_ml  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, fuel_date),
+    CONSTRAINT chk_fuel_protein CHECK (protein_logged_g <= 1000),
+    CONSTRAINT chk_fuel_water CHECK (water_logged_ml <= 15000),
+    CONSTRAINT fk_fuel_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 12. admin_audit_logs — written by triggers on the exercises master library.
+--     The app sets the session variable @app_user_id before admin writes, so the
+--     trigger knows WHO made the change. NULL admin_id = seed / direct SQL.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    admin_id     INT NULL,
+    action       ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+    target_table VARCHAR(64) NOT NULL,
+    target_id    INT NOT NULL,
+    details      JSON NULL,
+    created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_audit_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
