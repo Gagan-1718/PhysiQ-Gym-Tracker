@@ -212,7 +212,7 @@ Passwords are bcrypt-hashed (10 rounds). All SQL uses parameterised queries.
 | Collection | Validator highlights | Indexes |
 |---|---|---|
 | `custom_routines` | `user_id` int, 1–20 exercises, each with `exercise_id`, `target_sets` 1–10, optional rep range, rest and superset letter | unique `(user_id, name)`, `(user_id, last_used_at)` |
-| `journey_stories` | `kind` enum, `date` `YYYY-MM-DD`, mood/energy 1–5, ≤ 12 tags, optional `photo_file` (UUID + extension) and `milestone`; **extra fields allowed** | `(user_id, date, created_at)` timeline, `(user_id, kind, date)` filtered feed, `(user_id, tags)` multikey, sparse `session_id`, **text index** on `caption` + `tags` |
+| `journey_stories` | `kind` enum, `date` `YYYY-MM-DD`, mood/energy 1–5, ≤ 12 tags, optional `photo_file` (UUID + extension) and `milestone`; **extra fields allowed** | `(user_id, date, _id)` timeline (matches the feed sort and keyset cursor, so no in-memory sort), `(user_id, kind, date)` filtered feed, `(user_id, tags)` multikey, sparse `session_id`, **text index** on `caption` + `tags` |
 
 Validators are applied with `validationLevel: strict` and
 `validationAction: error`, and `npm run test:db` checks them.

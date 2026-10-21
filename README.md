@@ -43,7 +43,9 @@ on the same Wi-Fi, then use *Add to Home Screen*.
 |---|---|
 | `npm run db:init` | First-time build. Refuses to touch an existing `physiq_db`. |
 | `npm run db:reset` | **Drops** and rebuilds both databases (all data is lost) |
-| `npm run test:db` | 37 database tests (constraints, triggers, procedures, views, Mongo validators). Each runs in a rolled-back transaction. |
+| `npm run test:db` | 39 database tests (constraints, triggers, procedures, views, Mongo validators and indexes). Each runs in a rolled-back transaction. |
+| `npm run test:api` | 32 API tests against the running app (auth, roles, workouts, rollback, journey, photos, fuel, progress). Needs `npm run dev` or `npm start` running on a fresh `db:init`. |
+| `npm test` | Both suites |
 | `npm run docs:dictionary` | Regenerates `docs/DATA_DICTIONARY.md` from `information_schema` |
 | `npm run db:generate-demo` | Regenerates the demo history seed |
 | `npm run typecheck` / `build` | TypeScript check / production build |

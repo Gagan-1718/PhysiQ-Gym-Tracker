@@ -37,7 +37,7 @@ Gym-goers track workouts, splits and body changes across fragmented apps or pape
 | **Indexing & EXPLAIN** | Composite B-Tree indexes; measured 7 vs 60,019 rows examined, 0.07 ms vs 27.5 ms | [`database/indexes.sql`](database/indexes.sql), [`docs/QUERY_PERFORMANCE_EXPLAIN.md`](docs/QUERY_PERFORMANCE_EXPLAIN.md) |
 | **Complex queries** | CTEs, window functions, correlated subquery, anti-join, gaps-and-islands streak, keyset pagination | [`database/queries/`](database/queries) |
 | **Web interface** | Next.js 14 PWA: Today, Train/logger, Progress, History, Profile, Admin | [`src/app/`](src/app) |
-| **Testing** | 37 automated database tests, each in a rolled-back transaction | [`tests/db/`](tests/db) |
+| **Testing** | 39 database tests (each in a rolled-back transaction) + 32 API tests, run on every push by GitHub Actions | [`tests/`](tests), [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 
 ---
 
@@ -143,7 +143,7 @@ in a final feed.
 | 7 | **Viva prep**: ER diagram image, demo script rehearsal, screenshots, team contribution summary | 10.3 | ⏳ next |
 
 Every phase was verified against real MySQL 8.0.46 and MongoDB 8.2:
-`npm run test:db` (37 tests), API smoke tests for each route, and scripted
+`npm test` (39 database tests + 32 API tests, also run by GitHub Actions on every push), and scripted
 browser walkthroughs of onboarding, a full workout, progress, profile and admin.
 
 ---
