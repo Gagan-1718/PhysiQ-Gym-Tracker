@@ -173,3 +173,19 @@ test('view_weekly_summary and view_weekly_muscle_volume aggregate a week correct
       { muscle_group: 'Chest', working_sets: 1, volume: 500 },
     ]);
   }));
+
+test('sp_rep_max_table: rep-max table round-trips the Epley formula and validates input', () =>
+  inRollback(async (conn) => {
+    const [[rows]] = await conn.query('CALL sp_rep_max_table(100, 10)');
+    assert.equal(rows.length, 12, 'reps 1..12');
+    assert.ok(rows.every((r) => r.one_rm === 133.33), 'same estimated 1RM on every row');
+    assert.equal(rows[0].weight_kg, 133.33, '1 rep = the 1RM itself');
+    assert.equal(rows[9].weight_kg, 100, 'the 10-rep row returns the input weight');
+    assert.equal(rows[4].weight_kg, 114.3, '5RM = 133.33 / (1 + 5/30)');
+    assert.equal(rows[11].pct_of_one_rm, 71);
+    assert.ok(rows.every((r, i, a) => i === 0 || r.weight_kg < a[i - 1].weight_kg), 'more reps means less weight');
+
+    for (const bad of ['0, 5', '100, 0', '100, 31', '-5, 5']) {
+      await assert.rejects(conn.query(`CALL sp_rep_max_table(${bad})`), /weight must be above 0/, bad);
+    }
+  }));
