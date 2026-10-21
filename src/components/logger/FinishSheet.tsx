@@ -6,6 +6,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Pill';
 import { clock, cn, compact } from '@/lib/format';
+import { MOODS } from '@/lib/mood';
 
 export interface JournalInput {
   mood: number | null;
@@ -14,13 +15,6 @@ export interface JournalInput {
   caption: string | null;
 }
 
-const MOODS = [
-  { value: 1, emoji: '😫', label: 'Drained' },
-  { value: 2, emoji: '😕', label: 'Meh' },
-  { value: 3, emoji: '🙂', label: 'Solid' },
-  { value: 4, emoji: '😀', label: 'Strong' },
-  { value: 5, emoji: '🔥', label: 'On fire' },
-];
 const TAGS = ['pump', 'fasted', 'pre-workout', 'low sleep', 'deload', 'crowded gym', 'new gym', 'injury care'];
 
 interface FinishSheetProps {
