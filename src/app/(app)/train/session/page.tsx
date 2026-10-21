@@ -204,7 +204,7 @@ export default function SessionPage() {
           <X className="h-5 w-5" />
         </IconButton>
         <div className="min-w-0 flex-1 text-center">
-          <p className="truncate text-headline">{draft.bodyPart}</p>
+          <h1 className="truncate text-headline">{draft.bodyPart}</h1>
           <p className="tabular font-round text-[15px] font-bold text-accent">{clock(elapsed)}</p>
         </div>
         <Button size="sm" className="h-10 px-4" onClick={() => setFinishOpen(true)}>
