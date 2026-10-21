@@ -38,7 +38,20 @@
         "items": { "bsonType": "string", "maxLength": 30 }
       },
       "photo_url": { "bsonType": ["string", "null"], "maxLength": 500 },
+      "photo_file": {
+        "bsonType": ["string", "null"],
+        "pattern": "^[a-f0-9-]{36}\\.(jpg|png|webp)$",
+        "description": "File name of the private upload (uploads/<user_id>/<photo_file>); served only to its owner by /api/photos"
+      },
       "photo_angle": { "enum": ["front", "side", "back", "other", null] },
+      "milestone": {
+        "bsonType": ["object", "null"],
+        "description": "Set on system-made milestone stories, e.g. { type: 'sessions', value: 25 }",
+        "properties": {
+          "type": { "enum": ["sessions"] },
+          "value": { "bsonType": "int", "minimum": 1 }
+        }
+      },
       "weight_snapshot": {
         "bsonType": ["double", "int", "decimal", "null"],
         "minimum": 30,
