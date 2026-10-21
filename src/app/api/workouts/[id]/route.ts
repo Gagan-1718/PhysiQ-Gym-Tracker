@@ -6,7 +6,7 @@ import { getMongoDb } from '@/lib/mongodb';
 import { requireUser } from '@/lib/session';
 import type { SessionSet, SessionSummary } from '@/types/database';
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 function parseId(raw: string) {
   const id = Number(raw);
@@ -17,7 +17,7 @@ function parseId(raw: string) {
 // GET /api/workouts/:id — one session with its sets, PR flags and journal
 export const GET = route<Ctx>(async (_req, { params }) => {
   const me = await requireUser();
-  const id = parseId(params.id);
+  const id = parseId((await params).id);
   const session = await selectOne<Omit<SessionSummary, 'exercise_count' | 'working_sets' | 'pr_count'>>(
     `SELECT id, session_date, body_part, split_day_id, started_at, ended_at, total_volume, notes
      FROM workout_sessions WHERE id = ? AND user_id = ?`,
@@ -79,7 +79,7 @@ const EditSchema = z
 // (SELECT ... FOR UPDATE), which serialises two devices editing the same workout.
 export const PATCH = route<Ctx>(async (req, { params }) => {
   const me = await requireUser();
-  const id = parseId(params.id);
+  const id = parseId((await params).id);
   const edit = EditSchema.parse(await readJson(req));
 
   const overlap = edit.sets.find((s) => edit.deleteSetIds.includes(s.id));
@@ -120,7 +120,7 @@ export const PATCH = route<Ctx>(async (req, { params }) => {
 // DELETE /api/workouts/:id — triggers roll back last-trained dates and rebuild PRs
 export const DELETE = route<Ctx>(async (_req, { params }) => {
   const me = await requireUser();
-  const id = parseId(params.id);
+  const id = parseId((await params).id);
   const res = await execute('DELETE FROM workout_sessions WHERE id = ? AND user_id = ?', [id, me.id]);
   if (res.affectedRows === 0) throw new ApiError(404, 'Workout not found.');
   try {
