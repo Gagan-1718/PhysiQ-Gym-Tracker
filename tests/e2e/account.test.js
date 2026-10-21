@@ -69,11 +69,19 @@ test('profile: reminders switch persists, data export downloads, members cannot 
 
   const sw = page.getByRole('switch', { name: 'Overdue reminders' });
   assert.equal(await sw.getAttribute('aria-checked'), 'false');
-  await sw.click();
-  await page.waitForFunction(() => document.querySelector('[role=switch]').getAttribute('aria-checked') === 'true');
-  await page.reload({ waitUntil: 'networkidle' });
-  assert.equal(await page.getByRole('switch', { name: 'Overdue reminders' }).getAttribute('aria-checked'), 'true', 'preference persisted on the device');
-  await page.getByRole('switch', { name: 'Overdue reminders' }).click();
+  // Headless Chromium (what CI uses) always reports notifications as blocked, even when the test grants them.
+  // There the app must say so instead of offering a dead switch; a full browser runs the whole toggle flow.
+  const permission = await page.evaluate(() => ('Notification' in window ? Notification.permission : 'unsupported'));
+  if (permission === 'granted') {
+    await sw.click();
+    await page.waitForFunction(() => document.querySelector('[role=switch]').getAttribute('aria-checked') === 'true');
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.getByRole('switch', { name: 'Overdue reminders' }).getAttribute('aria-checked'), 'true', 'preference persisted on the device');
+    await page.getByRole('switch', { name: 'Overdue reminders' }).click();
+  } else {
+    assert.equal(await sw.isDisabled(), true, `notifications are ${permission} here, so the switch must be disabled`);
+    assert.match(await page.locator('main').innerText(), /Blocked\.|does not support notifications/, 'and the page explains why');
+  }
 
   // The link points at the export endpoint and is marked as a download. (Clicking an <a download> leaves a
   // navigation that Playwright cannot cleanly cancel at browser close, so fetch it with the page's session instead.)
