@@ -129,6 +129,7 @@ export function JourneyView() {
               color="#B6F23B"
               unit="/ 5"
               height={150}
+              domain={[1, 5]}
               data={ins.moodByWeek.map((w) => ({
                 key: w.week,
                 date: `${parseLocalDate(w.week).getDate()} ${MONTHS[parseLocalDate(w.week).getMonth()]}`,
