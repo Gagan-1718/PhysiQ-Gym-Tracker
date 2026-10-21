@@ -1,5 +1,7 @@
-import { ApiError, ok, route } from '@/lib/api';
-import { execute, select, selectOne } from '@/lib/mysql';
+import { z } from 'zod';
+import { ApiError, ok, readJson, route } from '@/lib/api';
+import { execute, select, selectOne, withTransaction } from '@/lib/mysql';
+import { summariseSession } from '@/lib/workout-summary';
 import { getMongoDb } from '@/lib/mongodb';
 import { requireUser } from '@/lib/session';
 import type { SessionSet, SessionSummary } from '@/types/database';
@@ -49,6 +51,70 @@ export const GET = route<Ctx>(async (_req, { params }) => {
     sets: sets.map((s) => ({ ...s, is_warmup: Boolean(s.is_warmup), is_pr: Boolean(s.is_pr) })),
     journal,
   });
+});
+
+
+const EditSchema = z
+  .object({
+    notes: z.string().trim().max(500).nullable().optional(),
+    sets: z
+      .array(
+        z.object({
+          id: z.number().int().positive(),
+          weight: z.number().min(0).max(999.99),
+          reps: z.number().int().min(1).max(100),
+          rpe: z.number().min(1).max(10).nullable().optional(),
+          warmup: z.boolean().optional(),
+        })
+      )
+      .max(80)
+      .default([]),
+    deleteSetIds: z.array(z.number().int().positive()).max(80).default([]),
+  })
+  .refine((e) => e.sets.length > 0 || e.deleteSetIds.length > 0 || e.notes !== undefined, 'nothing to change');
+
+// PATCH /api/workouts/:id — correct a saved workout: edit or remove sets, change notes.
+// One transaction. The UPDATE/DELETE triggers on `sets` recompute total_volume and the
+// personal records, so the app never calculates them. The session row is locked first
+// (SELECT ... FOR UPDATE), which serialises two devices editing the same workout.
+export const PATCH = route<Ctx>(async (req, { params }) => {
+  const me = await requireUser();
+  const id = parseId(params.id);
+  const edit = EditSchema.parse(await readJson(req));
+
+  const overlap = edit.sets.find((s) => edit.deleteSetIds.includes(s.id));
+  if (overlap) throw new ApiError(400, 'A set cannot be both edited and deleted.');
+
+  await withTransaction(async (conn) => {
+    const owned = await select<{ id: number }>('SELECT id FROM workout_sessions WHERE id = ? AND user_id = ? FOR UPDATE', [id, me.id], conn);
+    if (owned.length === 0) throw new ApiError(404, 'Workout not found.');
+
+    const touched = [...edit.sets.map((s) => s.id), ...edit.deleteSetIds];
+    if (touched.length > 0) {
+      const inSession = await select<{ id: number }>('SELECT id FROM sets WHERE session_id = ? AND id IN (?)', [id, touched], conn);
+      const known = new Set(inSession.map((r) => r.id));
+      if (touched.some((t) => !known.has(t))) throw new ApiError(400, 'One of those sets does not belong to this workout.');
+    }
+
+    for (const s of edit.sets) {
+      await execute(
+        'UPDATE sets SET weight = ?, reps = ?, rpe = ?, is_warmup = COALESCE(?, is_warmup) WHERE id = ? AND session_id = ?',
+        [Math.round(s.weight * 100) / 100, s.reps, s.rpe ?? null, s.warmup ?? null, s.id, id],
+        conn
+      );
+    }
+    if (edit.deleteSetIds.length > 0) {
+      await execute('DELETE FROM sets WHERE session_id = ? AND id IN (?)', [id, edit.deleteSetIds], conn);
+    }
+    if (edit.notes !== undefined) {
+      await execute('UPDATE workout_sessions SET notes = ? WHERE id = ?', [edit.notes || null, id], conn);
+    }
+
+    const left = await selectOne<{ n: number }>('SELECT COUNT(*) AS n FROM sets WHERE session_id = ?', [id], conn);
+    if (!left || Number(left.n) === 0) throw new ApiError(400, 'A workout needs at least one set. Delete the workout instead.');
+  });
+
+  return ok(await summariseSession(id, me.id));
 });
 
 // DELETE /api/workouts/:id — triggers roll back last-trained dates and rebuild PRs
