@@ -67,6 +67,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Runtime dependencies only: build tooling (Tailwind 3's glob/PostCSS chain) never runs on user input
+      - name: Dependency audit (runtime packages, high severity and above)
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Type-check
         run: npm run typecheck
 
