@@ -19,7 +19,8 @@ export const PHOTO_MIME: Record<PhotoExt, string> = { jpg: 'image/jpeg', png: 'i
 const FILE_RE = /^[a-f0-9-]{36}\.(jpg|png|webp)$/;
 
 function root(): string {
-  return path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
+  // The upload folder is runtime data, not part of the build: tell Turbopack not to trace it into the bundle
+  return path.resolve(/* turbopackIgnore: true */ process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
 }
 
 export function isPhotoFileName(name: string): boolean {
@@ -53,7 +54,7 @@ export async function savePhoto(userId: number, buf: Buffer, ext: PhotoExt): Pro
 
 export async function readPhoto(userId: number, file: string): Promise<Buffer | null> {
   try {
-    return await readFile(resolveFor(userId, file));
+    return await readFile(/* turbopackIgnore: true */ resolveFor(userId, file));
   } catch {
     return null;
   }
