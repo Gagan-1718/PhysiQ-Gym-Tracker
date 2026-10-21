@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { client, signedIn, uniqueEmail, DEMO_PASSWORD, BASE } = require('./helpers');
@@ -92,6 +93,13 @@ test('health details, library writes and the audit log are role-gated', async ()
   assert.equal(audit.body[0].action, 'INSERT');
   assert.equal(audit.body[0].admin_name, 'PhysiQ Admin', 'the trigger recorded who acted');
   assert.equal((await admin.del(`/api/exercises/${added.body.id}`)).status, 200);
+
+  // A trained exercise cannot be deleted: ON DELETE RESTRICT -> 409 (also with the restricted app account,
+  // which receives the short foreign-key error codes)
+  const trained = (await alex.get('/api/exercises')).body.exercises.find((e) => e.name === 'Barbell Bench Press');
+  assert.equal((await admin.del(`/api/exercises/${trained.id}`)).status, 409);
+  const ghost = await admin.post('/api/workouts', { clientRef: crypto.randomUUID(), sessionDate: new Date().toISOString().slice(0, 10), splitDayId: null, bodyPart: 'X', startedAt: null, endedAt: null, exercises: [{ exerciseId: 999999, sets: [{ weight: 1, reps: 1, warmup: false }] }] });
+  assert.equal(ghost.status, 400, 'FK violation on a set is a 400, not a 500');
 });
 
 test('account deletion needs the password and signs the session out of the data', async () => {
