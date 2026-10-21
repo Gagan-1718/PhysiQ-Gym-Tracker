@@ -3,13 +3,13 @@ import { callOut, select, selectOne } from '@/lib/mysql';
 import { requireUser } from '@/lib/session';
 import type { OverloadTarget, PersonalRecord } from '@/types/database';
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/progress/exercises/:id — strength trend (view_exercise_session_best),
 // current PR and the next overload target (sp_estimate_next_target)
 export const GET = route<Ctx>(async (_req, { params }) => {
   const me = await requireUser();
-  const id = Number(params.id);
+  const id = Number((await params).id);
   if (!Number.isInteger(id) || id <= 0) throw new ApiError(400, 'Invalid exercise id.');
 
   const [exercise, series, pr, target] = await Promise.all([
