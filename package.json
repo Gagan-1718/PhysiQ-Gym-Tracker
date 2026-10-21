@@ -16,7 +16,8 @@
     "test:api": "node scripts/run-tests.js tests/api",
     "test": "npm run test:db && npm run test:api",
     "docs:er": "node scripts/generate-er-diagram.js",
-    "viva:mongo": "node database/mongodb/viva_demo.js"
+    "viva:mongo": "node database/mongodb/viva_demo.js",
+    "docs:contributions": "node scripts/generate-contributions.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
