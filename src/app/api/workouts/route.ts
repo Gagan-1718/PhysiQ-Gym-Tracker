@@ -4,6 +4,7 @@ import { ApiError, ok, readJson, route } from '@/lib/api';
 import { execute, select, selectOne, withTransaction } from '@/lib/mysql';
 import { getMongoDb } from '@/lib/mongodb';
 import { recordSessionMilestone } from '@/lib/milestones';
+import { summariseSession } from '@/lib/workout-summary';
 import { requireUser } from '@/lib/session';
 import type { SessionSummary } from '@/types/database';
 
@@ -49,29 +50,6 @@ const WorkoutSchema = z.object({
     .optional(),
 });
 
-interface SavedPR {
-  exercise_id: number;
-  exercise_name: string;
-  weight: number;
-  reps: number;
-  estimated_1rm: number;
-}
-
-async function summarise(sessionId: number, userId: number) {
-  const session = await selectOne<{ total_volume: number; working_sets: number }>(
-    `SELECT ws.total_volume, (SELECT COUNT(*) FROM sets s WHERE s.session_id = ws.id AND s.is_warmup = FALSE) AS working_sets
-     FROM workout_sessions ws WHERE ws.id = ? AND ws.user_id = ?`,
-    [sessionId, userId]
-  );
-  // PR rows that now point at sets of this session = personal records set today (found by the triggers)
-  const prs = await select<SavedPR>(
-    `SELECT exercise_id, exercise_name, weight, reps, estimated_1rm
-     FROM view_personal_records_detailed WHERE user_id = ? AND session_id = ? ORDER BY exercise_name`,
-    [userId, sessionId]
-  );
-  return { sessionId, totalVolume: session?.total_volume ?? 0, workingSets: session?.working_sets ?? 0, prs };
-}
-
 // POST /api/workouts — log a finished workout as ONE transaction:
 //   INSERT workout_sessions  (trigger: validate, mark split day trained)
 //   INSERT sets              (triggers: add volume, detect PRs)
@@ -114,7 +92,7 @@ export const POST = route(async (req) => {
     replay = true;
   }
 
-  const summary = await summarise(sessionId, me.id);
+  const summary = await summariseSession(sessionId, me.id);
 
   // MongoDB side effects are best-effort: the workout itself is already committed in MySQL
   const warnings: string[] = [];
