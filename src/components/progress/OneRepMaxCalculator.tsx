@@ -63,19 +63,18 @@ export function OneRepMaxCalculator({ defaultWeight = 60, defaultReps = 8 }: { d
         {error && <p className="mt-3 text-[15px] text-train">{error.message}</p>}
 
         {data && (
-          <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4" role="table" aria-label="Estimated weight for each rep count">
+          <ul className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label="Estimated weight for each rep count">
             {data.table.map((row) => (
-              <div
+              <li
                 key={row.reps}
-                role="row"
                 className={cn('rounded-xl p-2.5 text-center', row.reps === query?.reps ? 'bg-accent/15 ring-1 ring-accent/40' : 'bg-surface-2')}
               >
-                <p className="text-footnote text-fg-3">{row.reps} {row.reps === 1 ? 'rep' : 'reps'}</p>
+                <p className={cn('text-footnote', row.reps === query?.reps ? 'text-fg-2' : 'text-fg-3')}>{row.reps} {row.reps === 1 ? 'rep' : 'reps'}</p>
                 <p className="font-round text-lg font-extrabold">{kg(row.weight_kg)}</p>
-                <p className="text-[11px] font-semibold text-fg-3">{row.pct_of_one_rm}%</p>
-              </div>
+                <p className={cn('text-[11px] font-semibold', row.reps === query?.reps ? 'text-fg-2' : 'text-fg-3')}>{row.pct_of_one_rm}%</p>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
         <p className="mt-3 text-footnote text-fg-3">Epley formula: weight × (1 + reps ÷ 30). Most accurate up to about 10 reps.</p>
       </Card>
