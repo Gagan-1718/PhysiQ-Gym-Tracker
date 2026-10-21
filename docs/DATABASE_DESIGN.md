@@ -212,10 +212,37 @@ Passwords are bcrypt-hashed (10 rounds). All SQL uses parameterised queries.
 | Collection | Validator highlights | Indexes |
 |---|---|---|
 | `custom_routines` | `user_id` int, 1–20 exercises, each with `exercise_id`, `target_sets` 1–10, optional rep range, rest and superset letter | unique `(user_id, name)`, `(user_id, last_used_at)` |
-| `journey_stories` | `kind` enum, `date` `YYYY-MM-DD`, mood/energy 1–5, ≤ 12 tags; **extra fields allowed** | `(user_id, date, created_at)`, `(user_id, tags)` multikey, sparse `session_id` |
+| `journey_stories` | `kind` enum, `date` `YYYY-MM-DD`, mood/energy 1–5, ≤ 12 tags, optional `photo_file` (UUID + extension) and `milestone`; **extra fields allowed** | `(user_id, date, created_at)` timeline, `(user_id, kind, date)` filtered feed, `(user_id, tags)` multikey, sparse `session_id`, **text index** on `caption` + `tags` |
 
 Validators are applied with `validationLevel: strict` and
 `validationAction: error`, and `npm run test:db` checks them.
+
+### What the journey uses MongoDB for
+
+| Feature | MongoDB capability | Where |
+|---|---|---|
+| Chronological feed, newest first, no `OFFSET` | compound index + **keyset paging** on `(date, _id)` | `GET /api/journey` |
+| Filter by kind or tag | `(user_id, kind, date)` index and the **multikey** tags index | same |
+| Search captions and tags | **`$text` search** with weights (caption 2, tags 1). Every query also filters by `user_id`, so members only search their own stories | same |
+| Mood by week, top tags, counts per kind | one **aggregation** using `$facet`: `$group`, `$dateTrunc` (Monday weeks), `$unwind`, `$sort`, `$limit` | `GET /api/journey/insights` |
+| Workout journals with embedded PR highlights | **nested arrays** of free-form objects, written after the MySQL commit | `POST /api/workouts` |
+| Milestone stories (1st, 10th, 25th, 50th, 100th, 250th session) | counts sessions in MySQL, inserts once (idempotent check) | `src/lib/milestones.ts` |
+
+### Progress photos: where the bytes live
+
+Image files are **not** stored in either database. The story document keeps the file name,
+the angle, and the **body weight in force on that date, read from MySQL with
+`fn_current_weight`** (a small example of the two stores cooperating).
+
+- Files go to `uploads/<user_id>/<uuid>.<ext>`, outside `public/`, and are served only by `/api/photos/<file>`. That route builds the folder from the **session** user id, so another member's file name returns 404.
+- The type is decided from the file's **magic bytes** (JPEG, PNG and WebP only; SVG and HTML are rejected even when named `.png`). Max 6 MB, server-generated names, no path traversal.
+- The browser shrinks photos to 1600 px and re-encodes them as JPEG before upload, which also **removes EXIF and GPS data**.
+- Deleting a story deletes its file. If the document insert fails, the just-saved file is removed.
+
+### Cross-store consistency rules
+1. MySQL is the system of record. MongoDB writes happen **after** the MySQL commit and are best-effort: a failure returns a warning and never loses the workout.
+2. Ids that point at MySQL (`user_id`, `exercise_id`, `session_id`) are checked by the API before a Mongo write.
+3. Deleting an account removes the MySQL rows (FK cascades) and then the member's Mongo documents.
 
 ---
 
