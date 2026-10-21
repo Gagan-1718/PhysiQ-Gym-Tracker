@@ -48,7 +48,7 @@ jobs:
       MYSQL_DATABASE: physiq_db
       # The app and the privilege tests use the least-privilege account (role physiq_app),
       # created by db:init. '%' because the service container sees the runner as a remote host.
-      MYSQL_APP_USER: physiq_app
+      MYSQL_APP_USER: physiq_web
       MYSQL_APP_PASSWORD: ci_app_password
       MYSQL_APP_HOST: '%'
       MONGODB_URI: mongodb://127.0.0.1:27017
