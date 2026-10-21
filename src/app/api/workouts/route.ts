@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { ApiError, ok, readJson, route } from '@/lib/api';
 import { execute, select, selectOne, withTransaction } from '@/lib/mysql';
 import { getMongoDb } from '@/lib/mongodb';
+import { recordSessionMilestone } from '@/lib/milestones';
 import { requireUser } from '@/lib/session';
 import type { SessionSummary } from '@/types/database';
 
@@ -138,6 +139,7 @@ export const POST = route(async (req) => {
           created_at: new Date(),
         });
       }
+      await recordSessionMilestone(me.id, w.sessionDate);
       if (w.routineId) {
         await db
           .collection('custom_routines')
