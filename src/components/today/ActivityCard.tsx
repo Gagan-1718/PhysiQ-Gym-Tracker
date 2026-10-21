@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Check, Plus } from 'lucide-react';
 import { Rings } from '@/components/ui/Rings';
 import { kg } from '@/lib/format';
 import type { DailyFuel } from '@/types/database';
@@ -9,12 +9,17 @@ const TRAIN = { color: '#FA2D55', deep: '#B3123A' };
 const PROTEIN = { color: '#B6F23B', deep: '#6FA312' };
 const WATER = { color: '#2DD4F5', deep: '#0E7FA0' };
 
-function Metric({ label, value, target, unit, color }: { label: string; value: string; target: string; unit: string; color: string }) {
+function Metric({ label, value, target, unit, color, done }: { label: string; value: string; target: string; unit: string; color: string; done?: boolean }) {
   return (
     <div>
       <p className="flex items-center gap-2 text-[15px] font-semibold text-fg-2">
         <span className="h-[3px] w-3.5 rounded-full" style={{ background: color }} aria-hidden />
         {label}
+        {done && (
+          <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold text-black" style={{ background: color }}>
+            <Check className="h-3 w-3" strokeWidth={3} /> Goal hit
+          </span>
+        )}
       </p>
       <p className="mt-0.5 font-round text-[26px] font-extrabold leading-none text-fg">
         {value}
@@ -73,14 +78,15 @@ export function ActivityCard({
           />
         </div>
         <div className="min-w-0 space-y-2.5">
-          <Metric label="Train" value={String(sessions)} target={String(goal)} unit="this week" color={TRAIN.color} />
-          <Metric label="Protein" value={fuel ? String(fuel.protein_logged_g) : '–'} target={fuel ? String(fuel.protein_target_g) : '–'} unit="g" color={PROTEIN.color} />
+          <Metric label="Train" value={String(sessions)} target={String(goal)} unit="this week" color={TRAIN.color} done={goal > 0 && sessions >= goal} />
+          <Metric label="Protein" value={fuel ? String(fuel.protein_logged_g) : '–'} target={fuel ? String(fuel.protein_target_g) : '–'} unit="g" color={PROTEIN.color} done={Boolean(fuel && fuel.protein_logged_g >= fuel.protein_target_g)} />
           <Metric
             label="Water"
             value={fuel ? kg(Math.round(fuel.water_logged_ml / 100) / 10) : '–'}
             target={fuel ? kg(Math.round(fuel.water_target_ml / 100) / 10) : '–'}
             unit="L"
             color={WATER.color}
+            done={Boolean(fuel && fuel.water_logged_ml >= fuel.water_target_ml)}
           />
         </div>
       </div>
