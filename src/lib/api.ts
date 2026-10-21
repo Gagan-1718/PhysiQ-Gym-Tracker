@@ -57,7 +57,7 @@ function toResponse(err: unknown) {
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
 
 /** Wrap a route handler with consistent error handling. */
-export function route<C = { params: Record<string, string> }>(handler: Handler<C>): Handler<C> {
+export function route<C = { params: Promise<Record<string, string>> }>(handler: Handler<C>): Handler<C> {
   return async (req, ctx) => {
     try {
       return await handler(req, ctx);
