@@ -11,8 +11,10 @@
     "db:init": "node scripts/init-db.js",
     "db:reset": "node scripts/init-db.js --reset",
     "db:generate-demo": "node scripts/generate-demo-data.js",
-    "test:db": "node --test --test-concurrency=1",
-    "docs:dictionary": "node scripts/generate-data-dictionary.js"
+    "test:db": "node scripts/run-tests.js tests/db",
+    "docs:dictionary": "node scripts/generate-data-dictionary.js",
+    "test:api": "node scripts/run-tests.js tests/api",
+    "test": "npm run test:db && npm run test:api"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
