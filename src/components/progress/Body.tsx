@@ -88,7 +88,7 @@ export function Body() {
       <Card>
         <p className="mb-2 text-footnote font-medium text-fg-2">Weight</p>
         <Stepper label="body weight" value={shownWeight} onChange={setWeight} step={0.1} min={30} max={300} unit="kg" decimals />
-        <button onClick={() => setMore((m) => !m)} className="mt-4 flex items-center gap-1 text-[15px] font-medium text-fg-2 hover:text-fg" aria-expanded={more}>
+        <button onClick={() => setMore((m) => !m)} className="-mb-2 mt-2 flex min-h-[2.75rem] items-center gap-1 text-[15px] font-medium text-fg-2 hover:text-fg" aria-expanded={more}>
           Measurements <ChevronDown className={cn('h-4 w-4 transition-transform', more && 'rotate-180')} />
         </button>
         {more && (

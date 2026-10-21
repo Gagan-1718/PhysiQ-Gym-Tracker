@@ -26,7 +26,7 @@ export function SectionHeader({
     <div className={cn('mb-2.5 mt-7 flex items-end justify-between px-1', className)}>
       <h2 className="text-title text-fg">{title}</h2>
       {href ? (
-        <Link href={href} className="flex items-center text-[15px] font-medium text-accent hover:brightness-110">
+        <Link href={href} className="-my-2 flex min-h-[2.75rem] items-center text-[15px] font-medium text-accent hover:brightness-110">
           Show more <ChevronRight className="h-4 w-4" />
         </Link>
       ) : (
