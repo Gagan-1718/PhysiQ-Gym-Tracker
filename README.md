@@ -97,13 +97,15 @@ from the repo files, runs `npm run test:db`, builds the app, then runs
 | 12-table schema in 3NF (`personal_records` in BCNF) | `database/schema.sql` |
 | CHECK constraints, a one-active-split rule via generated column + unique index, an idempotency key | `schema.sql` |
 | 11 triggers: volume, last-trained date, PR detection, `SIGNAL` validation, audit trail | `database/triggers.sql` |
-| 9 procedures and 5 functions: adaptive scheduler, overload estimator, fuel targets, PR rebuild (window function) | `database/procedures.sql` |
+| 11 procedures and 5 functions: adaptive scheduler, overload estimator, fuel targets, PR rebuild (window function), rep-max table (recursive CTE), schema stats (`SQL SECURITY DEFINER`) | `database/procedures.sql` |
 | 5 views: recovery status with priority rank, PRs, weekly volume, sets per muscle, per-session bests | `database/views.sql` |
 | Composite indexes with **real** EXPLAIN / EXPLAIN ANALYZE proof (7 rows vs 60,019; 0.07 ms vs 27.5 ms) | `database/indexes.sql`, `docs/QUERY_PERFORMANCE_EXPLAIN.md` |
 | ACID workout logging, split switching, audited admin writes | `src/app/api/workouts`, `src/app/api/splits`, `src/lib/mysql.ts` |
 | Analytical suite: CTEs, window functions (`ROW_NUMBER`, `LAG`, running `MAX`), correlated subquery, anti-join, gaps-and-islands | `database/queries/` |
 | MongoDB: `custom_routines` and `journey_stories` with JSON-schema validators, compound / multikey / **text** indexes, keyset paging and a `$facet` aggregation | `database/mongodb/`, `src/app/api/journey`, `src/app/api/routines` |
 | RBAC: `member` / `admin`, bcrypt, every query scoped by the session user | `src/lib/auth.ts`, `src/lib/session.ts` |
+| **Least privilege in MySQL:** the web app connects as `physiq_app` (role `physiq_app`: row access + `EXECUTE`, no DDL, no `GRANT`); a `physiq_readonly` role exists for reporting. Privileges are tested. | `database/roles.sql`, `scripts/init-db.js`, `tests/db/privileges.test.js` |
+| Security headers and a production Content-Security-Policy (same-origin only, no framing); API responses are never cached | `next.config.mjs` |
 
 <p align="center">
   <img src="docs/diagrams/architecture.png" width="900" alt="Architecture: browser, route handlers, MySQL, MongoDB and private photo storage">
@@ -122,7 +124,7 @@ Full write-up: [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) ·
 
 ```text
 database/
-  schema.sql  procedures.sql  triggers.sql  views.sql  indexes.sql
+  schema.sql  procedures.sql  triggers.sql  views.sql  indexes.sql  roles.sql
   seeds/       exercises.sql (44 movements), demo_data.sql (generated)
   mongodb/     validators, viva_demo.js
   queries/     analytical suite, EXPLAIN benchmark, viva_demo.sql
@@ -131,6 +133,7 @@ docs/          design, data dictionary (generated), EXPLAIN proof, viva guide,
 scripts/       init-db.js (DELIMITER-aware runner), test runner, generators
 tests/db/      node:test suite against MySQL + MongoDB
 tests/api/     node:test suite against the running app
+tests/e2e/     Playwright + axe-core browser suite (flows, accessibility, overflow)
 .github/       CI workflow
 src/
   app/(auth)   login, register
@@ -142,6 +145,7 @@ public/        icons, service worker (notifications only)
 ```
 
 ## Tech stack
-Next.js 14 (App Router) · TypeScript · Tailwind CSS · Framer Motion · SWR ·
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · Framer Motion · SWR ·
 NextAuth (credentials + bcrypt) · mysql2 · MongoDB Node driver · zod.
+Tested with node:test, Playwright and axe-core (WCAG 2.2 AA).
 Inter + Nunito type, with a dark design in the style of Apple Fitness.
