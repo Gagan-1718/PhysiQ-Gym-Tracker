@@ -25,7 +25,7 @@ function client() {
       jar.set(kv.slice(0, i), kv.slice(i + 1));
     }
     const type = res.headers.get('content-type') || '';
-    const body = type.includes('application/json') ? await res.json() : Buffer.from(await res.arrayBuffer());
+    const body = type.includes('json') ? await res.json() : Buffer.from(await res.arrayBuffer());
     return { status: res.status, body, headers: res.headers };
   }
 
