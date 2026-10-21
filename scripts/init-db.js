@@ -52,6 +52,11 @@ const MONGO_COLLECTIONS = [
       { key: { user_id: 1, date: -1, created_at: -1 }, name: 'idx_user_timeline' },
       { key: { user_id: 1, tags: 1 }, name: 'idx_user_tags' },
       { key: { session_id: 1 }, name: 'idx_session', sparse: true },
+      // Feed filtered by kind (journals / photos / milestones), newest first
+      { key: { user_id: 1, kind: 1, date: -1 }, name: 'idx_user_kind_date' },
+      // Full-text search over captions and tags (one text index per collection);
+      // queries always add user_id, so a member only ever searches their own stories
+      { key: { caption: 'text', tags: 'text' }, name: 'txt_caption_tags', weights: { caption: 2, tags: 1 }, default_language: 'english' },
     ],
   },
 ];
