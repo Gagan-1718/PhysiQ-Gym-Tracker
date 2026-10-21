@@ -22,6 +22,7 @@ export function LineChart({
   title,
   height = 200,
   reference,
+  domain,
 }: {
   data: Point[];
   color: string;
@@ -30,6 +31,8 @@ export function LineChart({
   height?: number;
   /** Optional horizontal marker, e.g. the next target */
   reference?: { value: number; label: string };
+  /** Fixed value range for bounded scales (e.g. mood 1 to 5) instead of fitting the data */
+  domain?: [number, number];
 }) {
   const id = useId().replace(/:/g, '');
   const svgRef = useRef<SVGSVGElement>(null);
@@ -42,7 +45,7 @@ export function LineChart({
   const lo = Math.min(...values);
   const hi = Math.max(...values);
   const spread = Math.max(hi - lo, Math.abs(hi) * 0.05, 1);
-  const ticks = niceTicks(lo - spread * 0.15, hi + spread * 0.15, 3);
+  const ticks = domain ? niceTicks(domain[0], domain[1], domain[1] - domain[0]) : niceTicks(lo - spread * 0.15, hi + spread * 0.15, 3);
   const x = linear(0, Math.max(1, data.length - 1), pad.left, W - pad.right);
   const y = linear(ticks[0], ticks[ticks.length - 1], H - pad.bottom, pad.top);
 
