@@ -173,3 +173,55 @@ test('the overdue alert comes straight from view_split_day_status', async () => 
   for (let i = 1; i < alerts.length; i++) assert.ok(alerts[i - 1].days_since >= alerts[i].days_since, 'worst first');
   assert.deepEqual((await admin.get('/api/alerts')).body.alerts, [], 'admin has no split, so nothing is overdue');
 });
+
+test('editing a saved workout: UPDATE / DELETE triggers recompute volume and PRs; invalid edits change nothing', async () => {
+  const bench = id('Barbell Bench Press'); // demo record: 72.5 x 10 (e1RM 96.67)
+  const saved = await alex.post(
+    '/api/workouts',
+    workout({
+      exercises: [{ exerciseId: bench, sets: [{ weight: 50, reps: 10, warmup: false }, { weight: 50, reps: 8, warmup: false }, { weight: 20, reps: 10, warmup: true }] }],
+    })
+  );
+  assert.equal(saved.status, 201);
+  const sid = saved.body.sessionId;
+  savedSessions.push(sid);
+  assert.equal(saved.body.totalVolume, 50 * 10 + 50 * 8);
+
+  const sets = (await alex.get(`/api/workouts/${sid}`)).body.sets;
+  const [s1, s2, warm] = sets;
+
+  // Edit 50x10 -> 80x10: e1RM 106.67 beats the 96.67 record, volume follows
+  const up = await alex.patch(`/api/workouts/${sid}`, { sets: [{ id: s1.id, weight: 80, reps: 10 }] });
+  assert.equal(up.status, 200, JSON.stringify(up.body));
+  assert.equal(up.body.totalVolume, 80 * 10 + 50 * 8, 'trg_sets_au swapped the old volume for the new');
+  assert.deepEqual(up.body.prs.map((p) => `${p.exercise_name} ${p.weight}x${p.reps}`), ['Barbell Bench Press 80x10'], 'trg_sets_au re-ran PR detection');
+  assert.equal((await alex.get(`/api/workouts/${sid}`)).body.sets.find((s) => s.id === s1.id).is_pr, true);
+
+  // Turning a working set into a warm-up removes it from the volume
+  const wu = await alex.patch(`/api/workouts/${sid}`, { sets: [{ id: s2.id, weight: 50, reps: 8, warmup: true }] });
+  assert.equal(wu.body.totalVolume, 800);
+
+  // Deleting the record set promotes the previous best (72.5 x 10) back to PR
+  const del = await alex.patch(`/api/workouts/${sid}`, { deleteSetIds: [s1.id] });
+  assert.equal(del.status, 200);
+  assert.equal(del.body.totalVolume, 0, 'only warm-ups left');
+  assert.deepEqual(del.body.prs, [], 'this workout no longer holds the record');
+  const ctx = (await alex.get(`/api/train/context?ids=${bench}`)).body[bench];
+  assert.equal(ctx.pr.weight, 72.5, 'trg_sets_ad promoted the next best set');
+
+  // Invalid edits are rejected and leave the workout exactly as it was
+  const before = (await alex.get(`/api/workouts/${sid}`)).body;
+  const foreignSet = (await alex.get('/api/workouts?limit=5')).body.sessions.find((x) => x.id !== sid).id; // another session of alex
+  const foreign = (await alex.get(`/api/workouts/${foreignSet}`)).body.sets[0].id;
+  assert.equal((await alex.patch(`/api/workouts/${sid}`, { sets: [{ id: foreign, weight: 1, reps: 1 }] })).status, 400, "a set of a different workout");
+  assert.equal((await alex.patch(`/api/workouts/${sid}`, { deleteSetIds: [s2.id, warm.id] })).status, 400, 'cannot leave a workout empty');
+  assert.equal((await alex.patch(`/api/workouts/${sid}`, { sets: [{ id: s2.id, weight: 1, reps: 0 }] })).status, 400, 'reps >= 1');
+  assert.equal((await alex.patch(`/api/workouts/${sid}`, { sets: [{ id: s2.id, weight: 1, reps: 5 }], deleteSetIds: [s2.id] })).status, 400, 'edit + delete of the same set');
+  assert.equal((await alex.patch(`/api/workouts/${sid}`, {})).status, 400, 'nothing to change');
+  assert.deepEqual((await alex.get(`/api/workouts/${sid}`)).body.sets, before.sets, 'rolled back: sets unchanged');
+
+  // Ownership
+  assert.equal((await admin.patch(`/api/workouts/${sid}`, { notes: 'hijack' })).status, 404);
+  assert.equal((await alex.patch(`/api/workouts/${sid}`, { notes: 'edited note' })).status, 200);
+  assert.equal((await alex.get(`/api/workouts/${sid}`)).body.session.notes, 'edited note');
+});
