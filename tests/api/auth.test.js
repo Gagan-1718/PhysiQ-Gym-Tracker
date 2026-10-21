@@ -112,3 +112,24 @@ test('account deletion needs the password and signs the session out of the data'
   assert.equal((await c.get('/api/me')).status, 401, 'the deleted account no longer resolves');
   assert.ok(BASE);
 });
+
+test('data export returns the member\'s own data from both databases and never the password hash', async () => {
+  const alex = await signedIn('alex@physiq.test');
+  const res = await alex.get('/api/me/export');
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-disposition'), /attachment; filename="physiq-export-\d{4}-\d{2}-\d{2}\.json"/);
+  const data = res.body;
+  assert.equal(data.format, 'physiq-export/1');
+  assert.equal(data.profile.email, 'alex@physiq.test');
+  assert.ok(!JSON.stringify(data).includes('password_hash') && !JSON.stringify(data).includes('$2a$'), 'no credentials in the export');
+  assert.ok(data.workouts.length >= 19, 'MySQL workouts');
+  assert.ok(data.workouts.every((w) => Array.isArray(w.sets) && w.sets.length > 0), 'sets nested under each workout');
+  assert.ok(data.personalRecords.length >= 12 && data.bodyMeasurements.length >= 6 && data.dailyFuel.length >= 7);
+  assert.ok(data.journey.length >= 6 && data.routines.length >= 2, 'MongoDB stories and routines');
+
+  const admin = await signedIn('admin@physiq.test');
+  const other = (await admin.get('/api/me/export')).body;
+  assert.equal(other.profile.email, 'admin@physiq.test');
+  assert.equal(other.workouts.length, 0, "never another member's data");
+  assert.equal((await client().get('/api/me/export')).status, 401);
+});
