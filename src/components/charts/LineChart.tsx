@@ -144,7 +144,9 @@ export function LineChart({
           </p>
         </div>
       )}
-      <table className="sr-only">
+      {/* wrapped: a bare <table> ignores sr-only's 1px width and makes the page scroll sideways on narrow phones */}
+      <div className="sr-only">
+      <table>
         <caption>{title}</caption>
         <tbody>
           {data.map((d) => (
@@ -158,6 +160,7 @@ export function LineChart({
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }

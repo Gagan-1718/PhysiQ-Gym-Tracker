@@ -96,7 +96,9 @@ export function ColumnChart({ data, color, unit, height = 180, title }: { data: 
           </p>
         </div>
       )}
-      <table className="sr-only">
+      {/* wrapped: a bare <table> ignores sr-only's 1px width and makes the page scroll sideways on narrow phones */}
+      <div className="sr-only">
+      <table>
         <caption>{title}</caption>
         <tbody>
           {data.map((d) => (
@@ -110,6 +112,7 @@ export function ColumnChart({ data, color, unit, height = 180, title }: { data: 
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }
