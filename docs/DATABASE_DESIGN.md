@@ -37,6 +37,10 @@ Mongo. Deleting a user also deletes their Mongo documents.
 
 ## 2. Entity-relationship model (MySQL)
 
+![ER diagram generated from the live schema](diagrams/er-diagram.png)
+
+*Generated from `information_schema` by `npm run docs:er` (source: [`diagrams/er-diagram.mmd`](diagrams/er-diagram.mmd), vector version: [`er-diagram.svg`](diagrams/er-diagram.svg)). The architecture of both stores is in [`diagrams/architecture.png`](diagrams/architecture.png). The summary below shows the relationships and delete rules.*
+
 ```mermaid
 erDiagram
     users ||--o{ splits : owns
