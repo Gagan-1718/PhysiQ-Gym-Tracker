@@ -1,7 +1,7 @@
 'use client';
 
 import { Minus, Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/format';
 
 interface StepperProps {
@@ -23,6 +23,7 @@ interface StepperProps {
  */
 export function Stepper({ value, onChange, step, min = 0, max = 999, unit, label, decimals, size = 'lg', className }: StepperProps) {
   const [text, setText] = useState(value === null ? '' : String(value));
+  const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => setText(value === null ? '' : String(value)), [value]);
 
   const clamp = (n: number) => Math.min(max, Math.max(min, Math.round(n * 100) / 100));
@@ -50,8 +51,11 @@ export function Stepper({ value, onChange, step, min = 0, max = 999, unit, label
       >
         <Minus className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
       </button>
-      <div className="flex min-w-0 flex-1 items-baseline justify-center">
+      {/* Tapping anywhere in the centre (not just on the digits) edits the number */}
+      <div className={cn('flex min-w-0 flex-1 cursor-text items-center justify-center self-stretch', h)} onClick={() => inputRef.current?.focus()}>
+        <div className="flex min-w-0 max-w-full items-baseline">
         <input
+          ref={inputRef}
           aria-label={label}
           inputMode={decimals ? 'decimal' : 'numeric'}
           value={text}
@@ -72,6 +76,7 @@ export function Stepper({ value, onChange, step, min = 0, max = 999, unit, label
             {unit}
           </span>
         )}
+        </div>
       </div>
       <button
         type="button"
