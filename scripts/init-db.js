@@ -32,6 +32,7 @@ const SQL_FILES = [
   'database/triggers.sql',
   'database/views.sql',
   'database/indexes.sql',
+  'database/roles.sql',
   'database/seeds/exercises.sql',
 ];
 const DEMO_SQL_FILES = ['database/seeds/demo_data.sql'];
@@ -165,6 +166,31 @@ async function runSqlFile(conn, relPath) {
   console.log(`  ✓ ${relPath} (${statements.length} statements)`);
 }
 
+/**
+ * Create the least-privilege application account (MySQL 8 role physiq_app, see
+ * database/roles.sql). Only when MYSQL_APP_USER is set; otherwise the app keeps
+ * using the admin account, which is fine for a quick local trial but not for a real deployment.
+ */
+async function createAppAccount(conn) {
+  const user = process.env.MYSQL_APP_USER;
+  if (!user) {
+    console.log('  ! MYSQL_APP_USER is not set: the app will connect with the admin account (set it for least privilege)');
+    return;
+  }
+  const password = process.env.MYSQL_APP_PASSWORD;
+  if (!password) throw new Error('MYSQL_APP_PASSWORD is required when MYSQL_APP_USER is set.');
+  if (!/^[A-Za-z0-9_]{1,32}$/.test(user)) throw new Error('MYSQL_APP_USER may only contain letters, digits and underscores.');
+  const host = process.env.MYSQL_APP_HOST || 'localhost';
+  if (!/^[A-Za-z0-9_.%:-]{1,60}$/.test(host)) throw new Error('MYSQL_APP_HOST contains unexpected characters.');
+
+  // Identifiers cannot be bound as parameters; they are validated above. The password is bound.
+  await conn.query(`CREATE USER IF NOT EXISTS '${user}'@'${host}' IDENTIFIED BY ?`, [password]);
+  await conn.query(`ALTER USER '${user}'@'${host}' IDENTIFIED BY ?`, [password]); // keeps the password in sync with .env
+  await conn.query(`GRANT 'physiq_app' TO '${user}'@'${host}'`);
+  await conn.query(`SET DEFAULT ROLE 'physiq_app' TO '${user}'@'${host}'`);
+  console.log(`  ✓ application account '${user}'@'${host}' with role physiq_app (DML + EXECUTE only)`);
+}
+
 async function initMySQL() {
   const conn = await mysql.createConnection(mysqlConfig());
   try {
@@ -182,6 +208,7 @@ async function initMySQL() {
 
     const files = WITH_DEMO ? [...SQL_FILES, ...DEMO_SQL_FILES] : SQL_FILES;
     for (const file of files) await runSqlFile(conn, file);
+    await createAppAccount(conn);
 
     const [[counts]] = await conn.query(`
       SELECT (SELECT COUNT(*) FROM ${DB_NAME}.exercises) AS exercises,
