@@ -2,6 +2,7 @@
 
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { Stepper } from '@/components/ui/Stepper';
+import { SET_ACTION, SET_BADGE, SET_REPS, SET_ROW, SET_WEIGHT } from '@/components/ui/set-row-layout';
 import { cn } from '@/lib/format';
 import type { SessionSet } from '@/types/database';
 
@@ -28,14 +29,14 @@ export function EditableSets({ sets, drafts, onChange }: EditableSetsProps) {
         if (!d) return null;
         const label = d.warmup ? 'W' : String(++working);
         return (
-          <li key={s.id} className={cn('flex items-center gap-1.5 transition-opacity', d.deleted && 'opacity-40')}>
+          <li key={s.id} className={cn(SET_ROW, 'transition-opacity', d.deleted && 'opacity-40')}>
             <button
               type="button"
               onClick={() => onChange(s.id, { warmup: !d.warmup })}
               disabled={d.deleted}
               aria-pressed={d.warmup}
               aria-label={d.warmup ? `Set ${label}: warm-up. Tap to count it as a working set` : `Set ${label}: working set. Tap to mark as warm-up`}
-              className={cn('press h-11 w-9 shrink-0 rounded-xl font-round text-[15px] font-extrabold hover:bg-surface-3', d.warmup ? 'text-recover' : 'text-fg-2')}
+              className={cn(SET_BADGE, 'press h-11 w-9 rounded-xl font-round text-[15px] font-extrabold hover:bg-surface-3', d.warmup ? 'text-recover' : 'text-fg-2')}
             >
               {label}
             </button>
@@ -47,7 +48,7 @@ export function EditableSets({ sets, drafts, onChange }: EditableSetsProps) {
               step={2.5}
               max={999.5}
               decimals
-              className="min-w-0 flex-[1.2] bg-surface-3/70"
+              className={cn(SET_WEIGHT, 'bg-surface-3/70')}
             />
             <Stepper
               size="sm"
@@ -57,13 +58,13 @@ export function EditableSets({ sets, drafts, onChange }: EditableSetsProps) {
               min={1}
               max={100}
               step={1}
-              className="min-w-0 flex-1 bg-surface-3/70"
+              className={cn(SET_REPS, 'bg-surface-3/70')}
             />
             <button
               type="button"
               onClick={() => onChange(s.id, { deleted: !d.deleted })}
               aria-label={d.deleted ? `Restore set ${label}` : `Delete set ${label}`}
-              className={cn('press flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', d.deleted ? 'bg-accent/15 text-accent' : 'bg-surface-3 text-fg-3 hover:text-train')}
+              className={cn(SET_ACTION, 'press flex h-11 w-11 items-center justify-center rounded-xl', d.deleted ? 'bg-accent/15 text-accent' : 'bg-surface-3 text-fg-3 hover:text-train')}
             >
               {d.deleted ? <RotateCcw className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
             </button>
