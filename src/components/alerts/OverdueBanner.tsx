@@ -44,7 +44,7 @@ export function OverdueBanner() {
       <AlertTriangle className="h-5 w-5 shrink-0 text-recover" aria-hidden />
       <p className="min-w-0 flex-1 text-[15px] leading-snug text-fg">
         <span className="font-semibold">{worst.body_part}</span> is {worst.days_since} days overdue
-        {extra > 0 && <span className="text-fg-2"> · +{extra} more</span>}
+        {extra > 0 && <span className="whitespace-nowrap text-fg-2"> · +{extra} more</span>}
       </p>
       <Link
         href={`/train?day=${worst.split_day_id}`}
