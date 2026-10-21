@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { select } from '@/lib/mysql';
+import { callRows, select } from '@/lib/mysql';
 import { getMongoDb } from '@/lib/mongodb';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -23,13 +23,10 @@ export async function GET() {
   const [mysql, mongo] = await Promise.all([
     timed(async () => {
       const [version] = await select<{ version: string }>('SELECT VERSION() AS version');
-      const objects = await select<{ type: string; n: number }>(
-        `SELECT 'tables' AS type, COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
-         UNION ALL SELECT 'views', COUNT(*) FROM information_schema.VIEWS WHERE TABLE_SCHEMA = DATABASE()
-         UNION ALL SELECT 'triggers', COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE()
-         UNION ALL SELECT 'routines', COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE()`
-      );
-      return { version: version.version, ...Object.fromEntries(objects.map((o) => [o.type, o.n])) };
+      // Counts come from a SECURITY DEFINER procedure: the least-privilege app account cannot read
+      // every part of the system catalogue itself.
+      const [stats] = await callRows<{ tables_count: number; views_count: number; triggers_count: number; routines_count: number }>('sp_schema_stats', []);
+      return { version: version.version, tables: stats.tables_count, views: stats.views_count, triggers: stats.triggers_count, routines: stats.routines_count };
     }),
     timed(async () => {
       const db = await getMongoDb();
