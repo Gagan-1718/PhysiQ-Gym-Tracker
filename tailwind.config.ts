@@ -20,8 +20,8 @@ const config: Config = {
         line: 'rgba(255, 255, 255, 0.07)',
         fg: {
           DEFAULT: '#F5F5F7',
-          2: '#A1A1A6',
-          3: '#6E6E73',
+          2: '#B4B4BA',
+          3: '#919197',
         },
         train: { DEFAULT: '#FA2D55', deep: '#B3123A' },
         protein: { DEFAULT: '#B6F23B', deep: '#6FA312' },
