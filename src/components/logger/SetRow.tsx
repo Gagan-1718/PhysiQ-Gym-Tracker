@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { Stepper } from '@/components/ui/Stepper';
+import { SET_ACTION, SET_BADGE, SET_REPS, SET_ROW, SET_WEIGHT } from '@/components/ui/set-row-layout';
 import { cn } from '@/lib/format';
 import type { DraftSet } from '@/lib/workout-draft';
 
@@ -23,13 +24,14 @@ export function SetRow({ set, label, bodyweight, onChange, onToggle, onOpenMenu 
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0 }}
-      className={cn('flex items-center gap-1.5 rounded-2xl p-1 transition-colors sm:gap-2', set.done && 'bg-accent/[0.09]')}
+      className={cn(SET_ROW, 'rounded-2xl p-1 transition-colors', set.done && 'bg-accent/[0.09]')}
     >
       <button
         onClick={onOpenMenu}
         aria-label={`Set ${label} options`}
         className={cn(
-          'press relative flex h-11 w-9 shrink-0 items-center justify-center rounded-xl font-round text-[15px] font-extrabold',
+          SET_BADGE,
+          'press relative flex h-11 w-9 items-center justify-center rounded-xl font-round text-[15px] font-extrabold',
           set.warmup ? 'text-recover' : 'text-fg-2',
           'hover:bg-surface-3'
         )}
@@ -45,7 +47,7 @@ export function SetRow({ set, label, bodyweight, onChange, onToggle, onOpenMenu 
         step={bodyweight ? 1 : 2.5}
         max={999.5}
         decimals
-        className="min-w-0 flex-[1.2] bg-surface-3/70"
+        className={cn(SET_WEIGHT, 'bg-surface-3/70')}
       />
       <Stepper
         size="sm"
@@ -55,14 +57,15 @@ export function SetRow({ set, label, bodyweight, onChange, onToggle, onOpenMenu 
         step={1}
         min={1}
         max={100}
-        className="min-w-0 flex-1 bg-surface-3/70"
+        className={cn(SET_REPS, 'bg-surface-3/70')}
       />
       <button
         onClick={onToggle}
         aria-label={set.done ? `Undo set ${label}` : `Complete set ${label}`}
         aria-pressed={set.done}
         className={cn(
-          'press flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors',
+          SET_ACTION,
+          'press flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
           set.done ? 'bg-accent text-black' : 'bg-surface-3 text-fg-3 hover:text-fg'
         )}
       >
