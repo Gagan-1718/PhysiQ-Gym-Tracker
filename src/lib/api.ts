@@ -38,8 +38,11 @@ function toResponse(err: unknown) {
       return NextResponse.json({ error: 'A value is outside the allowed range.' }, { status: 400 });
     case 'ER_DUP_ENTRY':
       return NextResponse.json({ error: 'That already exists.' }, { status: 409 });
+    // The *_2 codes carry constraint details; an account without the privilege to see them gets the short codes
+    case 'ER_ROW_IS_REFERENCED':
     case 'ER_ROW_IS_REFERENCED_2':
       return NextResponse.json({ error: 'It is still in use and cannot be deleted.' }, { status: 409 });
+    case 'ER_NO_REFERENCED_ROW':
     case 'ER_NO_REFERENCED_ROW_2':
       return NextResponse.json({ error: 'A referenced record does not exist.' }, { status: 400 });
   }
