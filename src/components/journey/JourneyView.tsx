@@ -175,7 +175,7 @@ export function JourneyView() {
       {!tag && ins && ins.topTags.length > 0 && (
         <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0" aria-label="Popular tags">
           {ins.topTags.map((t) => (
-            <button key={t.tag} onClick={() => setTag(t.tag)} className="press shrink-0 rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-fg-2 hover:text-fg">
+            <button key={t.tag} onClick={() => setTag(t.tag)} className="press inline-flex min-h-[2rem] shrink-0 items-center rounded-full bg-surface-2 px-3 text-xs font-semibold text-fg-2 hover:text-fg">
               #{t.tag} <span className="text-fg-3">{t.count}</span>
             </button>
           ))}

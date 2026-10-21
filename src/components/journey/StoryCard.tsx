@@ -88,7 +88,7 @@ export function StoryCard({ story: s, onTag, onDelete }: StoryCardProps) {
       {s.tags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {s.tags.map((t) => (
-            <button key={t} onClick={() => onTag(t)} className="press rounded-full bg-surface-3 px-2.5 py-1 text-xs font-semibold text-fg-2 hover:text-fg">
+            <button key={t} onClick={() => onTag(t)} className="press inline-flex min-h-[2rem] items-center rounded-full bg-surface-3 px-3 text-xs font-semibold text-fg-2 hover:text-fg">
               #{t}
             </button>
           ))}
@@ -96,7 +96,7 @@ export function StoryCard({ story: s, onTag, onDelete }: StoryCardProps) {
       )}
 
       {s.session_id && (
-        <Link href={`/history/${s.session_id}`} className="mt-3 inline-block text-[15px] font-medium text-accent hover:brightness-110">
+        <Link href={`/history/${s.session_id}`} className="-mb-2 mt-1 inline-flex min-h-[2.75rem] items-center text-[15px] font-medium text-accent hover:brightness-110">
           View workout →
         </Link>
       )}
