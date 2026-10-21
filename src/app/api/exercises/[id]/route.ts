@@ -3,7 +3,7 @@ import { execute, withTransaction } from '@/lib/mysql';
 import { requireAdmin } from '@/lib/session';
 import { ExerciseSchema } from '@/lib/schemas';
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 function parseId(raw: string) {
   const id = Number(raw);
@@ -14,7 +14,7 @@ function parseId(raw: string) {
 // PATCH /api/exercises/:id — admin edit (audited with before/after JSON)
 export const PATCH = route<Ctx>(async (req, { params }) => {
   const admin = await requireAdmin();
-  const id = parseId(params.id);
+  const id = parseId((await params).id);
   const body = ExerciseSchema.parse(await readJson(req));
   const res = await withTransaction(
     (conn) =>
@@ -32,7 +32,7 @@ export const PATCH = route<Ctx>(async (req, { params }) => {
 // DELETE /api/exercises/:id — only possible while no one has logged it (FK RESTRICT)
 export const DELETE = route<Ctx>(async (_req, { params }) => {
   const admin = await requireAdmin();
-  const id = parseId(params.id);
+  const id = parseId((await params).id);
   const res = await withTransaction((conn) => execute('DELETE FROM exercises WHERE id = ?', [id], conn), { actingUserId: admin.id });
   if (res.affectedRows === 0) throw new ApiError(404, 'Exercise not found.');
   return ok({ deleted: id });
