@@ -17,7 +17,8 @@
     "docs:er": "node scripts/generate-er-diagram.js",
     "viva:mongo": "node database/mongodb/viva_demo.js",
     "docs:contributions": "node scripts/generate-contributions.js",
-    "test:e2e": "node scripts/run-tests.js tests/e2e"
+    "test:e2e": "node scripts/run-tests.js tests/e2e",
+    "brand:assets": "node scripts/generate-brand-assets.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
