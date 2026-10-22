@@ -1,9 +1,9 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * PhysiQ design tokens: Apple Fitness structure in a darker palette.
- * True-black canvas, layered near-black surfaces, and three saturated ring
- * colours (train / protein / water) that carry the meaning across the app.
+ * PhysiQ design tokens, taken from the logo: true-black canvas, layered near-black
+ * surfaces, brand red, and the logo's silver-white. Three ring colours carry the
+ * meaning across the app: train (red), protein (white), water (blue).
  */
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
@@ -23,20 +23,24 @@ const config: Config = {
           2: '#B4B4BA',
           3: '#919197',
         },
-        train: { DEFAULT: '#FA2D55', deep: '#B3123A' },
-        protein: { DEFAULT: '#B6F23B', deep: '#6FA312' },
-        water: { DEFAULT: '#2DD4F5', deep: '#0E7FA0' },
-        accent: '#B6F23B',
+        // Brand red, sampled from the logo. DEFAULT is for text, icons, borders and rings on dark surfaces (6:1 on black);
+        // solid is for filled buttons that carry white text (5:1).
+        accent: { DEFAULT: '#FF4B2B', solid: '#D9230F', deep: '#8F1308' },
+        train: { DEFAULT: '#FF4B2B', deep: '#B01A0E' },
+        // The white half of the logo's Q: nutrition ring and neutral highlights
+        protein: { DEFAULT: '#EDEDF0', deep: '#8B8B93' },
+        water: { DEFAULT: '#3CC8F2', deep: '#0E7FA0' },
         recover: '#FFB020',
         gold: '#FFD60A',
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        round: ['var(--font-nunito)', 'ui-rounded', 'var(--font-inter)', 'sans-serif'],
+        display: ['var(--font-display)', 'var(--font-inter)', 'ui-sans-serif', 'sans-serif'],
+        wordmark: ['var(--font-display-italic)', 'var(--font-display)', 'sans-serif'],
       },
       fontSize: {
-        'large-title': ['2.125rem', { lineHeight: '2.5rem', letterSpacing: '-0.025em', fontWeight: '700' }],
-        title: ['1.375rem', { lineHeight: '1.75rem', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'large-title': ['2.125rem', { lineHeight: '2.5rem', letterSpacing: '-0.01em', fontWeight: '800' }],
+        title: ['1.375rem', { lineHeight: '1.75rem', letterSpacing: '-0.005em', fontWeight: '800' }],
         headline: ['1.0625rem', { lineHeight: '1.375rem', letterSpacing: '-0.01em', fontWeight: '600' }],
         footnote: ['0.8125rem', { lineHeight: '1.125rem' }],
         eyebrow: ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.08em', fontWeight: '600' }],

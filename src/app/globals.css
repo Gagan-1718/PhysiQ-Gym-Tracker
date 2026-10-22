@@ -22,8 +22,15 @@
     overscroll-behavior-y: none;
   }
 
+  /* Headings use the athletic display face; body text stays Inter */
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+
   ::selection {
-    @apply bg-accent text-black;
+    @apply bg-accent-solid text-white;
   }
 
   /* Number inputs: no spinners; we provide big steppers instead */

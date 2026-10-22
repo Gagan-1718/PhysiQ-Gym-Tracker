@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Nunito } from 'next/font/google';
+import { Exo_2, Inter } from 'next/font/google';
 import Providers from './providers';
 import './globals.css';
 
-// Inter for interface text; Nunito's rounded numerals for metrics (Apple Fitness feel)
+// Inter for interface text. Exo 2 (squared, athletic, close to the logo's wordmark) for headings and big numbers,
+// with one slanted weight for the "PhysiQ" wordmark.
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
-const nunito = Nunito({ subsets: ['latin'], weight: ['700', '800', '900'], variable: '--font-nunito', display: 'swap' });
+const exo = Exo_2({ subsets: ['latin'], weight: ['700', '800', '900'], variable: '--font-display', display: 'swap' });
+const exoSlanted = Exo_2({ subsets: ['latin'], weight: '900', style: 'italic', variable: '--font-display-italic', display: 'swap' });
 
 export const metadata: Metadata = {
   title: { default: 'PhysiQ', template: '%s · PhysiQ' },
@@ -25,7 +27,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${nunito.variable}`}>
+    <html lang="en" className={`${inter.variable} ${exo.variable} ${exoSlanted.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>
