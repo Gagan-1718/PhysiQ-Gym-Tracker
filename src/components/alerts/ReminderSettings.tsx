@@ -57,7 +57,7 @@ export function ReminderSettings() {
         aria-label="Overdue reminders"
         disabled={!ready || unavailable || blocked}
         onClick={toggle}
-        className={cn('press relative h-8 w-[3.25rem] shrink-0 rounded-full transition-colors disabled:opacity-40', on ? 'bg-accent' : 'bg-surface-4')}
+        className={cn('press relative h-8 w-[3.25rem] shrink-0 rounded-full transition-colors disabled:opacity-40', on ? 'bg-accent-solid' : 'bg-surface-4')}
       >
         <span className={cn('absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all', on ? 'left-[1.5rem]' : 'left-1')} />
       </button>

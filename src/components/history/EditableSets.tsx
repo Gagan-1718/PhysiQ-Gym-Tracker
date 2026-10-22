@@ -36,7 +36,7 @@ export function EditableSets({ sets, drafts, onChange }: EditableSetsProps) {
               disabled={d.deleted}
               aria-pressed={d.warmup}
               aria-label={d.warmup ? `Set ${label}: warm-up. Tap to count it as a working set` : `Set ${label}: working set. Tap to mark as warm-up`}
-              className={cn(SET_BADGE, 'press h-11 w-9 rounded-xl font-round text-[15px] font-extrabold hover:bg-surface-3', d.warmup ? 'text-recover' : 'text-fg-2')}
+              className={cn(SET_BADGE, 'press h-11 w-9 rounded-xl font-display text-[15px] font-extrabold hover:bg-surface-3', d.warmup ? 'text-recover' : 'text-fg-2')}
             >
               {label}
             </button>

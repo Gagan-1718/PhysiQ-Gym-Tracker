@@ -36,7 +36,7 @@ export function ActiveWorkoutBar() {
               <p className="truncate text-[15px] font-semibold">{draft.bodyPart} workout</p>
               <p className="text-footnote text-fg-2">In progress · tap to resume</p>
             </div>
-            <span className="tabular font-round text-lg font-extrabold text-accent">{clock(elapsed)}</span>
+            <span className="tabular font-display text-lg font-extrabold text-accent">{clock(elapsed)}</span>
             <ChevronRight className="h-5 w-5 text-fg-3" />
           </Link>
         </motion.div>

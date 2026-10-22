@@ -114,7 +114,7 @@ export function JourneyView() {
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl bg-surface-1 p-3.5">
               <p className="text-footnote text-fg-3">{label}</p>
-              <p className="font-round text-2xl font-extrabold">{value}</p>
+              <p className="font-display text-2xl font-extrabold">{value}</p>
             </div>
           ))}
         </div>
@@ -126,7 +126,7 @@ export function JourneyView() {
           <Card>
             <LineChart
               title="Average mood by week, 1 to 5"
-              color="#B6F23B"
+              color="#EDEDF0"
               unit="/ 5"
               height={150}
               domain={[1, 5]}
