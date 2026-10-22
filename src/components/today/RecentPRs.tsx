@@ -18,7 +18,7 @@ export function RecentPRs({ prs }: { prs: PersonalRecord[] }) {
                 {relativeDay(p.achieved_on)} · e1RM {kg(p.estimated_1rm)} kg
               </p>
             </div>
-            <p className="font-round text-lg font-extrabold">
+            <p className="font-display text-lg font-extrabold">
               {kg(p.weight)}
               <span className="text-sm text-fg-3"> × {p.reps}</span>
             </p>

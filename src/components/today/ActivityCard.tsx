@@ -5,9 +5,9 @@ import { Rings } from '@/components/ui/Rings';
 import { kg } from '@/lib/format';
 import type { DailyFuel } from '@/types/database';
 
-const TRAIN = { color: '#FA2D55', deep: '#B3123A' };
-const PROTEIN = { color: '#B6F23B', deep: '#6FA312' };
-const WATER = { color: '#2DD4F5', deep: '#0E7FA0' };
+const TRAIN = { color: '#FF4B2B', deep: '#B01A0E' };
+const PROTEIN = { color: '#EDEDF0', deep: '#8B8B93' };
+const WATER = { color: '#3CC8F2', deep: '#0E7FA0' };
 
 function Metric({ label, value, target, unit, color, done }: { label: string; value: string; target: string; unit: string; color: string; done?: boolean }) {
   return (
@@ -21,7 +21,7 @@ function Metric({ label, value, target, unit, color, done }: { label: string; va
           </span>
         )}
       </p>
-      <p className="mt-0.5 font-round text-[26px] font-extrabold leading-none text-fg">
+      <p className="mt-0.5 font-display text-[26px] font-extrabold leading-none text-fg">
         {value}
         <span className="text-[15px] font-bold text-fg-3">
           /{target} {unit}

@@ -36,7 +36,7 @@ export function WeekCard({ weeks, thisWeekStart, thisWeek }: { weeks: WeeklySumm
         {stats.map(([label, value, unit]) => (
           <div key={label}>
             <p className="text-footnote text-fg-3">{label}</p>
-            <p className="font-round text-2xl font-extrabold">
+            <p className="font-display text-2xl font-extrabold">
               {value}
               {unit && <span className="text-sm font-bold text-fg-3"> {unit}</span>}
             </p>
@@ -44,7 +44,7 @@ export function WeekCard({ weeks, thisWeekStart, thisWeek }: { weeks: WeeklySumm
         ))}
       </div>
       <p className="mb-1 mt-5 text-footnote font-medium text-fg-2">Weekly volume, last 8 weeks</p>
-      <ColumnChart data={lastWeeks(weeks, thisWeekStart)} color="#FA2D55" unit="kg" height={140} title="Training volume per week, last 8 weeks" />
+      <ColumnChart data={lastWeeks(weeks, thisWeekStart)} color="#FF4B2B" unit="kg" height={140} title="Training volume per week, last 8 weeks" />
     </Card>
   );
 }
