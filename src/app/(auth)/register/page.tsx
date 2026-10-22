@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { LogoMark, Wordmark } from '@/components/shell/Logo';
 import { HttpError, send } from '@/lib/client';
 
 export default function RegisterPage() {
@@ -34,6 +35,10 @@ export default function RegisterPage() {
 
   return (
     <div className="animate-pop-in">
+      <div className="mb-5 flex items-center gap-3">
+        <LogoMark size={56} />
+        <Wordmark className="text-[28px]" />
+      </div>
       <h1 className="text-large-title">Create your account</h1>
       <p className="mb-8 mt-2 text-[17px] text-fg-2">Takes 30 seconds. Then we set up your split.</p>
 

@@ -6,13 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
-import { Rings } from '@/components/ui/Rings';
-
-const HERO_RINGS = [
-  { progress: 0.78, color: '#FA2D55', deep: '#B3123A', label: 'Train' },
-  { progress: 0.9, color: '#B6F23B', deep: '#6FA312', label: 'Protein' },
-  { progress: 0.62, color: '#2DD4F5', deep: '#0E7FA0', label: 'Water' },
-];
+import { LogoFull } from '@/components/shell/Logo';
 
 function LoginForm() {
   const router = useRouter();
@@ -68,8 +62,8 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="animate-pop-in">
-      <div className="mb-8 flex justify-center">
-        <Rings rings={HERO_RINGS} size={132} stroke={14} gap={3} />
+      <div className="mb-4 flex justify-center">
+        <LogoFull size={232} />
       </div>
       <h1 className="text-center text-large-title">Train smarter.</h1>
       <p className="mb-8 mt-2 text-center text-[17px] text-fg-2">Your history decides what to train next and how much to lift.</p>
