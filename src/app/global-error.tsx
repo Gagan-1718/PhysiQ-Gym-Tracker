@@ -11,7 +11,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
           <p style={{ color: '#A1A1A6', maxWidth: 320 }}>Your data is safe. Reload to continue.</p>
           <button
             onClick={reset}
-            style={{ marginTop: 16, height: 52, padding: '0 28px', border: 0, borderRadius: 16, background: '#B6F23B', color: '#000', fontSize: 17, fontWeight: 600 }}
+            style={{ marginTop: 16, height: 52, padding: '0 28px', border: 0, borderRadius: 16, background: '#D9230F', color: '#fff', fontSize: 17, fontWeight: 600 }}
           >
             Reload
           </button>

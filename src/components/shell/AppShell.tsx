@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar (md+) */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-canvas px-4 py-6 md:flex">
         <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">
-          <LogoMark size={30} />
+          <LogoMark size={38} />
           <Wordmark />
         </Link>
         <nav className="flex flex-col gap-1" aria-label="Main">

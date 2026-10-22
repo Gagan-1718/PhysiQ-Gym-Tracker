@@ -57,7 +57,7 @@ export default function OnboardingPage() {
             <ChevronLeft className="h-5 w-5" /> Back
           </button>
         ) : (
-          <LogoMark size={28} />
+          <LogoMark size={36} />
         )}
         <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
           {STEPS.map((s, i) => (
@@ -97,7 +97,7 @@ export default function OnboardingPage() {
                         <span className="block text-headline">{g.label}</span>
                         <span className="text-[15px] text-fg-2">{g.blurb}</span>
                       </span>
-                      <span className={cn('flex h-6 w-6 items-center justify-center rounded-full', goal === g.value ? 'bg-accent text-black' : 'border border-surface-4')}>
+                      <span className={cn('flex h-6 w-6 items-center justify-center rounded-full', goal === g.value ? 'bg-accent-solid text-white' : 'border border-surface-4')}>
                         {goal === g.value && <Check className="h-4 w-4" strokeWidth={3} />}
                       </span>
                     </button>
@@ -123,14 +123,14 @@ export default function OnboardingPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-2xl bg-surface-1 p-4">
                         <p className="text-footnote text-fg-3">Protein / day</p>
-                        <p className="tabular mt-1 font-round text-3xl font-extrabold text-protein">
+                        <p className="tabular mt-1 font-display text-3xl font-extrabold text-protein">
                           {Math.round(weight * 2)}
                           <span className="text-base text-fg-2"> g</span>
                         </p>
                       </div>
                       <div className="rounded-2xl bg-surface-1 p-4">
                         <p className="text-footnote text-fg-3">Water / day</p>
-                        <p className="tabular mt-1 font-round text-3xl font-extrabold text-water">
+                        <p className="tabular mt-1 font-display text-3xl font-extrabold text-water">
                           {(Math.round((weight * 40) / 50) * 0.05).toFixed(1)}
                           <span className="text-base text-fg-2"> L</span>
                         </p>
