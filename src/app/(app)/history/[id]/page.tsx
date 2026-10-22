@@ -124,12 +124,12 @@ export default function WorkoutDetailPage() {
           <div className="mt-5 grid grid-cols-3 gap-2">
             {[
               ['Volume', compact(data.session.total_volume), 'kg', 'text-train'],
-              ['Sets', String(working), '', 'text-accent'],
+              ['Sets', String(working), '', 'text-protein'],
               ['Time', minutes ? String(minutes) : '–', minutes ? 'min' : '', 'text-water'],
             ].map(([label, value, unit, color]) => (
               <div key={label} className="rounded-2xl bg-surface-1 p-3.5">
                 <p className="text-footnote text-fg-3">{label}</p>
-                <p className={cn('tabular mt-0.5 font-round text-2xl font-extrabold', color)}>
+                <p className={cn('tabular mt-0.5 font-display text-2xl font-extrabold', color)}>
                   {value}
                   {unit && <span className="text-sm text-fg-2"> {unit}</span>}
                 </p>
@@ -170,7 +170,7 @@ export default function WorkoutDetailPage() {
                   <ul className="mt-3 space-y-1.5">
                     {sets.map((s) => (
                       <li key={s.id} className="flex items-center gap-3 text-[15px]">
-                        <span className={cn('w-6 text-center font-round font-extrabold', s.is_warmup ? 'text-recover' : 'text-fg-3')}>{s.is_warmup ? 'W' : ++n}</span>
+                        <span className={cn('w-6 text-center font-display font-extrabold', s.is_warmup ? 'text-recover' : 'text-fg-3')}>{s.is_warmup ? 'W' : ++n}</span>
                         <span className="tabular flex-1 font-medium">
                           {kg(s.weight)} kg × {s.reps}
                           {s.rpe ? <span className="text-fg-3"> · RPE {s.rpe}</span> : null}

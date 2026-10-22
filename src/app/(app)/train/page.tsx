@@ -122,7 +122,7 @@ function TrainHome() {
 
       {draft && (
         <Card className="mb-2 flex items-center gap-4 border-accent/30 bg-accent/[0.07]">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-black">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-solid text-white">
             <Play className="h-5 w-5 fill-current" />
           </div>
           <div className="min-w-0 flex-1">
@@ -154,14 +154,14 @@ function TrainHome() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-headline">{day.body_part}</span>
-                      {day.split_day_id === recId && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-black">UP NEXT</span>}
+                      {day.split_day_id === recId && <span className="rounded-full bg-accent-solid px-2 py-0.5 text-[11px] font-bold text-white">UP NEXT</span>}
                     </div>
                     <p className="truncate text-footnote text-fg-3">
                       {day.muscles.join(' · ')} {day.last_trained_date && `· ${relativeDay(day.last_trained_date)}`}
                     </p>
                   </div>
                   <StatusPill status={day.status} />
-                  <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full', starting === key ? 'bg-accent text-black' : 'bg-surface-3 text-fg-2')}>
+                  <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full', starting === key ? 'bg-accent-solid text-white' : 'bg-surface-3 text-fg-2')}>
                     {starting === key ? <span className="h-3 w-3 animate-ping rounded-full bg-black" /> : <Play className="h-4 w-4 fill-current" />}
                   </span>
                 </button>

@@ -92,7 +92,7 @@ export default function HistoryPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="tabular font-round text-lg font-extrabold">{compact(s.total_volume)}</p>
+                      <p className="tabular font-display text-lg font-extrabold">{compact(s.total_volume)}</p>
                       <p className="text-[11px] font-semibold text-fg-3">KG</p>
                     </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-fg-3" />
