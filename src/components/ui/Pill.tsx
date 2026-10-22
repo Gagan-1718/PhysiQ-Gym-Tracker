@@ -2,10 +2,10 @@ import { cn } from '@/lib/format';
 import type { DayStatus } from '@/types/database';
 
 export const STATUS_META: Record<DayStatus, { label: string; text: string; bg: string; color: string }> = {
-  overdue: { label: 'Overdue', text: 'text-train', bg: 'bg-train/15', color: '#FA2D55' },
-  ready: { label: 'Ready', text: 'text-accent', bg: 'bg-accent/15', color: '#B6F23B' },
+  overdue: { label: 'Overdue', text: 'text-train', bg: 'bg-train/15', color: '#FF4B2B' },
+  ready: { label: 'Ready', text: 'text-protein', bg: 'bg-protein/15', color: '#EDEDF0' },
   recovering: { label: 'Recovering', text: 'text-recover', bg: 'bg-recover/15', color: '#FFB020' },
-  new: { label: 'Not started', text: 'text-water', bg: 'bg-water/15', color: '#2DD4F5' },
+  new: { label: 'Not started', text: 'text-water', bg: 'bg-water/15', color: '#3CC8F2' },
 };
 
 export function StatusPill({ status, className }: { status: DayStatus; className?: string }) {

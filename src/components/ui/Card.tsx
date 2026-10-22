@@ -53,7 +53,7 @@ export function Metric({
   unitClassName?: string;
 }) {
   return (
-    <span className={cn('tabular font-round font-extrabold leading-none', className)}>
+    <span className={cn('tabular font-display font-extrabold leading-none', className)}>
       {value}
       {unit && <span className={cn('ml-0.5 text-[0.45em] font-bold text-fg-2', unitClassName)}>{unit}</span>}
     </span>

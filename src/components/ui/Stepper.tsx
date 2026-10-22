@@ -67,7 +67,7 @@ export function Stepper({ value, onChange, step, min = 0, max = 999, unit, label
           // Size to the content so the unit sits right next to the number
           style={{ width: `${Math.max(text.length, 1) + 0.6}ch` }}
           className={cn(
-            'tabular min-w-0 max-w-full bg-transparent text-center font-round font-extrabold text-fg placeholder:text-fg-3 focus:outline-none',
+            'tabular min-w-0 max-w-full bg-transparent text-center font-display font-extrabold text-fg placeholder:text-fg-3 focus:outline-none',
             size === 'lg' ? 'text-[26px]' : size === 'md' ? 'text-xl' : 'text-lg'
           )}
         />
