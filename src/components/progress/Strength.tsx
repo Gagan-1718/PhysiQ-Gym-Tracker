@@ -77,7 +77,7 @@ export function Strength() {
             <div className="mt-4 flex items-end gap-4">
               <div>
                 <p className="text-footnote text-fg-3">Estimated 1RM</p>
-                <p className="font-round text-[44px] font-extrabold leading-none">
+                <p className="font-display text-[44px] font-extrabold leading-none">
                   {latest !== undefined ? kg(latest) : '–'}
                   <span className="text-lg text-fg-3"> kg</span>
                 </p>
@@ -92,7 +92,7 @@ export function Strength() {
             <div className="mt-4">
               <LineChart
                 title={`${d.exercise.name} best estimated 1RM per session`}
-                color="#B6F23B"
+                color="#FF4B2B"
                 unit="kg"
                 data={d.series.map((s, i) => ({
                   key: `${s.session_date}-${i}`,
@@ -112,7 +112,7 @@ export function Strength() {
                 </span>
                 <div>
                   <p className="text-footnote text-fg-3">Personal record · {relativeDay(d.pr.achieved_on)}</p>
-                  <p className="font-round text-xl font-extrabold">
+                  <p className="font-display text-xl font-extrabold">
                     {kg(d.pr.weight)} kg × {d.pr.reps}
                   </p>
                 </div>
@@ -124,7 +124,7 @@ export function Strength() {
               </span>
               <div className="min-w-0">
                 <p className="text-footnote text-fg-3">Next target</p>
-                <p className="font-round text-xl font-extrabold">
+                <p className="font-display text-xl font-extrabold">
                   {d.target.suggested_weight !== null ? `${kg(d.target.suggested_weight)} kg × ${d.target.suggested_reps}` : `${d.target.suggested_reps} reps`}
                 </p>
                 <p className="text-footnote text-fg-3">{d.target.rationale}</p>

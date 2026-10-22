@@ -60,7 +60,7 @@ export function Body() {
         <div className="flex items-end gap-4">
           <div>
             <p className="text-footnote text-fg-3">Body weight</p>
-            <p className="font-round text-[44px] font-extrabold leading-none">
+            <p className="font-display text-[44px] font-extrabold leading-none">
               {latest ? kg(latest.weight) : '–'}
               <span className="text-lg text-fg-3"> kg</span>
             </p>
@@ -76,7 +76,7 @@ export function Body() {
           <div className="mt-4">
             <LineChart
               title="Body weight over time"
-              color="#2DD4F5"
+              color="#3CC8F2"
               unit="kg"
               data={weights.map((m) => ({ key: m.recorded_on, date: shortDate(m.recorded_on), value: m.weight! }))}
             />

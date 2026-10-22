@@ -47,7 +47,7 @@ export function Overview() {
         ].map(([label, value, unit]) => (
           <div key={label} className="rounded-2xl bg-surface-1 p-3.5">
             <p className="text-footnote text-fg-3">{label}</p>
-            <p className="font-round text-2xl font-extrabold">
+            <p className="font-display text-2xl font-extrabold">
               {value} <span className="text-sm font-bold text-fg-3">{unit}</span>
             </p>
           </div>
@@ -57,7 +57,7 @@ export function Overview() {
       <SectionHeader title="Weekly volume" />
       <Card>
         <p className="mb-2 text-footnote text-fg-3">Total kg lifted in working sets each week</p>
-        <ColumnChart data={weeks} color="#FA2D55" unit="kg" title="Training volume per week, last 8 weeks" />
+        <ColumnChart data={weeks} color="#FF4B2B" unit="kg" title="Training volume per week, last 8 weeks" />
       </Card>
 
       <SectionHeader
@@ -76,7 +76,7 @@ export function Overview() {
         }
       />
       <Card>
-        <MuscleBars rows={rows} color="#B6F23B" />
+        <MuscleBars rows={rows} color="#EDEDF0" />
       </Card>
 
       {data.prs.length > 0 && (

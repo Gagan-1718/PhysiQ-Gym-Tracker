@@ -54,7 +54,7 @@ export function OneRepMaxCalculator({ defaultWeight = 60, defaultReps = 8 }: { d
           </span>
           <div>
             <p className="text-footnote text-fg-3">Estimated 1RM</p>
-            <p className="font-round text-[34px] font-extrabold leading-none" aria-live="polite">
+            <p className="font-display text-[34px] font-extrabold leading-none" aria-live="polite">
               {data ? kg(data.oneRm) : '–'}
               <span className="text-base text-fg-3"> kg</span>
             </p>
@@ -71,7 +71,7 @@ export function OneRepMaxCalculator({ defaultWeight = 60, defaultReps = 8 }: { d
                 className={cn('rounded-xl p-2.5 text-center', row.reps === query?.reps ? 'bg-accent/15 ring-1 ring-accent/40' : 'bg-surface-2')}
               >
                 <p className={cn('text-footnote', row.reps === query?.reps ? 'text-fg-2' : 'text-fg-3')}>{row.reps} {row.reps === 1 ? 'rep' : 'reps'}</p>
-                <p className="font-round text-lg font-extrabold">{kg(row.weight_kg)}</p>
+                <p className="font-display text-lg font-extrabold">{kg(row.weight_kg)}</p>
                 <p className={cn('text-[11px] font-semibold', row.reps === query?.reps ? 'text-fg-2' : 'text-fg-3')}>{row.pct_of_one_rm}%</p>
               </li>
             ))}
