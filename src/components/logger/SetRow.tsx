@@ -31,7 +31,7 @@ export function SetRow({ set, label, bodyweight, onChange, onToggle, onOpenMenu 
         aria-label={`Set ${label} options`}
         className={cn(
           SET_BADGE,
-          'press relative flex h-11 w-9 items-center justify-center rounded-xl font-round text-[15px] font-extrabold',
+          'press relative flex h-11 w-9 items-center justify-center rounded-xl font-display text-[15px] font-extrabold',
           set.warmup ? 'text-recover' : 'text-fg-2',
           'hover:bg-surface-3'
         )}
@@ -66,7 +66,7 @@ export function SetRow({ set, label, bodyweight, onChange, onToggle, onOpenMenu 
         className={cn(
           SET_ACTION,
           'press flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
-          set.done ? 'bg-accent text-black' : 'bg-surface-3 text-fg-3 hover:text-fg'
+          set.done ? 'bg-accent-solid text-white' : 'bg-surface-3 text-fg-3 hover:text-fg'
         )}
       >
         <Check className="h-5 w-5" strokeWidth={3} />

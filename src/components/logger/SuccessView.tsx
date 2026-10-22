@@ -24,7 +24,7 @@ export function SuccessView({ result, bodyPart, elapsed, firstTimers, onDone }: 
         initial={{ scale: 0.4, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', damping: 12, stiffness: 180 }}
-        className="flex h-24 w-24 items-center justify-center rounded-full bg-accent text-black shadow-[0_0_80px_-10px_rgba(182,242,59,0.6)]"
+        className="flex h-24 w-24 items-center justify-center rounded-full bg-accent-solid text-white shadow-[0_0_80px_-10px_rgba(255,75,43,0.55)]"
       >
         <Check className="h-12 w-12" strokeWidth={3.2} />
       </motion.div>
@@ -35,12 +35,12 @@ export function SuccessView({ result, bodyPart, elapsed, firstTimers, onDone }: 
         <div className="mt-8 grid grid-cols-3 gap-2">
           {[
             ['Volume', `${compact(result.totalVolume)}`, 'kg', 'text-train'],
-            ['Sets', String(result.workingSets), '', 'text-accent'],
+            ['Sets', String(result.workingSets), '', 'text-protein'],
             ['Time', clock(elapsed), '', 'text-water'],
           ].map(([label, value, unit, color]) => (
             <div key={label} className="rounded-2xl bg-surface-1 p-4">
               <p className="text-footnote text-fg-3">{label}</p>
-              <p className={`tabular mt-1 font-round text-2xl font-extrabold ${color}`}>
+              <p className={`tabular mt-1 font-display text-2xl font-extrabold ${color}`}>
                 {value}
                 {unit && <span className="text-sm text-fg-2"> {unit}</span>}
               </p>

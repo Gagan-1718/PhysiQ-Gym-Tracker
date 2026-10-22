@@ -62,12 +62,12 @@ export function FinishSheet({ open, onClose, onSave, elapsed, doneSets, volume, 
       <div className="grid grid-cols-3 gap-2">
         {[
           ['Time', clock(elapsed), 'text-fg'],
-          ['Sets', String(doneSets), 'text-accent'],
+          ['Sets', String(doneSets), 'text-protein'],
           ['Volume', `${compact(volume)} kg`, 'text-train'],
         ].map(([label, value, color]) => (
           <div key={label} className="rounded-2xl bg-surface-2 p-3 text-center">
             <p className="text-footnote text-fg-3">{label}</p>
-            <p className={cn('tabular mt-0.5 font-round text-xl font-extrabold', color)}>{value}</p>
+            <p className={cn('tabular mt-0.5 font-display text-xl font-extrabold', color)}>{value}</p>
           </div>
         ))}
       </div>
@@ -133,7 +133,7 @@ export function FinishSheet({ open, onClose, onSave, elapsed, doneSets, volume, 
               <span className="block text-headline">Save as routine</span>
               <span className="text-footnote text-fg-3">Reuse these exercises next time</span>
             </span>
-            <input type="checkbox" checked={saveRoutine} onChange={(e) => setSaveRoutine(e.target.checked)} className="h-6 w-6 accent-[#B6F23B]" />
+            <input type="checkbox" checked={saveRoutine} onChange={(e) => setSaveRoutine(e.target.checked)} className="h-6 w-6 accent-[#FF4B2B]" />
           </label>
           {saveRoutine && (
             <input

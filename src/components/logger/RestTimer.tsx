@@ -72,10 +72,10 @@ export function RestTimer({ endsAt, total, onAdjust, onSkip }: RestTimerProps) {
           aria-label={`Rest ${clock(left)} remaining`}
         >
           <div className="mx-auto mb-2 flex max-w-xl items-center gap-3 rounded-[1.4rem] border border-line bg-surface-2/95 p-2.5 pl-3 shadow-2xl shadow-black backdrop-blur-xl">
-            <MiniRing progress={total ? left / total : 0} color="#2DD4F5" size={40} stroke={5} />
+            <MiniRing progress={total ? left / total : 0} color="#3CC8F2" size={40} stroke={5} />
             <div className="min-w-0 flex-1">
               <p className="text-eyebrow uppercase text-fg-3">Rest</p>
-              <p className="tabular font-round text-[26px] font-extrabold leading-none text-water">{clock(left)}</p>
+              <p className="tabular font-display text-[26px] font-extrabold leading-none text-water">{clock(left)}</p>
             </div>
             <button onClick={() => onAdjust(-15)} className="press h-11 rounded-xl bg-surface-3 px-3 text-[15px] font-semibold text-fg-2 hover:text-fg">
               −15
