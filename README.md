@@ -69,6 +69,8 @@ on the same Wi-Fi, then use *Add to Home Screen*.
 | `npm run viva:mongo` | MongoDB half of the viva demo (validator, indexes, plans, text search, aggregation) |
 | `npm run docs:dictionary` / `docs:er` / `docs:contributions` | Regenerate the data dictionary, ER diagram source and contribution summary from the live database / git |
 | `npm run typecheck` / `build` | TypeScript check / production build |
+| `npm run brand:assets` | Re-cuts the app icons, favicon and in-app logo from `design/physiq-logo.png` |
+| `npm run docs:screenshots` | Re-takes every screenshot in `docs/screenshots` from the running app (needs a fresh `db:reset`) |
 
 GitHub Actions audits the runtime dependencies, type-checks, builds both databases
 from the repo files, runs `npm run test:db`, builds the app, then runs
@@ -152,4 +154,4 @@ public/        icons, service worker (notifications only)
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · Framer Motion · SWR ·
 NextAuth (credentials + bcrypt) · mysql2 · MongoDB Node driver · zod.
 Tested with node:test, Playwright and axe-core (WCAG 2.2 AA).
-Inter + Nunito type, with a dark design in the style of Apple Fitness.
+Inter + Exo 2 type on a true-black canvas, in the logo's red and silver.

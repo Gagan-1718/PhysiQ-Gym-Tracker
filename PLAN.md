@@ -87,7 +87,7 @@ flowchart LR
 ### Feature 4: Daily fuel & recovery protocol
 * `sp_get_daily_fuel` / `sp_log_fuel` over `user_daily_fuel`: protein 2 g/kg, water 40 ml/kg, calories ≈ 33 kcal/kg ± goal (+300 hypertrophy, +200 strength, −400 fat loss).
 * Today's targets follow the latest weigh-in; past days stay frozen.
-* UI: Apple-style rings with one-tap +10/+25 g and +250/+500 ml.
+* UI: three activity rings (training red, protein white, water blue) with one-tap +10/+25 g and +250/+500 ml.
 
 ### Feature 5: Journey timeline (MongoDB)
 * Finishing a workout stores mood, tags and journal text in `journey_stories`, linked by `session_id`, with PR highlights embedded.
