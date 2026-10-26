@@ -34,42 +34,45 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="animate-pop-in">
+    <div>
+      {/* The logo sits outside the animated block, so its black can blend into the glow behind it */}
       <div className="mb-5 flex items-center gap-3">
         <LogoMark size={56} />
         <Wordmark className="text-[28px]" />
       </div>
-      <h1 className="text-large-title">Create your account</h1>
-      <p className="mb-8 mt-2 text-[17px] text-fg-2">Takes 30 seconds. Then we set up your split.</p>
+      <div className="animate-pop-in">
+        <h1 className="text-large-title">Create your account</h1>
+        <p className="mb-8 mt-2 text-[17px] text-fg-2">Takes 30 seconds. Then we set up your split.</p>
 
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
-        <Field label="Name" autoComplete="name" value={form.name} onChange={set('name')} required />
-        <Field label="Email" type="email" autoComplete="email" inputMode="email" value={form.email} onChange={set('email')} required />
-        <Field
-          label="Password"
-          type="password"
-          autoComplete="new-password"
-          hint="At least 8 characters"
-          value={form.password}
-          onChange={set('password')}
-          required
-        />
-        {error && (
-          <p role="alert" className="px-1 text-[15px] text-train">
-            {error}
-          </p>
-        )}
-        <Button type="submit" size="lg" block loading={loading} disabled={!form.name || !form.email || !form.password}>
-          Continue
-        </Button>
-      </form>
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          <Field label="Name" autoComplete="name" value={form.name} onChange={set('name')} required />
+          <Field label="Email" type="email" autoComplete="email" inputMode="email" value={form.email} onChange={set('email')} required />
+          <Field
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            hint="At least 8 characters"
+            value={form.password}
+            onChange={set('password')}
+            required
+          />
+          {error && (
+            <p role="alert" className="px-1 text-[15px] text-train">
+              {error}
+            </p>
+          )}
+          <Button type="submit" size="lg" block loading={loading} disabled={!form.name || !form.email || !form.password}>
+            Continue
+          </Button>
+        </form>
 
-      <p className="mt-6 text-center text-[15px] text-fg-2">
-        Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-accent hover:brightness-110">
-          Sign in
-        </Link>
-      </p>
+        <p className="mt-6 text-center text-[15px] text-fg-2">
+          Already have an account?{' '}
+          <Link href="/login" className="font-semibold text-accent hover:brightness-110">
+            Sign in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

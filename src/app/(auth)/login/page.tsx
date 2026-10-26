@@ -61,31 +61,34 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="animate-pop-in">
+    <div>
+      {/* Outside the animated block below: that block isolates blending, and the logo's black must blend into the glow */}
       <div className="mb-4 flex justify-center">
         <LogoFull size={232} />
       </div>
-      <h1 className="text-center text-large-title">Train smarter.</h1>
-      <p className="mb-8 mt-2 text-center text-[17px] text-fg-2">Your history decides what to train next and how much to lift.</p>
+      <div className="animate-pop-in">
+        <h1 className="text-center text-large-title">Train smarter.</h1>
+        <p className="mb-8 mt-2 text-center text-[17px] text-fg-2">Your history decides what to train next and how much to lift.</p>
 
-      <Suspense>
-        <LoginForm />
-      </Suspense>
+        <Suspense>
+          <LoginForm />
+        </Suspense>
 
-      <p className="mt-6 text-center text-[15px] text-fg-2">
-        New here?{' '}
-        <Link href="/register" className="font-semibold text-accent hover:brightness-110">
-          Create an account
-        </Link>
-      </p>
+        <p className="mt-6 text-center text-[15px] text-fg-2">
+          New here?{' '}
+          <Link href="/register" className="font-semibold text-accent hover:brightness-110">
+            Create an account
+          </Link>
+        </p>
 
-      {process.env.NODE_ENV !== 'production' && (
-        <div className="mt-8 rounded-2xl border border-line bg-surface-1 px-4 py-3 text-footnote text-fg-3">
-          <span className="font-semibold text-fg-2">Demo accounts</span> (password <code className="text-fg-2">physiq123</code>):
-          <br />
-          alex@physiq.test · admin@physiq.test
-        </div>
-      )}
+        {process.env.NODE_ENV !== 'production' && (
+          <div className="mt-8 rounded-2xl border border-line bg-surface-1 px-4 py-3 text-footnote text-fg-3">
+            <span className="font-semibold text-fg-2">Demo accounts</span> (password <code className="text-fg-2">physiq123</code>):
+            <br />
+            alex@physiq.test · admin@physiq.test
+          </div>
+        )}
+      </div>
     </div>
   );
 }
