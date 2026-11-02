@@ -1,0 +1,40 @@
+flowchart TB
+  subgraph Client["Phone / laptop (PWA)"]
+    UI["Next.js pages<br/>Today · Train · Progress · Journey"]
+    Draft[("localStorage<br/>in-progress workout")]
+    SW["Service worker<br/>notifications only"]
+  end
+
+  subgraph Server["Next.js route handlers (session-scoped, zod-validated)"]
+    API["/api/*"]
+    Auth["NextAuth + bcrypt<br/>roles: member · admin"]
+  end
+
+  subgraph MySQL["MySQL 8 · system of record · ACID · 3NF"]
+    Tables["12 tables"]
+    Trg["11 triggers<br/>volume · PRs · last trained · audit"]
+    Proc["procedures + functions<br/>scheduler · overload · fuel"]
+    Views["5 views<br/>recovery status · weekly volume · PRs"]
+  end
+
+  subgraph Mongo["MongoDB · flexible documents"]
+    Stories[("journey_stories<br/>journals · notes · photos · milestones<br/>photo story keeps weight from fn_current_weight")]
+    Routines[("custom_routines<br/>nested exercise lists")]
+  end
+
+  Files[("uploads/&lt;user&gt;/&lt;uuid&gt;.jpg<br/>private photo files")]
+
+  UI -->|"fetch (cookie session)"| API
+  UI --- Draft
+  UI --- SW
+  API --- Auth
+  API -->|"one transaction per workout"| Tables
+  Tables --> Trg
+  API -->|"CALL / SELECT"| Proc
+  API -->|"SELECT"| Views
+  API -->|"after MySQL commit, best effort"| Stories
+  API --> Routines
+  API -->|"validated, magic-byte checked"| Files
+  Stories -. "session_id · user_id (checked by API)" .-> Tables
+  Routines -. "exercise_id (checked by API)" .-> Tables
+  Stories -. "photo_file" .-> Files

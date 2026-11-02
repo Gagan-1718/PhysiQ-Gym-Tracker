@@ -1,0 +1,68 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "journey_stories",
+    "description": "Fitness journey timeline: post-workout journals and progress photos. Attributes are sparse and evolve over time (mood, energy, tags, photo angle, free text), so a flexible document fits better than a wide table of NULLs. Extra fields are allowed on purpose.",
+    "required": ["user_id", "date", "kind", "created_at"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "user_id": {
+        "bsonType": "int",
+        "minimum": 1,
+        "description": "users.id in MySQL (cross-store reference, checked by the API)"
+      },
+      "date": {
+        "bsonType": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+        "description": "Calendar date YYYY-MM-DD in the user's local time"
+      },
+      "kind": {
+        "enum": ["workout_journal", "progress_photo", "milestone", "note"]
+      },
+      "session_id": {
+        "bsonType": ["int", "null"],
+        "description": "workout_sessions.id in MySQL when the story is about a workout"
+      },
+      "week_number": { "bsonType": ["int", "null"], "minimum": 1 },
+      "caption": { "bsonType": ["string", "null"], "maxLength": 1000 },
+      "mood": {
+        "bsonType": ["int", "null"],
+        "minimum": 1,
+        "maximum": 5,
+        "description": "1 = drained, 5 = unstoppable"
+      },
+      "energy": { "bsonType": ["int", "null"], "minimum": 1, "maximum": 5 },
+      "tags": {
+        "bsonType": "array",
+        "maxItems": 12,
+        "items": { "bsonType": "string", "maxLength": 30 }
+      },
+      "photo_url": { "bsonType": ["string", "null"], "maxLength": 500 },
+      "photo_file": {
+        "bsonType": ["string", "null"],
+        "pattern": "^[a-f0-9-]{36}\\.(jpg|png|webp)$",
+        "description": "File name of the private upload (uploads/<user_id>/<photo_file>); served only to its owner by /api/photos"
+      },
+      "photo_angle": { "enum": ["front", "side", "back", "other", null] },
+      "milestone": {
+        "bsonType": ["object", "null"],
+        "description": "Set on system-made milestone stories, e.g. { type: 'sessions', value: 25 }",
+        "properties": {
+          "type": { "enum": ["sessions"] },
+          "value": { "bsonType": "int", "minimum": 1 }
+        }
+      },
+      "weight_snapshot": {
+        "bsonType": ["double", "int", "decimal", "null"],
+        "minimum": 30,
+        "maximum": 300
+      },
+      "highlights": {
+        "bsonType": "array",
+        "description": "Free-form highlight objects, e.g. PRs hit in the session",
+        "items": { "bsonType": "object" }
+      },
+      "created_at": { "bsonType": "date" }
+    }
+  }
+}

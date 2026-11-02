@@ -1,0 +1,122 @@
+erDiagram
+  users {
+    int id PK
+    varchar name
+    varchar email UK
+    varchar password_hash
+    enum role
+    enum goal
+    decimal height
+    decimal starting_weight
+    tinyint weekly_goal
+    timestamp created_at
+    timestamp updated_at
+  }
+  splits {
+    int id PK
+    int user_id FK
+    varchar split_name
+    tinyint is_active
+    tinyint active_slot
+    timestamp created_at
+  }
+  split_days {
+    int id PK
+    int split_id FK
+    varchar body_part
+    tinyint day_order
+    tinyint min_rest_days
+    date last_trained_date
+  }
+  split_day_muscles {
+    int split_day_id PK,FK
+    int muscle_group_id PK,FK
+  }
+  muscle_groups {
+    int id PK
+    varchar name UK
+    enum region
+  }
+  exercises {
+    int id PK
+    varchar name UK
+    int muscle_group_id FK
+    enum equipment_needed
+    text instructions
+    timestamp created_at
+  }
+  workout_sessions {
+    int id PK
+    int user_id FK
+    int split_day_id FK
+    date session_date
+    varchar body_part
+    datetime started_at
+    datetime ended_at
+    decimal total_volume
+    varchar notes
+    char client_ref
+    timestamp created_at
+  }
+  sets {
+    int id PK
+    int session_id FK
+    int exercise_id FK
+    tinyint set_number
+    smallint reps
+    decimal weight
+    tinyint is_warmup
+    decimal rpe
+    timestamp created_at
+  }
+  personal_records {
+    int user_id PK,FK
+    int exercise_id PK,FK
+    int set_id FK,UK
+    timestamp updated_at
+  }
+  body_measurements {
+    int id PK
+    int user_id FK
+    date recorded_on
+    decimal weight
+    decimal waist
+    decimal chest
+    decimal arms
+    timestamp created_at
+  }
+  user_daily_fuel {
+    int user_id PK,FK
+    date fuel_date PK
+    smallint protein_target_g
+    smallint water_target_ml
+    smallint calorie_target
+    smallint protein_logged_g
+    smallint water_logged_ml
+    timestamp updated_at
+  }
+  admin_audit_logs {
+    bigint id PK
+    int admin_id FK
+    enum action
+    varchar target_table
+    int target_id
+    json details
+    timestamp created_at
+  }
+
+  users ||--o{ splits : "user_id"
+  splits ||--o{ split_days : "split_id"
+  split_days ||--o{ split_day_muscles : "split_day_id"
+  muscle_groups ||--o{ split_day_muscles : "muscle_group_id"
+  muscle_groups ||--o{ exercises : "muscle_group_id"
+  users ||--o{ workout_sessions : "user_id"
+  split_days |o--o{ workout_sessions : "split_day_id"
+  exercises ||--o{ sets : "exercise_id"
+  workout_sessions ||--o{ sets : "session_id"
+  users ||--o{ personal_records : "user_id"
+  exercises ||--o{ personal_records : "exercise_id"
+  sets ||--o| personal_records : "set_id"
+  users ||--o{ body_measurements : "user_id"
+  users ||--o{ user_daily_fuel : "user_id"
+  users |o--o{ admin_audit_logs : "admin_id"

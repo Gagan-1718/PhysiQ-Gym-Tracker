@@ -1,67 +1,41 @@
-import { NextResponse } from 'next/server';
-import { query } from '@/lib/mysql';
+import { ok, readJson, route } from '@/lib/api';
+import { execute, select, selectOne, withTransaction } from '@/lib/mysql';
+import { requireAdmin, requireUser } from '@/lib/session';
+import { ExerciseSchema } from '@/lib/schemas';
+import type { Exercise } from '@/types/database';
 
-// GET: Browse & filter exercises master library
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const muscleGroup = searchParams.get('muscleGroup');
-    const search = searchParams.get('search');
+const EXERCISE_COLUMNS = `e.id, e.name, e.muscle_group_id, mg.name AS muscle_group, e.equipment_needed, e.instructions`;
 
-    let sql = `SELECT * FROM exercises WHERE 1=1`;
-    const params: any[] = [];
+// GET /api/exercises — master library, sorted by muscle group then name
+export const GET = route(async () => {
+  await requireUser();
+  const exercises = await select<Exercise>(
+    `SELECT ${EXERCISE_COLUMNS}
+     FROM exercises e JOIN muscle_groups mg ON mg.id = e.muscle_group_id
+     ORDER BY mg.id, e.name`
+  );
+  const muscleGroups = await select<{ id: number; name: string; region: string }>('SELECT id, name, region FROM muscle_groups ORDER BY id');
+  return ok({ exercises, muscleGroups });
+});
 
-    if (muscleGroup && muscleGroup !== 'All') {
-      sql += ` AND muscle_group = ?`;
-      params.push(muscleGroup);
-    }
-
-    if (search) {
-      sql += ` AND name LIKE ?`;
-      params.push(`%${search}%`);
-    }
-
-    sql += ` ORDER BY muscle_group ASC, name ASC`;
-
-    const exercises = await query(sql, params);
-
-    return NextResponse.json({ success: true, data: exercises });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch exercises' },
-      { status: 500 }
-    );
-  }
-}
-
-// POST: Add new exercise to master library (Admin/Contributed)
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { name, muscleGroup, equipmentNeeded, instructions } = body;
-
-    if (!name || !muscleGroup) {
-      return NextResponse.json(
-        { success: false, error: 'Exercise name and muscle group are required' },
-        { status: 400 }
+// POST /api/exercises — admins add to the master library (audited by trg_exercises_ai)
+export const POST = route(async (req) => {
+  const admin = await requireAdmin();
+  const body = ExerciseSchema.parse(await readJson(req));
+  const id = await withTransaction(
+    async (conn) => {
+      const res = await execute(
+        'INSERT INTO exercises (name, muscle_group_id, equipment_needed, instructions) VALUES (?, ?, ?, ?)',
+        [body.name, body.muscleGroupId, body.equipment, body.instructions || null],
+        conn
       );
-    }
-
-    const result: any = await query(
-      `INSERT INTO exercises (name, muscle_group, equipment_needed, instructions)
-       VALUES (?, ?, ?, ?)`,
-      [name, muscleGroup, equipmentNeeded || 'Bodyweight', instructions || null]
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: 'Exercise added to library',
-      data: { id: result.insertId },
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to insert exercise' },
-      { status: 500 }
-    );
-  }
-}
+      return res.insertId;
+    },
+    { actingUserId: admin.id }
+  );
+  const exercise = await selectOne<Exercise>(
+    `SELECT ${EXERCISE_COLUMNS} FROM exercises e JOIN muscle_groups mg ON mg.id = e.muscle_group_id WHERE e.id = ?`,
+    [id]
+  );
+  return ok(exercise, 201);
+});
