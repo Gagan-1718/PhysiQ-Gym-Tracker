@@ -58,6 +58,8 @@ test('add a note and two photos; search, filter, compare then-and-now; photos ar
     await page.waitForFunction(() => document.querySelectorAll('[role=dialog]').length === 0, null, { timeout: 5000 });
   }
 
+  // Wait for SWR insights revalidation to render the Then and now card
+  await page.getByText('Then and now').waitFor({ timeout: 15000 });
   assert.ok((await page.getByText('Then and now').count()) > 0, 'comparison appears with two photos');
 
   // Photo stored privately and shrunk by the browser before upload
