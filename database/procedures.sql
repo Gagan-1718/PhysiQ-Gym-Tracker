@@ -27,7 +27,7 @@ BEGIN
     IF p_reps = 1 THEN
         RETURN p_weight;
     END IF;
-    RETURN ROUND(p_weight * (1 + p_reps / 30), 2);
+    RETURN ROUND((p_weight * (30 + p_reps)) / 30.0, 2);
 END$$
 
 -- -----------------------------------------------------------------------------
