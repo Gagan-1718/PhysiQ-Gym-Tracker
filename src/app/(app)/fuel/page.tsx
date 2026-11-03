@@ -12,6 +12,7 @@ import { MacroSummaryCard } from '@/components/fuel/MacroSummaryCard';
 import { MealSectionList } from '@/components/fuel/MealSectionList';
 import { WaterTrackerCard } from '@/components/fuel/WaterTrackerCard';
 import { AddMealSheet } from '@/components/fuel/AddMealSheet';
+import { SemanticMealRecommender } from '@/components/fuel/SemanticMealRecommender';
 import { send } from '@/lib/client';
 import { localDateISO, parseLocalDate, relativeDay, shortDate } from '@/lib/format';
 import type { MealType, NutritionResponse } from '@/types/database';
@@ -178,6 +179,12 @@ export default function FuelPage() {
           {(tab === 'all' || tab === 'food') && (
             <>
               <MacroSummaryCard fuel={data.fuel} />
+
+              <SectionHeader title="Smart meal recommender" />
+              <SemanticMealRecommender
+                busy={busy}
+                onQuickLogFood={(foodId, mealType) => handleLogLibraryFood(foodId, 1, mealType)}
+              />
 
               <SectionHeader
                 title="Meals"
