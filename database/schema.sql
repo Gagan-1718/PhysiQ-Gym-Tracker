@@ -227,3 +227,25 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_audit_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 13. foods — master food library (user_id NULL = built-in staple food) plus
+--     member-created custom foods (user_id = owner, cascaded on account delete)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS foods (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT NULL COMMENT 'NULL = system staple food; otherwise custom food owned by user',
+    name          VARCHAR(100) NOT NULL,
+    category      ENUM('protein', 'grains_carbs', 'dairy_eggs', 'fruits_veg', 'fats_nuts', 'drinks_supps', 'meals') NOT NULL DEFAULT 'meals',
+    serving_label VARCHAR(50) NOT NULL DEFAULT '100 g',
+    serving_grams SMALLINT UNSIGNED NOT NULL DEFAULT 100,
+    calories      SMALLINT UNSIGNED NOT NULL,
+    protein_g     DECIMAL(5,1) NOT NULL DEFAULT 0.0,
+    carbs_g       DECIMAL(5,1) NOT NULL DEFAULT 0.0,
+    fat_g         DECIMAL(5,1) NOT NULL DEFAULT 0.0,
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_foods_serving_grams CHECK (serving_grams BETWEEN 1 AND 5000),
+    CONSTRAINT chk_foods_calories CHECK (calories <= 5000),
+    CONSTRAINT chk_foods_macros CHECK (protein_g >= 0 AND protein_g <= 500 AND carbs_g >= 0 AND carbs_g <= 1000 AND fat_g >= 0 AND fat_g <= 500),
+    CONSTRAINT fk_foods_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
