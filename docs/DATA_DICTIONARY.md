@@ -2,7 +2,7 @@
 
 > Generated from the live `information_schema` by `npm run docs:dictionary`. Do not edit by hand.
 
-**MySQL:** 12 tables, 5 views, 11 procedures, 5 functions, 11 triggers.
+**MySQL:** 15 tables, 7 views, 15 procedures, 7 functions, 15 triggers.
 **MongoDB:** `custom_routines`, `journey_stories` (validators in `database/mongodb/`).
 
 ## 1. `users`
@@ -160,11 +160,16 @@
 | `protein_target_g` | smallint unsigned | no |  |  |  |
 | `water_target_ml` | smallint unsigned | no |  |  |  |
 | `calorie_target` | smallint unsigned | no |  |  |  |
+| `carbs_target_g` | smallint unsigned | no | 250 |  |  |
+| `fat_target_g` | smallint unsigned | no | 70 |  |  |
 | `protein_logged_g` | smallint unsigned | no | 0 |  |  |
 | `water_logged_ml` | smallint unsigned | no | 0 |  |  |
+| `calories_logged` | smallint unsigned | no | 0 |  |  |
+| `carbs_logged_g` | smallint unsigned | no | 0 |  |  |
+| `fat_logged_g` | smallint unsigned | no | 0 |  |  |
 | `updated_at` | timestamp | no | CURRENT_TIMESTAMP |  | on update CURRENT_TIMESTAMP |
 
-**Checks:** `chk_fuel_protein`: `` (`protein_logged_g` <= 1000) `` · `chk_fuel_water`: `` (`water_logged_ml` <= 15000) ``
+**Checks:** `chk_fuel_calories`: `` (`calories_logged` <= 15000) `` · `chk_fuel_carbs`: `` (`carbs_logged_g` <= 2000) `` · `chk_fuel_fat`: `` (`fat_logged_g` <= 1000) `` · `chk_fuel_protein`: `` (`protein_logged_g` <= 1000) `` · `chk_fuel_water`: `` (`water_logged_ml` <= 15000) ``
 
 **Indexes:** `PRIMARY` (unique) (user_id, fuel_date)
 
@@ -182,9 +187,68 @@
 
 **Indexes:** `PRIMARY` (unique) (id) · `fk_audit_admin` (admin_id) · `idx_admin_audit_logs_created` (created_at DESC)
 
+## 13. `foods`
+
+| Column | Type | Null | Default | Key | Notes |
+|---|---|---|---|---|---|
+| `id` | int | no |  | PRI | auto_increment |
+| `user_id` | int | yes |  | MUL | FK → `users.id` ON DELETE CASCADE; NULL = system staple food; otherwise custom food owned by user |
+| `name` | varchar(100) | no |  |  |  |
+| `category` | enum('protein','grains_carbs','dairy_eggs','fruits_veg','fats_nuts','drinks_supps','meals') | no | meals |  |  |
+| `serving_label` | varchar(50) | no | 100 g |  |  |
+| `serving_grams` | smallint unsigned | no | 100 |  |  |
+| `calories` | smallint unsigned | no |  |  |  |
+| `protein_g` | decimal(5,1) | no | 0.0 |  |  |
+| `carbs_g` | decimal(5,1) | no | 0.0 |  |  |
+| `fat_g` | decimal(5,1) | no | 0.0 |  |  |
+| `created_at` | timestamp | no | CURRENT_TIMESTAMP |  |  |
+
+**Checks:** `chk_foods_calories`: `` (`calories` <= 5000) `` · `chk_foods_macros`: `` ((`protein_g` >= 0) and (`protein_g` <= 500) and (`carbs_g` >= 0) and (`carbs_g` <= 1000) and (`fat_g` >= 0) and (`fat_g` <= 500)) `` · `chk_foods_serving_grams`: `` (`serving_grams` between 1 and 5000) ``
+
+**Indexes:** `PRIMARY` (unique) (id) · `idx_foods_user_category` (user_id, category, name)
+
+## 14. `meal_logs`
+
+| Column | Type | Null | Default | Key | Notes |
+|---|---|---|---|---|---|
+| `id` | int | no |  | PRI | auto_increment |
+| `user_id` | int | no |  | MUL | FK → `users.id` ON DELETE CASCADE |
+| `fuel_date` | date | no |  |  |  |
+| `meal_type` | enum('breakfast','lunch','dinner','snack') | no | snack |  |  |
+| `food_id` | int | yes |  | MUL | FK → `foods.id` ON DELETE SET NULL |
+| `food_name` | varchar(100) | no |  |  |  |
+| `serving_label` | varchar(50) | no | 1 serving |  |  |
+| `servings` | decimal(4,2) | no | 1.00 |  |  |
+| `calories` | smallint unsigned | no |  |  |  |
+| `protein_g` | decimal(5,1) | no | 0.0 |  |  |
+| `carbs_g` | decimal(5,1) | no | 0.0 |  |  |
+| `fat_g` | decimal(5,1) | no | 0.0 |  |  |
+| `logged_at` | timestamp | no | CURRENT_TIMESTAMP |  |  |
+
+**Checks:** `chk_meal_calories`: `` (`calories` <= 5000) `` · `chk_meal_macros`: `` ((`protein_g` >= 0) and (`protein_g` <= 500) and (`carbs_g` >= 0) and (`carbs_g` <= 1000) and (`fat_g` >= 0) and (`fat_g` <= 500)) `` · `chk_meal_servings`: `` ((`servings` > 0) and (`servings` <= 20)) ``
+
+**Indexes:** `PRIMARY` (unique) (id) · `fk_meal_food` (food_id) · `idx_meal_logs_user_date` (user_id, fuel_date, logged_at)
+
+## 15. `water_logs`
+
+| Column | Type | Null | Default | Key | Notes |
+|---|---|---|---|---|---|
+| `id` | int | no |  | PRI | auto_increment |
+| `user_id` | int | no |  | MUL | FK → `users.id` ON DELETE CASCADE |
+| `fuel_date` | date | no |  |  |  |
+| `amount_ml` | smallint unsigned | no |  |  |  |
+| `container_label` | varchar(40) | no | Glass |  |  |
+| `logged_at` | timestamp | no | CURRENT_TIMESTAMP |  |  |
+
+**Checks:** `chk_water_amount`: `` (`amount_ml` between 50 and 5000) ``
+
+**Indexes:** `PRIMARY` (unique) (id) · `idx_water_logs_user_date` (user_id, fuel_date, logged_at)
+
 ## Views
 
+- `view_daily_nutrition_summary`
 - `view_exercise_session_best`
+- `view_hydration_daily`
 - `view_personal_records_detailed`
 - `view_split_day_status`
 - `view_weekly_muscle_volume`
@@ -194,16 +258,22 @@
 
 - function `fn_calculate_1rm`
 - function `fn_calorie_target`
+- function `fn_carbs_target_g`
 - function `fn_current_weight`
+- function `fn_fat_target_g`
 - function `fn_protein_target_g`
 - function `fn_water_target_ml`
 - procedure `sp_assert_valid_session`
 - procedure `sp_check_and_update_pr`
+- procedure `sp_delete_meal`
+- procedure `sp_delete_water`
 - procedure `sp_ensure_daily_fuel`
 - procedure `sp_estimate_next_target`
 - procedure `sp_get_daily_fuel`
 - procedure `sp_get_next_body_part`
 - procedure `sp_log_fuel`
+- procedure `sp_log_meal`
+- procedure `sp_log_water`
 - procedure `sp_rebuild_personal_records`
 - procedure `sp_refresh_last_trained`
 - procedure `sp_rep_max_table`
@@ -216,9 +286,13 @@
 | `trg_exercises_ad` | AFTER | DELETE | `exercises` |
 | `trg_exercises_ai` | AFTER | INSERT | `exercises` |
 | `trg_exercises_au` | AFTER | UPDATE | `exercises` |
+| `trg_meal_logs_ad` | AFTER | DELETE | `meal_logs` |
+| `trg_meal_logs_ai` | AFTER | INSERT | `meal_logs` |
 | `trg_sets_ad` | AFTER | DELETE | `sets` |
 | `trg_sets_ai` | AFTER | INSERT | `sets` |
 | `trg_sets_au` | AFTER | UPDATE | `sets` |
+| `trg_water_logs_ad` | AFTER | DELETE | `water_logs` |
+| `trg_water_logs_ai` | AFTER | INSERT | `water_logs` |
 | `trg_workout_sessions_ad` | AFTER | DELETE | `workout_sessions` |
 | `trg_workout_sessions_ai` | AFTER | INSERT | `workout_sessions` |
 | `trg_workout_sessions_au` | AFTER | UPDATE | `workout_sessions` |

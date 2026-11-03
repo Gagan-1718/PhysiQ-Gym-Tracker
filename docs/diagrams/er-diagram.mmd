@@ -91,8 +91,13 @@ erDiagram
     smallint protein_target_g
     smallint water_target_ml
     smallint calorie_target
+    smallint carbs_target_g
+    smallint fat_target_g
     smallint protein_logged_g
     smallint water_logged_ml
+    smallint calories_logged
+    smallint carbs_logged_g
+    smallint fat_logged_g
     timestamp updated_at
   }
   admin_audit_logs {
@@ -103,6 +108,42 @@ erDiagram
     int target_id
     json details
     timestamp created_at
+  }
+  foods {
+    int id PK
+    int user_id FK
+    varchar name
+    enum category
+    varchar serving_label
+    smallint serving_grams
+    smallint calories
+    decimal protein_g
+    decimal carbs_g
+    decimal fat_g
+    timestamp created_at
+  }
+  meal_logs {
+    int id PK
+    int user_id FK
+    date fuel_date
+    enum meal_type
+    int food_id FK
+    varchar food_name
+    varchar serving_label
+    decimal servings
+    smallint calories
+    decimal protein_g
+    decimal carbs_g
+    decimal fat_g
+    timestamp logged_at
+  }
+  water_logs {
+    int id PK
+    int user_id FK
+    date fuel_date
+    smallint amount_ml
+    varchar container_label
+    timestamp logged_at
   }
 
   users ||--o{ splits : "user_id"
@@ -120,3 +161,7 @@ erDiagram
   users ||--o{ body_measurements : "user_id"
   users ||--o{ user_daily_fuel : "user_id"
   users |o--o{ admin_audit_logs : "admin_id"
+  users |o--o{ foods : "user_id"
+  users ||--o{ meal_logs : "user_id"
+  foods |o--o{ meal_logs : "food_id"
+  users ||--o{ water_logs : "user_id"
