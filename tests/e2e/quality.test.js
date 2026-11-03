@@ -42,6 +42,9 @@ for (const width of WIDTHS) {
     await page.goto(`${BASE}/train`, { waitUntil: 'networkidle' });
     await check(page, '/train');
 
+    await page.goto(`${BASE}/fuel`, { waitUntil: 'networkidle' });
+    await check(page, '/fuel');
+
     await page.goto(`${BASE}/progress`, { waitUntil: 'networkidle' });
     await check(page, '/progress (overview)');
     await page.getByRole('radio', { name: 'Strength' }).click();
