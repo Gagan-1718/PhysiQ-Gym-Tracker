@@ -91,7 +91,7 @@ export default function TodayPage() {
 
       {!split.data ? <Skeleton className="h-64 rounded-[1.75rem]" /> : <UpNextCard rec={split.data.recommendation} days={split.data.days} />}
 
-      <SectionHeader title="Activity" />
+      <SectionHeader title="Activity" href="/fuel" />
       {!progress.data ? (
         <Skeleton className="h-60 rounded-[1.75rem]" />
       ) : (

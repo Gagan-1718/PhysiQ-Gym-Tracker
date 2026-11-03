@@ -1,6 +1,7 @@
 'use client';
 
-import { Check, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { Check, ChevronRight, Plus } from 'lucide-react';
 import { Rings } from '@/components/ui/Rings';
 import { kg } from '@/lib/format';
 import type { DailyFuel } from '@/types/database';
@@ -104,9 +105,19 @@ export function ActivityCard({
         </div>
       </div>
       {fuel && (
-        <p className="mt-3 text-footnote text-fg-3">
-          Targets from {kg(fuel.body_weight_kg)} kg · {fuel.calorie_target.toLocaleString()} kcal for your goal
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+          <p className="text-footnote text-fg-3">
+            {fuel.calories_logged !== undefined
+              ? `${fuel.calories_logged.toLocaleString()} / ${fuel.calorie_target.toLocaleString()} kcal · ${kg(fuel.body_weight_kg)} kg`
+              : `Targets from ${kg(fuel.body_weight_kg)} kg · ${fuel.calorie_target.toLocaleString()} kcal`}
+          </p>
+          <Link
+            href="/fuel"
+            className="inline-flex items-center gap-0.5 text-footnote font-semibold text-accent hover:brightness-110"
+          >
+            Food & Water log <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       )}
     </section>
   );
