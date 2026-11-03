@@ -192,4 +192,60 @@ BEGIN
                         'equipment', OLD.equipment_needed));
 END$$
 
+-- =============================================================================
+-- meal_logs & water_logs: keep user_daily_fuel totals synchronized automatically
+-- =============================================================================
+
+-- 12. Meal inserted -> add calories, protein, carbs and fat to user_daily_fuel
+DROP TRIGGER IF EXISTS trg_meal_logs_ai$$
+CREATE TRIGGER trg_meal_logs_ai
+AFTER INSERT ON meal_logs
+FOR EACH ROW
+BEGIN
+    CALL sp_ensure_daily_fuel(NEW.user_id, NEW.fuel_date);
+    UPDATE user_daily_fuel
+    SET calories_logged  = LEAST(15000, GREATEST(0, CAST(calories_logged  AS SIGNED) + NEW.calories)),
+        protein_logged_g = LEAST(1000,  GREATEST(0, CAST(protein_logged_g AS SIGNED) + ROUND(NEW.protein_g))),
+        carbs_logged_g   = LEAST(2000,  GREATEST(0, CAST(carbs_logged_g   AS SIGNED) + ROUND(NEW.carbs_g))),
+        fat_logged_g     = LEAST(1000,  GREATEST(0, CAST(fat_logged_g     AS SIGNED) + ROUND(NEW.fat_g)))
+    WHERE user_id = NEW.user_id AND fuel_date = NEW.fuel_date;
+END$$
+
+-- 13. Meal deleted -> subtract its calories and macros from user_daily_fuel
+DROP TRIGGER IF EXISTS trg_meal_logs_ad$$
+CREATE TRIGGER trg_meal_logs_ad
+AFTER DELETE ON meal_logs
+FOR EACH ROW
+BEGIN
+    UPDATE user_daily_fuel
+    SET calories_logged  = LEAST(15000, GREATEST(0, CAST(calories_logged  AS SIGNED) - OLD.calories)),
+        protein_logged_g = LEAST(1000,  GREATEST(0, CAST(protein_logged_g AS SIGNED) - ROUND(OLD.protein_g))),
+        carbs_logged_g   = LEAST(2000,  GREATEST(0, CAST(carbs_logged_g   AS SIGNED) - ROUND(OLD.carbs_g))),
+        fat_logged_g     = LEAST(1000,  GREATEST(0, CAST(fat_logged_g     AS SIGNED) - ROUND(OLD.fat_g)))
+    WHERE user_id = OLD.user_id AND fuel_date = OLD.fuel_date;
+END$$
+
+-- 14. Water entry inserted -> add amount_ml to user_daily_fuel.water_logged_ml
+DROP TRIGGER IF EXISTS trg_water_logs_ai$$
+CREATE TRIGGER trg_water_logs_ai
+AFTER INSERT ON water_logs
+FOR EACH ROW
+BEGIN
+    CALL sp_ensure_daily_fuel(NEW.user_id, NEW.fuel_date);
+    UPDATE user_daily_fuel
+    SET water_logged_ml = LEAST(15000, GREATEST(0, CAST(water_logged_ml AS SIGNED) + NEW.amount_ml))
+    WHERE user_id = NEW.user_id AND fuel_date = NEW.fuel_date;
+END$$
+
+-- 15. Water entry deleted -> subtract amount_ml from user_daily_fuel.water_logged_ml
+DROP TRIGGER IF EXISTS trg_water_logs_ad$$
+CREATE TRIGGER trg_water_logs_ad
+AFTER DELETE ON water_logs
+FOR EACH ROW
+BEGIN
+    UPDATE user_daily_fuel
+    SET water_logged_ml = LEAST(15000, GREATEST(0, CAST(water_logged_ml AS SIGNED) - OLD.amount_ml))
+    WHERE user_id = OLD.user_id AND fuel_date = OLD.fuel_date;
+END$$
+
 DELIMITER ;
