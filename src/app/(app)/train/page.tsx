@@ -16,6 +16,7 @@ import { fetcher, send } from '@/lib/client';
 import { cn, relativeDay } from '@/lib/format';
 import { buildDraft, useLibrary } from '@/lib/training';
 import { useWorkoutDraft } from '@/lib/workout-draft';
+import { SemanticExerciseFinder } from '@/components/train/SemanticExerciseFinder';
 import type { Exercise, Recommendation, Routine, SplitDayStatus } from '@/types/database';
 
 interface SplitResponse {
@@ -213,6 +214,21 @@ function TrainHome() {
       >
         <Plus className="h-5 w-5" /> Empty workout
       </Button>
+
+      <SectionHeader title="Exercise & alternative finder" />
+      <SemanticExerciseFinder
+        exercises={library.data?.exercises ?? []}
+        onStartExercise={(exercise) =>
+          start(`vec-${exercise.id}`, async () =>
+            buildDraft({
+              userId: userId!,
+              splitDayId: null,
+              bodyPart: exercise.muscle_group,
+              exercises: [{ exercise, targetSets: 3 }],
+            })
+          )
+        }
+      />
 
       <Sheet open={pendingStart !== null} onClose={() => setPendingStart(null)} title="Workout in progress">
         <p className="text-[15px] text-fg-2">
