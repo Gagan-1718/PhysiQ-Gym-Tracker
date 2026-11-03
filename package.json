@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "bash scripts/dev-services.sh ensure",
     "dev": "next dev",
     "build": "next build",
+    "prestart": "bash scripts/dev-services.sh ensure",
     "start": "next start",
     "services:start": "bash scripts/dev-services.sh start",
+    "services:ensure": "bash scripts/dev-services.sh ensure",
     "services:stop": "bash scripts/dev-services.sh stop",
     "services:status": "bash scripts/dev-services.sh status",
     "typecheck": "tsc --noEmit",
