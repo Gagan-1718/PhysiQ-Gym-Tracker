@@ -1,4 +1,4 @@
-import { CircleUserRound, Dumbbell, LayoutGrid, TrendingUp, type LucideIcon } from 'lucide-react';
+import { CircleUserRound, Dumbbell, LayoutGrid, TrendingUp, Utensils, type LucideIcon } from 'lucide-react';
 
 export interface NavItem {
   href: string;
@@ -11,6 +11,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Today', icon: LayoutGrid },
   { href: '/train', label: 'Train', icon: Dumbbell, match: ['/train'] },
+  { href: '/fuel', label: 'Fuel', icon: Utensils, match: ['/fuel'] },
   { href: '/progress', label: 'Progress', icon: TrendingUp, match: ['/progress', '/history'] },
   { href: '/profile', label: 'Profile', icon: CircleUserRound, match: ['/profile', '/admin'] },
 ];
