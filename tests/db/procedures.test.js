@@ -189,3 +189,40 @@ test('sp_rep_max_table: rep-max table round-trips the Epley formula and validate
       await assert.rejects(conn.query(`CALL sp_rep_max_table(${bad})`), /weight must be above 0/, bad);
     }
   }));
+
+test('sp_log_meal and sp_delete_meal scale library foods and sync user_daily_fuel via triggers', () =>
+  inRollback(async (conn) => {
+    const userId = await createUser(conn, { starting_weight: 75, goal: 'hypertrophy' });
+    const [[chicken]] = await conn.query("SELECT id, calories, protein_g, carbs_g, fat_g FROM foods WHERE name = 'Chicken Breast (Grilled)' LIMIT 1");
+    assert.ok(chicken, 'built-in food library is seeded');
+
+    const [[[meal]]] = await conn.query(
+      "CALL sp_log_meal(?, CURRENT_DATE, 'lunch', ?, NULL, NULL, 2.00, 0, 0, 0, 0)",
+      [userId, chicken.id]
+    );
+    assert.equal(meal.calories, chicken.calories * 2);
+    assert.equal(meal.protein_g, chicken.protein_g * 2);
+
+    const [[[fuelAfterAdd]]] = await conn.query('CALL sp_get_daily_fuel(?, CURRENT_DATE)', [userId]);
+    assert.equal(fuelAfterAdd.calories_logged, chicken.calories * 2);
+    assert.equal(fuelAfterAdd.protein_logged_g, Math.round(chicken.protein_g * 2));
+
+    await conn.query('CALL sp_delete_meal(?, ?)', [userId, meal.id]);
+    const [[[fuelAfterDel]]] = await conn.query('CALL sp_get_daily_fuel(?, CURRENT_DATE)', [userId]);
+    assert.equal(fuelAfterDel.calories_logged, 0);
+    assert.equal(fuelAfterDel.protein_logged_g, 0);
+  }));
+
+test('sp_log_water and sp_delete_water update water_logged_ml via triggers', () =>
+  inRollback(async (conn) => {
+    const userId = await createUser(conn, { starting_weight: 75 });
+    const [[[w1]]] = await conn.query("CALL sp_log_water(?, CURRENT_DATE, 500, 'Bottle')", [userId]);
+    await conn.query("CALL sp_log_water(?, CURRENT_DATE, 250, 'Glass')", [userId]);
+
+    const [[[fuel]]] = await conn.query('CALL sp_get_daily_fuel(?, CURRENT_DATE)', [userId]);
+    assert.equal(fuel.water_logged_ml, 750);
+
+    await conn.query('CALL sp_delete_water(?, ?)', [userId, w1.id]);
+    const [[[fuelAfter]]] = await conn.query('CALL sp_get_daily_fuel(?, CURRENT_DATE)', [userId]);
+    assert.equal(fuelAfter.water_logged_ml, 250);
+  }));
