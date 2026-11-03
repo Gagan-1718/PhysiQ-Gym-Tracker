@@ -124,7 +124,7 @@ export function SemanticMealRecommender({
                     disabled={busy}
                     onClick={() => onQuickLogFood(hit.entity_id, mealType)}
                     aria-label={`Log ${hit.title}`}
-                    className="press inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-train px-2.5 text-xs font-bold text-white disabled:opacity-40"
+                    className="press inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-accent-solid px-2.5 text-xs font-bold text-white disabled:opacity-40"
                   >
                     <Plus className="h-3.5 w-3.5" /> {cal} kcal
                   </button>

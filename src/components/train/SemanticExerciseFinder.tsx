@@ -83,7 +83,7 @@ export function SemanticExerciseFinder({
               }}
               className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
                 active
-                  ? 'bg-train text-white'
+                  ? 'bg-accent-solid text-white'
                   : 'bg-surface-2 text-fg-2 hover:bg-surface-3 hover:text-fg'
               }`}
             >
@@ -129,7 +129,7 @@ export function SemanticExerciseFinder({
                         type="button"
                         onClick={() => onStartExercise(ex)}
                         aria-label={`Start workout with ${hit.title}`}
-                        className="press inline-flex h-8 items-center gap-1 rounded-lg bg-train px-2.5 text-xs font-bold text-white"
+                        className="press inline-flex h-8 items-center gap-1 rounded-lg bg-accent-solid px-2.5 text-xs font-bold text-white"
                       >
                         <Play className="h-3 w-3 fill-current" /> Train
                       </button>

@@ -204,7 +204,7 @@ export function AddMealSheet({
                     onClick={() => setCategory(c.value)}
                     className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
                       active
-                        ? 'bg-train text-white'
+                        ? 'bg-accent-solid text-white'
                         : 'bg-surface-2 text-fg-2 hover:bg-surface-3 hover:text-fg'
                     }`}
                   >
@@ -262,7 +262,7 @@ export function AddMealSheet({
                       type="button"
                       disabled={busy}
                       onClick={() => handleLibraryPick(food)}
-                      className="press inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-train px-3 text-xs font-bold text-white disabled:opacity-40"
+                      className="press inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-accent-solid px-3 text-xs font-bold text-white disabled:opacity-40"
                     >
                       <Plus className="h-3.5 w-3.5" /> {scaledCal} kcal
                     </button>
