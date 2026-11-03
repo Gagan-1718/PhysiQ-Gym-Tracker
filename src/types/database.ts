@@ -219,16 +219,3 @@ export interface JourneyInsights {
   firstPhoto: JourneyStory | null;
   latestPhoto: JourneyStory | null;
 }
-
-export interface UserDailyFuel {
-  id: number;
-  user_id: number;
-  log_date: string;
-  protein_target_g: number;
-  water_target_l: number;
-  calorie_target: number;
-  protein_completed: boolean;
-  water_completed: boolean;
-  sleep_hours: number;
-  notes?: string | null;
-}
