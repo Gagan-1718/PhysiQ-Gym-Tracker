@@ -17,6 +17,12 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 const { MongoClient } = require('mongodb');
 const { loadEnvConfig } = require('@next/env');
+const {
+  VECTOR_DIMENSIONS,
+  embedText,
+  buildExerciseSemanticText,
+  buildFoodSemanticText,
+} = require('../src/lib/embedding-engine');
 
 const ROOT = path.join(__dirname, '..');
 loadEnvConfig(ROOT);
@@ -59,6 +65,14 @@ const MONGO_COLLECTIONS = [
       // Full-text search over captions and tags (one text index per collection);
       // queries always add user_id, so a member only ever searches their own stories
       { key: { caption: 'text', tags: 'text' }, name: 'txt_caption_tags', weights: { caption: 2, tags: 1 }, default_language: 'english' },
+    ],
+  },
+  {
+    name: 'vector_embeddings',
+    schema: 'database/mongodb/vector_embeddings.schema.json',
+    indexes: [
+      { key: { domain: 1, entity_id: 1 }, name: 'uq_domain_entity', unique: true },
+      { key: { domain: 1, user_id: 1 }, name: 'idx_domain_user' },
     ],
   },
 ];
@@ -332,6 +346,76 @@ async function seedMongoDemo(db) {
   }
 }
 
+async function seedMongoVectors(db) {
+  const conn = await mysql.createConnection({ ...mysqlConfig(), database: DB_NAME });
+  try {
+    const [exercises] = await conn.query(
+      `SELECT e.id, e.name, e.muscle_group_id, mg.name AS muscle_group, e.equipment_needed, e.instructions
+       FROM exercises e JOIN muscle_groups mg ON mg.id = e.muscle_group_id
+       ORDER BY e.id`
+    );
+    const [foods] = await conn.query(
+      `SELECT id, user_id, name, category, serving_label, serving_grams, calories, protein_g, carbs_g, fat_g
+       FROM foods ORDER BY id`
+    );
+
+    const now = new Date();
+    const docs = [];
+
+    for (const ex of exercises) {
+      const semantic_text = buildExerciseSemanticText(ex);
+      docs.push({
+        domain: 'exercise',
+        entity_id: Number(ex.id),
+        user_id: null,
+        title: ex.name,
+        subtitle: `${ex.muscle_group} · ${ex.equipment_needed}`,
+        semantic_text,
+        dimensions: VECTOR_DIMENSIONS,
+        embedding: embedText(semantic_text),
+        metadata: {
+          muscle_group_id: Number(ex.muscle_group_id),
+          muscle_group: ex.muscle_group,
+          equipment_needed: ex.equipment_needed,
+          instructions: ex.instructions,
+        },
+        updated_at: now,
+      });
+    }
+
+    for (const f of foods) {
+      const semantic_text = buildFoodSemanticText(f);
+      docs.push({
+        domain: 'food',
+        entity_id: Number(f.id),
+        user_id: f.user_id === null ? null : Number(f.user_id),
+        title: f.name,
+        subtitle: `${f.serving_label} · ${f.calories} kcal · ${Number(f.protein_g)}g P`,
+        semantic_text,
+        dimensions: VECTOR_DIMENSIONS,
+        embedding: embedText(semantic_text),
+        metadata: {
+          category: f.category,
+          serving_label: f.serving_label,
+          serving_grams: Number(f.serving_grams),
+          calories: Number(f.calories),
+          protein_g: Number(f.protein_g),
+          carbs_g: Number(f.carbs_g),
+          fat_g: Number(f.fat_g),
+        },
+        updated_at: now,
+      });
+    }
+
+    if (docs.length > 0) {
+      await db.collection('vector_embeddings').insertMany(docs);
+    }
+    console.log(`  ✓ vector_embeddings (${exercises.length} exercise vectors + ${foods.length} food vectors, ${VECTOR_DIMENSIONS}-d)`);
+  } finally {
+    await conn.end();
+  }
+}
+
 async function initMongo() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
   const dbName = process.env.MONGODB_DB || 'physiq';
@@ -347,6 +431,7 @@ async function initMongo() {
       await db.collection(coll.name).createIndexes(coll.indexes);
       console.log(`  ✓ ${dbName}.${coll.name} (validator + ${coll.indexes.length} indexes)`);
     }
+    await seedMongoVectors(db);
     if (WITH_DEMO) await seedMongoDemo(db);
   } finally {
     await client.close();

@@ -2,6 +2,7 @@ import { ok, readJson, route } from '@/lib/api';
 import { execute, select, selectOne } from '@/lib/mysql';
 import { CreateFoodSchema, FOOD_CATEGORIES } from '@/lib/schemas';
 import { requireUser } from '@/lib/session';
+import { upsertFoodVector } from '@/lib/vector';
 import type { FoodCategory, FoodItem } from '@/types/database';
 
 // GET /api/foods?q=...&category=... — built-in staple foods + signed-in user's custom foods
@@ -62,6 +63,10 @@ export const POST = route(async (req) => {
      FROM foods WHERE id = ?`,
     [res.insertId]
   );
+
+  if (created) {
+    await upsertFoodVector(created);
+  }
 
   return ok(created, 201);
 });

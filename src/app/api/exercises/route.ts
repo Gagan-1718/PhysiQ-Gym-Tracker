@@ -2,6 +2,7 @@ import { ok, readJson, route } from '@/lib/api';
 import { execute, select, selectOne, withTransaction } from '@/lib/mysql';
 import { requireAdmin, requireUser } from '@/lib/session';
 import { ExerciseSchema } from '@/lib/schemas';
+import { upsertExerciseVector } from '@/lib/vector';
 import type { Exercise } from '@/types/database';
 
 const EXERCISE_COLUMNS = `e.id, e.name, e.muscle_group_id, mg.name AS muscle_group, e.equipment_needed, e.instructions`;
@@ -37,5 +38,8 @@ export const POST = route(async (req) => {
     `SELECT ${EXERCISE_COLUMNS} FROM exercises e JOIN muscle_groups mg ON mg.id = e.muscle_group_id WHERE e.id = ?`,
     [id]
   );
+  if (exercise) {
+    await upsertExerciseVector(exercise);
+  }
   return ok(exercise, 201);
 });
