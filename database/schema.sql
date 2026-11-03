@@ -249,3 +249,29 @@ CREATE TABLE IF NOT EXISTS foods (
     CONSTRAINT chk_foods_macros CHECK (protein_g >= 0 AND protein_g <= 500 AND carbs_g >= 0 AND carbs_g <= 1000 AND fat_g >= 0 AND fat_g <= 500),
     CONSTRAINT fk_foods_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 14. meal_logs — individual meal entries per user and day (breakfast, lunch,
+--     dinner, snack). Macros are snapshotted at log time so editing/deleting a
+--     custom food never rewrites historical logs.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS meal_logs (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT NOT NULL,
+    fuel_date     DATE NOT NULL,
+    meal_type     ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL DEFAULT 'snack',
+    food_id       INT NULL,
+    food_name     VARCHAR(100) NOT NULL,
+    serving_label VARCHAR(50) NOT NULL DEFAULT '1 serving',
+    servings      DECIMAL(4,2) NOT NULL DEFAULT 1.00,
+    calories      SMALLINT UNSIGNED NOT NULL,
+    protein_g     DECIMAL(5,1) NOT NULL DEFAULT 0.0,
+    carbs_g       DECIMAL(5,1) NOT NULL DEFAULT 0.0,
+    fat_g         DECIMAL(5,1) NOT NULL DEFAULT 0.0,
+    logged_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_meal_servings CHECK (servings > 0 AND servings <= 20),
+    CONSTRAINT chk_meal_calories CHECK (calories <= 5000),
+    CONSTRAINT chk_meal_macros CHECK (protein_g >= 0 AND protein_g <= 500 AND carbs_g >= 0 AND carbs_g <= 1000 AND fat_g >= 0 AND fat_g <= 500),
+    CONSTRAINT fk_meal_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_meal_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
