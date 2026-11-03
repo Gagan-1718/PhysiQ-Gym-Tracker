@@ -3,7 +3,7 @@
 > Generated from the live `information_schema` by `npm run docs:dictionary`. Do not edit by hand.
 
 **MySQL:** 15 tables, 7 views, 15 procedures, 7 functions, 15 triggers.
-**MongoDB:** `custom_routines`, `journey_stories` (validators in `database/mongodb/`).
+**MongoDB:** `custom_routines`, `journey_stories`, `vector_embeddings` (validators in `database/mongodb/`).
 
 ## 1. `users`
 

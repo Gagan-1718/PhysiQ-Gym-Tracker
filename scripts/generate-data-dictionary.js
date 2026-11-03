@@ -84,7 +84,7 @@ async function main() {
   out.push('');
   out.push(`**MySQL:** ${TABLE_ORDER.length} tables, ${views.length} views, ${routines.filter((r) => r.ROUTINE_TYPE === 'PROCEDURE').length} procedures, ` +
     `${routines.filter((r) => r.ROUTINE_TYPE === 'FUNCTION').length} functions, ${triggers.length} triggers.`);
-  out.push('**MongoDB:** `custom_routines`, `journey_stories` (validators in `database/mongodb/`).');
+  out.push('**MongoDB:** `custom_routines`, `journey_stories`, `vector_embeddings` (validators in `database/mongodb/`).');
   out.push('');
 
   TABLE_ORDER.forEach((table, i) => {
