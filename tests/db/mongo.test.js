@@ -88,3 +88,43 @@ test('journey_stories has a text index and a (user, kind, date) index', async ()
     assert.ok(names.includes(expected), `missing index ${expected}`);
   }
 });
+
+test('vector_embeddings validates 32-d float vectors and seeds exercise + food embeddings', async () => {
+  const coll = db.collection('vector_embeddings');
+  const count = await coll.countDocuments();
+  assert.ok(count >= 72, `expected >= 72 seeded vector embeddings, got ${count}`);
+
+  // Rejects wrong dimension length (must be 32)
+  await assert.rejects(
+    coll.insertOne({
+      domain: 'exercise',
+      entity_id: 999999,
+      user_id: null,
+      title: 'Invalid Dim Vector',
+      subtitle: 'Chest',
+      semantic_text: 'Too short embedding array',
+      dimensions: 32,
+      embedding: [0.1, 0.2, 0.3],
+      metadata: {},
+      updated_at: new Date(),
+    }),
+    isValidationError
+  );
+
+  // Rejects out-of-range float (> 1.0)
+  await assert.rejects(
+    coll.insertOne({
+      domain: 'food',
+      entity_id: 999999,
+      user_id: null,
+      title: 'Unnormalized Vector',
+      subtitle: 'Protein',
+      semantic_text: 'Out of [-1, 1] range',
+      dimensions: 32,
+      embedding: new Array(32).fill(2.5),
+      metadata: {},
+      updated_at: new Date(),
+    }),
+    isValidationError
+  );
+});

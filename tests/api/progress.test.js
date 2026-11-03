@@ -125,3 +125,24 @@ test('nutrition & hydration APIs: food library, meal logging, and water logging 
   assert.equal(cleaned.fuel.calories_logged, 0);
   assert.equal(cleaned.fuel.water_logged_ml, 0);
 });
+
+test('vector search API (/api/vector/search): ranks exercises and foods by 32-d Cosine Similarity', async () => {
+  const exRes = await alex.get('/api/vector/search?domain=exercise&q=lower+back+friendly+leg+builder&k=4');
+  assert.equal(exRes.status, 200);
+  assert.equal(exRes.body.dimensions, 32);
+  assert.equal(exRes.body.results.length, 4);
+  assert.ok(
+    exRes.body.results[0].cosine_similarity >= exRes.body.results[1].cosine_similarity,
+    'results sorted descending by cosine similarity'
+  );
+
+  const simRes = await alex.get(`/api/vector/search?domain=exercise&similarTo=${exRes.body.results[0].entity_id}&k=3`);
+  assert.equal(simRes.status, 200);
+  assert.equal(simRes.body.results.length, 3);
+  assert.ok(simRes.body.results.every((r) => r.entity_id !== exRes.body.results[0].entity_id), 'excludes anchor exercise');
+
+  const foodRes = await alex.get('/api/vector/search?domain=food&q=high+protein+post+workout+recovery&k=4');
+  assert.equal(foodRes.status, 200);
+  assert.equal(foodRes.body.results.length, 4);
+  assert.ok(foodRes.body.results[0].cosine_similarity > 0.4);
+});

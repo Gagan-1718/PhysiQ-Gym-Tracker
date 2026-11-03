@@ -8,6 +8,7 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 const { MongoClient } = require('mongodb');
 const { loadEnvConfig } = require('@next/env');
+const { VECTOR_DIMENSIONS, embedText } = require('../../src/lib/embedding-engine');
 
 loadEnvConfig(path.join(__dirname, '..', '..'));
 
@@ -28,8 +29,8 @@ const show = (label, value) => console.log(`${label}:`, typeof value === 'string
   const stories = db.collection('journey_stories');
   const [[alex]] = await sql.query("SELECT id FROM users WHERE email = 'alex@physiq.test'");
 
-  h(1, 'Two collections, documents instead of join tables');
-  for (const name of ['custom_routines', 'journey_stories']) show(name, `${await db.collection(name).countDocuments()} documents`);
+  h(1, 'Three collections: document store + vector store');
+  for (const name of ['custom_routines', 'journey_stories', 'vector_embeddings']) show(name, `${await db.collection(name).countDocuments()} documents`);
   show('a routine (nested exercise list, supersets, targets in ONE document)', await db.collection('custom_routines').findOne({ user_id: alex.id }, { projection: { _id: 0, user_id: 0, created_at: 0, updated_at: 0 } }));
 
   h(2, 'A JSON-schema validator guards the collection');
@@ -91,6 +92,51 @@ const show = (label, value) => console.log(`${label}:`, typeof value === 'string
   const [[session]] = await sql.query('SELECT id, session_date, body_part, total_volume FROM workout_sessions WHERE id = ? AND user_id = ?', [linked.session_id, alex.id]);
   show('MongoDB story', { date: linked.date, caption: linked.caption, mood: linked.mood, tags: linked.tags, session_id: linked.session_id });
   show('MySQL session it points to (volume computed by a trigger)', { ...session, session_date: String(session.session_date).slice(0, 15) });
+
+  h(8, 'Vector Database (physiq.vector_embeddings): 32-d Cosine Similarity & L2 KNN');
+  const vectors = db.collection('vector_embeddings');
+  try {
+    await vectors.insertOne({
+      domain: 'exercise',
+      entity_id: 99999,
+      title: 'Bad Vector',
+      subtitle: 'Chest',
+      semantic_text: 'Too few dimensions',
+      dimensions: 32,
+      embedding: [0.5, 0.5], // only 2 dimensions instead of 32
+      metadata: {},
+      updated_at: new Date(),
+    });
+  } catch (err) {
+    console.log(`insert 2-d vector into 32-d collection -> REJECTED, error code ${err.code}: document failed validation`);
+  }
+
+  const qVec = embedText('lower back friendly leg builder');
+  const knn = await vectors
+    .aggregate([
+      { $match: { domain: 'exercise' } },
+      {
+        $addFields: {
+          cosine_similarity: {
+            $reduce: {
+              input: { $range: [0, VECTOR_DIMENSIONS] },
+              initialValue: 0,
+              in: {
+                $add: [
+                  '$$value',
+                  { $multiply: [{ $arrayElemAt: ['$embedding', '$$this'] }, { $arrayElemAt: [qVec, '$$this'] }] },
+                ],
+              },
+            },
+          },
+        },
+      },
+      { $sort: { cosine_similarity: -1 } },
+      { $limit: 3 },
+      { $project: { _id: 0, title: 1, subtitle: 1, cosine_similarity: { $round: ['$cosine_similarity', 4] } } },
+    ])
+    .toArray();
+  show('Top-3 KNN exercise vectors for "lower back friendly leg builder"', knn);
 
   await sql.end();
   await client.close();
