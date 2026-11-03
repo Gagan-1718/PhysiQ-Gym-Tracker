@@ -13,7 +13,7 @@ test('anonymous visitors: pages redirect to login, APIs answer 401, health shows
   const page = await anon.req('/');
   assert.equal(page.status, 307);
   assert.match(page.headers.get('location'), /\/login\?callbackUrl=%2F/);
-  for (const path of ['/api/me', '/api/splits', '/api/workouts', '/api/progress', '/api/fuel?date=2026-01-01', '/api/exercises', '/api/alerts', '/api/routines', '/api/body']) {
+  for (const path of ['/api/me', '/api/splits', '/api/workouts', '/api/progress', '/api/fuel?date=2026-01-01', '/api/nutrition?date=2026-01-01', '/api/foods', '/api/exercises', '/api/alerts', '/api/routines', '/api/body']) {
     assert.equal((await anon.get(path)).status, 401, path);
   }
   const health = await anon.get('/api/health');
@@ -80,8 +80,8 @@ test('health details, library writes and the audit log are role-gated', async ()
   assert.equal(detail.status, 'ok');
   assert.equal(detail.mysql.ok, true);
   assert.equal(detail.mongodb.ok, true);
-  assert.equal(detail.mysql.value.tables, 12);
-  assert.equal(detail.mysql.value.triggers, 11);
+  assert.equal(detail.mysql.value.tables, 15);
+  assert.equal(detail.mysql.value.triggers, 15);
 
   assert.equal((await alex.post('/api/exercises', { name: 'Member Move', muscleGroupId: 1, equipment: 'Machine' })).status, 403);
   assert.equal((await alex.get('/api/admin/audit')).status, 403);

@@ -86,3 +86,42 @@ test('1RM calculator is computed by the database (sp_rep_max_table) and validate
   }
   assert.equal((await client().get('/api/calc/one-rep-max?weight=100&reps=10')).status, 401);
 });
+
+test('nutrition & hydration APIs: food library, meal logging, and water logging sync daily fuel', async () => {
+  const foodsRes = await alex.get('/api/foods?category=protein');
+  assert.equal(foodsRes.status, 200);
+  assert.ok(foodsRes.body.foods.length >= 4, 'seeded protein foods');
+
+  const day = today(-390);
+  const initial = (await alex.get(`/api/nutrition?date=${day}`)).body;
+  assert.equal(initial.meals.length, 0);
+  assert.equal(initial.waterLogs.length, 0);
+
+  const mealRes = await alex.post('/api/nutrition/meals', {
+    date: day,
+    mealType: 'lunch',
+    foodId: foodsRes.body.foods[0].id,
+    servings: 1.5,
+  });
+  assert.equal(mealRes.status, 201);
+
+  const waterRes = await alex.post('/api/nutrition/water', {
+    date: day,
+    amountMl: 500,
+    containerLabel: 'Bottle',
+  });
+  assert.equal(waterRes.status, 201);
+
+  const after = (await alex.get(`/api/nutrition?date=${day}`)).body;
+  assert.equal(after.meals.length, 1);
+  assert.equal(after.waterLogs.length, 1);
+  assert.equal(after.fuel.calories_logged, mealRes.body.calories);
+  assert.equal(after.fuel.water_logged_ml, 500);
+
+  assert.equal((await alex.del(`/api/nutrition/meals?id=${mealRes.body.id}`)).status, 200);
+  assert.equal((await alex.del(`/api/nutrition/water?id=${waterRes.body.id}`)).status, 200);
+
+  const cleaned = (await alex.get(`/api/nutrition?date=${day}`)).body;
+  assert.equal(cleaned.fuel.calories_logged, 0);
+  assert.equal(cleaned.fuel.water_logged_ml, 0);
+});
