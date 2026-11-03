@@ -93,6 +93,28 @@ BEGIN
     RETURN ROUND((p_weight * 33 + v_adjust) / 10) * 10;
 END$$
 
+DROP FUNCTION IF EXISTS fn_fat_target_g$$
+CREATE FUNCTION fn_fat_target_g(p_weight DECIMAL(5,2))
+RETURNS SMALLINT UNSIGNED
+DETERMINISTIC NO SQL
+BEGIN
+    RETURN ROUND(p_weight * 0.9);
+END$$
+
+DROP FUNCTION IF EXISTS fn_carbs_target_g$$
+CREATE FUNCTION fn_carbs_target_g(p_weight DECIMAL(5,2), p_goal VARCHAR(20))
+RETURNS SMALLINT UNSIGNED
+DETERMINISTIC NO SQL
+BEGIN
+    DECLARE v_kcal INT;
+    DECLARE v_protein_kcal INT;
+    DECLARE v_fat_kcal INT;
+    SET v_kcal = fn_calorie_target(p_weight, p_goal);
+    SET v_protein_kcal = fn_protein_target_g(p_weight) * 4;
+    SET v_fat_kcal = fn_fat_target_g(p_weight) * 9;
+    RETURN GREATEST(50, ROUND((v_kcal - v_protein_kcal - v_fat_kcal) / 4.0));
+END$$
+
 -- =============================================================================
 -- INTEGRITY HELPERS (called by triggers)
 -- =============================================================================
