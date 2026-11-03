@@ -36,3 +36,15 @@ CREATE INDEX idx_exercises_muscle_group_name
 -- 5. Admin audit feed: ORDER BY created_at DESC LIMIT n
 CREATE INDEX idx_admin_audit_logs_created
     ON admin_audit_logs (created_at DESC);
+
+-- 6. Food library browsing & search: WHERE (user_id IS NULL OR user_id = ?) [AND category = ?] ORDER BY name
+CREATE INDEX idx_foods_user_category
+    ON foods (user_id, category, name);
+
+-- 7. Daily meal logs feed: WHERE user_id = ? AND fuel_date = ? ORDER BY logged_at
+CREATE INDEX idx_meal_logs_user_date
+    ON meal_logs (user_id, fuel_date, logged_at);
+
+-- 8. Daily hydration entries: WHERE user_id = ? AND fuel_date = ? ORDER BY logged_at
+CREATE INDEX idx_water_logs_user_date
+    ON water_logs (user_id, fuel_date, logged_at);
