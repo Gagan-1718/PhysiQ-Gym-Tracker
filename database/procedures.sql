@@ -420,6 +420,89 @@ BEGIN
 END$$
 
 -- -----------------------------------------------------------------------------
+-- sp_log_meal — log a meal from the food library or a custom quick entry.
+-- Ensures the day's fuel row exists first so the AFTER INSERT trigger on
+-- meal_logs can increment calories/macros atomically.
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_log_meal$$
+CREATE PROCEDURE sp_log_meal(
+    IN p_user_id INT,
+    IN p_date DATE,
+    IN p_meal_type VARCHAR(20),
+    IN p_food_id INT,
+    IN p_food_name VARCHAR(100),
+    IN p_serving_label VARCHAR(50),
+    IN p_servings DECIMAL(4,2),
+    IN p_calories INT,
+    IN p_protein_g DECIMAL(5,1),
+    IN p_carbs_g DECIMAL(5,1),
+    IN p_fat_g DECIMAL(5,1)
+)
+BEGIN
+    DECLARE v_name VARCHAR(100);
+    DECLARE v_label VARCHAR(50);
+    DECLARE v_cal INT;
+    DECLARE v_pro DECIMAL(5,1);
+    DECLARE v_carb DECIMAL(5,1);
+    DECLARE v_fat DECIMAL(5,1);
+    DECLARE v_mult DECIMAL(4,2);
+
+    CALL sp_ensure_daily_fuel(p_user_id, p_date);
+    SET v_mult = COALESCE(p_servings, 1.00);
+
+    IF p_food_id IS NOT NULL THEN
+        SELECT name,
+               serving_label,
+               ROUND(calories * v_mult),
+               ROUND(protein_g * v_mult, 1),
+               ROUND(carbs_g * v_mult, 1),
+               ROUND(fat_g * v_mult, 1)
+        INTO v_name, v_label, v_cal, v_pro, v_carb, v_fat
+        FROM foods
+        WHERE id = p_food_id AND (user_id IS NULL OR user_id = p_user_id);
+
+        IF v_name IS NULL THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Food item not found';
+        END IF;
+    ELSE
+        SET v_name  = p_food_name;
+        SET v_label = COALESCE(p_serving_label, '1 serving');
+        SET v_cal   = COALESCE(p_calories, 0);
+        SET v_pro   = COALESCE(p_protein_g, 0.0);
+        SET v_carb  = COALESCE(p_carbs_g, 0.0);
+        SET v_fat   = COALESCE(p_fat_g, 0.0);
+    END IF;
+
+    INSERT INTO meal_logs (
+        user_id, fuel_date, meal_type, food_id, food_name,
+        serving_label, servings, calories, protein_g, carbs_g, fat_g
+    )
+    VALUES (
+        p_user_id, p_date, COALESCE(p_meal_type, 'snack'), p_food_id, v_name,
+        v_label, v_mult, v_cal, v_pro, v_carb, v_fat
+    );
+
+    SELECT id, user_id, DATE_FORMAT(fuel_date, '%Y-%m-%d') AS fuel_date,
+           meal_type, food_id, food_name, serving_label, servings,
+           calories, protein_g, carbs_g, fat_g, logged_at
+    FROM meal_logs
+    WHERE id = LAST_INSERT_ID();
+END$$
+
+-- -----------------------------------------------------------------------------
+-- sp_delete_meal — delete a user's logged meal (AFTER DELETE trigger rolls back
+-- the day's macro totals in user_daily_fuel).
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_delete_meal$$
+CREATE PROCEDURE sp_delete_meal(IN p_user_id INT, IN p_meal_id INT)
+BEGIN
+    DELETE FROM meal_logs
+    WHERE id = p_meal_id AND user_id = p_user_id;
+
+    SELECT ROW_COUNT() AS deleted;
+END$$
+
+-- -----------------------------------------------------------------------------
 -- sp_schema_stats — how many tables, views, triggers and routines the database
 -- has. Used by /api/health. SQL SECURITY DEFINER: it reads the system catalogue
 -- with the owner's rights, so the least-privilege application account (which can
