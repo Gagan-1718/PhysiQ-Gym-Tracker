@@ -142,3 +142,51 @@ FROM sets s
 JOIN workout_sessions ws ON ws.id = s.session_id
 WHERE s.is_warmup = FALSE
 GROUP BY ws.user_id, s.exercise_id, ws.id, ws.session_date;
+
+-- -----------------------------------------------------------------------------
+-- 6. view_daily_nutrition_summary — daily macro targets vs logged totals and
+--    meal count per user and day (feeds the Fuel & Nutrition dashboard)
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW view_daily_nutrition_summary AS
+SELECT
+    f.user_id,
+    f.fuel_date,
+    f.calorie_target,
+    f.calories_logged,
+    f.protein_target_g,
+    f.protein_logged_g,
+    f.carbs_target_g,
+    f.carbs_logged_g,
+    f.fat_target_g,
+    f.fat_logged_g,
+    f.water_target_ml,
+    f.water_logged_ml,
+    ROUND(100 * f.calories_logged / NULLIF(f.calorie_target, 0))   AS calorie_pct,
+    ROUND(100 * f.protein_logged_g / NULLIF(f.protein_target_g, 0)) AS protein_pct,
+    ROUND(100 * f.water_logged_ml / NULLIF(f.water_target_ml, 0))   AS water_pct,
+    COALESCE(m.meals_count, 0)                                      AS meals_count
+FROM user_daily_fuel f
+LEFT JOIN (
+    SELECT user_id, fuel_date, COUNT(*) AS meals_count
+    FROM meal_logs
+    GROUP BY user_id, fuel_date
+) AS m ON m.user_id = f.user_id AND m.fuel_date = f.fuel_date;
+
+-- -----------------------------------------------------------------------------
+-- 7. view_hydration_daily — daily hydration summary with entry count and
+--    percentage of body-weight water goal
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW view_hydration_daily AS
+SELECT
+    f.user_id,
+    f.fuel_date,
+    f.water_target_ml,
+    f.water_logged_ml,
+    ROUND(100 * f.water_logged_ml / NULLIF(f.water_target_ml, 0)) AS hydration_pct,
+    COALESCE(w.entries_count, 0)                                  AS entries_count
+FROM user_daily_fuel f
+LEFT JOIN (
+    SELECT user_id, fuel_date, COUNT(*) AS entries_count
+    FROM water_logs
+    GROUP BY user_id, fuel_date
+) AS w ON w.user_id = f.user_id AND w.fuel_date = f.fuel_date;
