@@ -17,6 +17,7 @@ const DB = process.env.MYSQL_DATABASE || 'physiq_db';
 const TABLE_ORDER = [
   'users', 'muscle_groups', 'exercises', 'splits', 'split_days', 'split_day_muscles',
   'workout_sessions', 'sets', 'personal_records', 'body_measurements', 'user_daily_fuel', 'admin_audit_logs',
+  'foods', 'meal_logs', 'water_logs',
 ];
 
 const esc = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');

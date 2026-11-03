@@ -20,6 +20,7 @@ const DB = process.env.MYSQL_DATABASE || 'physiq_db';
 const ORDER = [
   'users', 'splits', 'split_days', 'split_day_muscles', 'muscle_groups', 'exercises',
   'workout_sessions', 'sets', 'personal_records', 'body_measurements', 'user_daily_fuel', 'admin_audit_logs',
+  'foods', 'meal_logs', 'water_logs',
 ];
 
 // Mermaid attribute types cannot contain commas or spaces
@@ -77,7 +78,7 @@ async function main() {
   out.push('');
   // Declaring relationships in dependency order (parents before children) gives the layout engine
   // the cleanest ranking: user -> split chain first, then the lookup tables, then training data.
-  const REL_ORDER = ['splits', 'split_days', 'split_day_muscles', 'exercises', 'workout_sessions', 'sets', 'personal_records', 'body_measurements', 'user_daily_fuel', 'admin_audit_logs'];
+  const REL_ORDER = ['splits', 'split_days', 'split_day_muscles', 'exercises', 'workout_sessions', 'sets', 'personal_records', 'body_measurements', 'user_daily_fuel', 'admin_audit_logs', 'foods', 'meal_logs', 'water_logs'];
   for (const f of fks.sort((a, b) => REL_ORDER.indexOf(a.t) - REL_ORDER.indexOf(b.t) || ORDER.indexOf(a.rt) - ORDER.indexOf(b.rt))) {
     const col = colInfo.get(`${f.t}.${f.c}`);
     const optional = col.n === 'YES';
