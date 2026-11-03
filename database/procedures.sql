@@ -503,6 +503,43 @@ BEGIN
 END$$
 
 -- -----------------------------------------------------------------------------
+-- sp_log_water — log a timestamped hydration entry (glass, bottle, shaker).
+-- Ensures the day's fuel row exists so trg_water_logs_ai increments
+-- water_logged_ml automatically.
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_log_water$$
+CREATE PROCEDURE sp_log_water(
+    IN p_user_id INT,
+    IN p_date DATE,
+    IN p_amount_ml INT,
+    IN p_container_label VARCHAR(40)
+)
+BEGIN
+    CALL sp_ensure_daily_fuel(p_user_id, p_date);
+
+    INSERT INTO water_logs (user_id, fuel_date, amount_ml, container_label)
+    VALUES (p_user_id, p_date, p_amount_ml, COALESCE(p_container_label, 'Glass'));
+
+    SELECT id, user_id, DATE_FORMAT(fuel_date, '%Y-%m-%d') AS fuel_date,
+           amount_ml, container_label, logged_at
+    FROM water_logs
+    WHERE id = LAST_INSERT_ID();
+END$$
+
+-- -----------------------------------------------------------------------------
+-- sp_delete_water — delete a hydration entry (trg_water_logs_ad subtracts its
+-- volume from user_daily_fuel.water_logged_ml).
+-- -----------------------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_delete_water$$
+CREATE PROCEDURE sp_delete_water(IN p_user_id INT, IN p_water_id INT)
+BEGIN
+    DELETE FROM water_logs
+    WHERE id = p_water_id AND user_id = p_user_id;
+
+    SELECT ROW_COUNT() AS deleted;
+END$$
+
+-- -----------------------------------------------------------------------------
 -- sp_schema_stats — how many tables, views, triggers and routines the database
 -- has. Used by /api/health. SQL SECURITY DEFINER: it reads the system catalogue
 -- with the owner's rights, so the least-privilege application account (which can
