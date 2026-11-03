@@ -356,15 +356,25 @@ BEGIN
 
     SET v_weight = COALESCE(fn_current_weight(p_user_id, p_date), 70.00);
 
-    INSERT INTO user_daily_fuel (user_id, fuel_date, protein_target_g, water_target_ml, calorie_target)
-    VALUES (p_user_id, p_date,
-            fn_protein_target_g(v_weight),
-            fn_water_target_ml(v_weight),
-            fn_calorie_target(v_weight, v_goal)) AS new_fuel
+    INSERT INTO user_daily_fuel (
+        user_id, fuel_date,
+        protein_target_g, water_target_ml, calorie_target,
+        carbs_target_g, fat_target_g
+    )
+    VALUES (
+        p_user_id, p_date,
+        fn_protein_target_g(v_weight),
+        fn_water_target_ml(v_weight),
+        fn_calorie_target(v_weight, v_goal),
+        fn_carbs_target_g(v_weight, v_goal),
+        fn_fat_target_g(v_weight)
+    ) AS new_fuel
     ON DUPLICATE KEY UPDATE
         protein_target_g = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.protein_target_g, user_daily_fuel.protein_target_g),
         water_target_ml  = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.water_target_ml,  user_daily_fuel.water_target_ml),
-        calorie_target   = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.calorie_target,   user_daily_fuel.calorie_target);
+        calorie_target   = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.calorie_target,   user_daily_fuel.calorie_target),
+        carbs_target_g   = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.carbs_target_g,   user_daily_fuel.carbs_target_g),
+        fat_target_g     = IF(user_daily_fuel.fuel_date >= CURRENT_DATE, new_fuel.fat_target_g,     user_daily_fuel.fat_target_g);
 END$$
 
 -- -----------------------------------------------------------------------------
@@ -379,7 +389,9 @@ BEGIN
     SELECT f.fuel_date,
            f.protein_target_g, f.protein_logged_g,
            f.water_target_ml,  f.water_logged_ml,
-           f.calorie_target,
+           f.calorie_target,   f.calories_logged,
+           f.carbs_target_g,   f.carbs_logged_g,
+           f.fat_target_g,     f.fat_logged_g,
            fn_current_weight(p_user_id, p_date) AS body_weight_kg
     FROM user_daily_fuel f
     WHERE f.user_id = p_user_id AND f.fuel_date = p_date;
