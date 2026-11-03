@@ -203,12 +203,20 @@ CREATE TABLE IF NOT EXISTS user_daily_fuel (
     protein_target_g SMALLINT UNSIGNED NOT NULL,
     water_target_ml  SMALLINT UNSIGNED NOT NULL,
     calorie_target   SMALLINT UNSIGNED NOT NULL,
+    carbs_target_g   SMALLINT UNSIGNED NOT NULL DEFAULT 250,
+    fat_target_g     SMALLINT UNSIGNED NOT NULL DEFAULT 70,
     protein_logged_g SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     water_logged_ml  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    calories_logged  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    carbs_logged_g   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    fat_logged_g     SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, fuel_date),
     CONSTRAINT chk_fuel_protein CHECK (protein_logged_g <= 1000),
     CONSTRAINT chk_fuel_water CHECK (water_logged_ml <= 15000),
+    CONSTRAINT chk_fuel_calories CHECK (calories_logged <= 15000),
+    CONSTRAINT chk_fuel_carbs CHECK (carbs_logged_g <= 2000),
+    CONSTRAINT chk_fuel_fat CHECK (fat_logged_g <= 1000),
     CONSTRAINT fk_fuel_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
