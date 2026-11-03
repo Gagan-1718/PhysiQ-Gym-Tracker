@@ -82,3 +82,43 @@ INSERT INTO exercises (name, muscle_group_id, equipment_needed, instructions) VA
 ('Hanging Leg Raise',              @core, 'Bodyweight', 'Hang from a bar and raise the legs to hip height without swinging.'),
 ('Cable Crunch',                   @core, 'Cable',      'Kneel with the rope at the head, crunch the ribs towards the hips.'),
 ('Ab Wheel Rollout',               @core, 'Other',      'From the knees, roll out as far as you can while keeping the lower back flat.');
+
+-- -----------------------------------------------------------------------------
+-- Built-in Food Library (28 athletic staples across 7 categories)
+-- -----------------------------------------------------------------------------
+INSERT INTO foods (user_id, name, category, serving_label, serving_grams, calories, protein_g, carbs_g, fat_g) VALUES
+-- Protein
+(NULL, 'Chicken Breast (Grilled)',       'protein',      '150 g cooked',     150, 248, 46.5,  0.0,  5.4),
+(NULL, 'Lean Ground Beef (93/7)',        'protein',      '150 g cooked',     150, 258, 39.0,  0.0, 10.5),
+(NULL, 'Atlantic Salmon Fillet',         'protein',      '150 g cooked',     150, 312, 33.0,  0.0, 19.5),
+(NULL, 'Canned Tuna in Water',           'protein',      '1 can (120 g)',    120, 132, 29.0,  0.0,  1.2),
+(NULL, 'Paneer (Low-Fat Cottage Cheese)','protein',      '100 g',            100, 265, 18.3,  3.4, 20.8),
+(NULL, 'Tofu (Extra Firm)',              'protein',      '150 g',            150, 180, 21.0,  3.0,  9.0),
+-- Dairy & Eggs
+(NULL, 'Whole Large Eggs (2 eggs)',      'dairy_eggs',   '2 large (100 g)',  100, 144, 12.6,  0.8,  9.6),
+(NULL, 'Liquid Egg Whites',              'dairy_eggs',   '200 ml',           200, 104, 22.0,  1.4,  0.4),
+(NULL, 'Greek Yogurt (0% Non-Fat)',      'dairy_eggs',   '1 cup (200 g)',    200, 118, 20.0,  7.8,  0.4),
+(NULL, 'Skim Milk',                      'dairy_eggs',   '250 ml glass',     250,  86,  8.5, 12.5,  0.3),
+-- Grains & Carbs
+(NULL, 'Jasmine White Rice (Cooked)',    'grains_carbs', '1 cup (180 g)',    180, 234,  4.3, 50.4,  0.4),
+(NULL, 'Rolled Oats (Dry)',              'grains_carbs', '80 g bowl',         80, 303, 10.5, 54.0,  5.2),
+(NULL, 'Sweet Potato (Baked)',           'grains_carbs', '200 g medium',     200, 180,  4.0, 41.4,  0.3),
+(NULL, 'Whole Wheat Bread',              'grains_carbs', '2 slices (70 g)',   70, 178,  8.4, 30.0,  2.4),
+(NULL, 'Whole Wheat Roti / Chapati',     'grains_carbs', '2 rotis (80 g)',    80, 240,  7.8, 46.0,  2.6),
+-- Fruits & Veg
+(NULL, 'Banana (Medium)',                'fruits_veg',   '1 medium (120 g)', 120, 105,  1.3, 27.0,  0.4),
+(NULL, 'Blueberries',                    'fruits_veg',   '1 cup (150 g)',    150,  85,  1.1, 21.6,  0.5),
+(NULL, 'Steamed Broccoli & Greens',      'fruits_veg',   '150 g',            150,  52,  4.2, 10.0,  0.6),
+(NULL, 'Avocado',                        'fruits_veg',   '1/2 medium (75 g)', 75, 120,  1.5,  6.4, 11.0),
+-- Fats & Nuts
+(NULL, 'Natural Peanut Butter',          'fats_nuts',    '2 tbsp (32 g)',     32, 190,  8.0,  6.0, 16.0),
+(NULL, 'Raw Almonds',                    'fats_nuts',    '30 g handful',      30, 174,  6.3,  6.5, 15.0),
+(NULL, 'Extra Virgin Olive Oil',         'fats_nuts',    '1 tbsp (14 g)',     14, 119,  0.0,  0.0, 13.5),
+-- Drinks & Supplements
+(NULL, 'Whey Protein Isolate',           'drinks_supps', '1 scoop (32 g)',    32, 120, 27.0,  1.5,  0.5),
+(NULL, 'Mass Gainer Shake',              'drinks_supps', '1 serving (100 g)',100, 380, 25.0, 62.0,  3.5),
+(NULL, 'Electrolyte Intra-Workout',      'drinks_supps', '500 ml bottle',    500,  45,  0.0, 11.0,  0.0),
+-- Complete Meals
+(NULL, 'Chicken & Rice Bowl',            'meals',        '1 bowl (400 g)',   400, 560, 48.0, 62.0, 11.5),
+(NULL, 'Protein Oatmeal w/ Whey & Berries','meals',      '1 bowl (350 g)',   350, 495, 38.5, 68.0,  7.2),
+(NULL, 'Steak, Sweet Potato & Broccoli', 'meals',        '1 plate (420 g)',  420, 620, 52.0, 48.0, 22.0);

@@ -422,16 +422,49 @@ INSERT INTO body_measurements (user_id, recorded_on, weight, waist, chest, arms)
 
 -- Daily fuel for the last week (targets computed by sp_ensure_daily_fuel)
 CALL sp_ensure_daily_fuel(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 6 DAY));
-UPDATE user_daily_fuel SET protein_logged_g = ROUND(protein_target_g * 1.03), water_logged_ml = ROUND(water_target_ml * 0.74 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 6 DAY);
+UPDATE user_daily_fuel SET calories_logged = ROUND(calorie_target * 0.96), protein_logged_g = ROUND(protein_target_g * 1.03), carbs_logged_g = ROUND(carbs_target_g * 0.94), fat_logged_g = ROUND(fat_target_g * 0.92), water_logged_ml = ROUND(water_target_ml * 0.74 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 6 DAY);
 CALL sp_ensure_daily_fuel(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY));
-UPDATE user_daily_fuel SET protein_logged_g = ROUND(protein_target_g * 1.06), water_logged_ml = ROUND(water_target_ml * 0.98 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY);
+UPDATE user_daily_fuel SET calories_logged = ROUND(calorie_target * 1.01), protein_logged_g = ROUND(protein_target_g * 1.06), carbs_logged_g = ROUND(carbs_target_g * 0.99), fat_logged_g = ROUND(fat_target_g * 0.98), water_logged_ml = ROUND(water_target_ml * 0.98 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY);
 CALL sp_ensure_daily_fuel(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 4 DAY));
-UPDATE user_daily_fuel SET protein_logged_g = ROUND(protein_target_g * 0.74), water_logged_ml = ROUND(water_target_ml * 1.08 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 4 DAY);
+UPDATE user_daily_fuel SET calories_logged = ROUND(calorie_target * 0.85), protein_logged_g = ROUND(protein_target_g * 0.74), carbs_logged_g = ROUND(carbs_target_g * 0.88), fat_logged_g = ROUND(fat_target_g * 0.86), water_logged_ml = ROUND(water_target_ml * 1.08 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 4 DAY);
 CALL sp_ensure_daily_fuel(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 3 DAY));
-UPDATE user_daily_fuel SET protein_logged_g = ROUND(protein_target_g * 0.80), water_logged_ml = ROUND(water_target_ml * 1.04 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 3 DAY);
+UPDATE user_daily_fuel SET calories_logged = ROUND(calorie_target * 0.92), protein_logged_g = ROUND(protein_target_g * 0.80), carbs_logged_g = ROUND(carbs_target_g * 0.95), fat_logged_g = ROUND(fat_target_g * 0.93), water_logged_ml = ROUND(water_target_ml * 1.04 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 3 DAY);
 CALL sp_ensure_daily_fuel(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 2 DAY));
-UPDATE user_daily_fuel SET protein_logged_g = ROUND(protein_target_g * 1.01), water_logged_ml = ROUND(water_target_ml * 0.75 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 2 DAY);
+UPDATE user_daily_fuel SET calories_logged = ROUND(calorie_target * 0.98), protein_logged_g = ROUND(protein_target_g * 1.01), carbs_logged_g = ROUND(carbs_target_g * 0.97), fat_logged_g = ROUND(fat_target_g * 0.96), water_logged_ml = ROUND(water_target_ml * 0.75 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 2 DAY);
+
+-- Yesterday & Today: logged via meal_logs and water_logs (triggers sync user_daily_fuel)
+SET @food_oats    = (SELECT id FROM foods WHERE name = 'Protein Oatmeal w/ Whey & Berries' LIMIT 1);
+SET @food_chicken = (SELECT id FROM foods WHERE name = 'Chicken & Rice Bowl' LIMIT 1);
+SET @food_salmon  = (SELECT id FROM foods WHERE name = 'Atlantic Salmon Fillet' LIMIT 1);
+SET @food_potato  = (SELECT id FROM foods WHERE name = 'Sweet Potato (Baked)' LIMIT 1);
+SET @food_whey    = (SELECT id FROM foods WHERE name = 'Whey Protein Isolate' LIMIT 1);
+SET @food_eggs    = (SELECT id FROM foods WHERE name = 'Whole Large Eggs (2 eggs)' LIMIT 1);
+
+-- Yesterday's meals & hydration
 CALL sp_ensure_daily_fuel(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY));
-UPDATE user_daily_fuel SET protein_logged_g = ROUND(protein_target_g * 0.96), water_logged_ml = ROUND(water_target_ml * 0.93 / 250) * 250 WHERE user_id = @alex AND fuel_date = DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY);
+INSERT INTO meal_logs (user_id, fuel_date, meal_type, food_id, food_name, serving_label, servings, calories, protein_g, carbs_g, fat_g) VALUES
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 'breakfast', @food_oats,    'Protein Oatmeal w/ Whey & Berries', '1 bowl (350 g)',  1.00, 495, 38.5, 68.0,  7.2),
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 'lunch',     @food_chicken, 'Chicken & Rice Bowl',               '1 bowl (400 g)',  1.00, 560, 48.0, 62.0, 11.5),
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 'dinner',    @food_salmon,  'Atlantic Salmon Fillet',            '150 g cooked',    1.00, 312, 33.0,  0.0, 19.5),
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 'dinner',    @food_potato,  'Sweet Potato (Baked)',              '200 g medium',    1.00, 180,  4.0, 41.4,  0.3),
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 'snack',     @food_whey,    'Whey Protein Isolate',              '1 scoop (32 g)',  1.00, 120, 27.0,  1.5,  0.5);
+
+INSERT INTO water_logs (user_id, fuel_date, amount_ml, container_label) VALUES
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 500, 'Bottle'),
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 750, 'Gym Shaker'),
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 500, 'Bottle'),
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 750, 'Gym Shaker'),
+(@alex, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 250, 'Glass');
+
+-- Today's meals & hydration so far (in progress)
 CALL sp_ensure_daily_fuel(@alex, CURRENT_DATE);
-UPDATE user_daily_fuel SET protein_logged_g = ROUND(protein_target_g * 0.45), water_logged_ml = ROUND(water_target_ml * 0.40 / 250) * 250 WHERE user_id = @alex AND fuel_date = CURRENT_DATE;
+INSERT INTO meal_logs (user_id, fuel_date, meal_type, food_id, food_name, serving_label, servings, calories, protein_g, carbs_g, fat_g) VALUES
+(@alex, CURRENT_DATE, 'breakfast', @food_oats,    'Protein Oatmeal w/ Whey & Berries', '1 bowl (350 g)',   1.00, 495, 38.5, 68.0,  7.2),
+(@alex, CURRENT_DATE, 'breakfast', @food_eggs,    'Whole Large Eggs (2 eggs)',         '2 large (100 g)',  1.00, 144, 12.6,  0.8,  9.6),
+(@alex, CURRENT_DATE, 'lunch',     @food_chicken, 'Chicken & Rice Bowl',               '1 bowl (400 g)',   1.00, 560, 48.0, 62.0, 11.5),
+(@alex, CURRENT_DATE, 'snack',     @food_whey,    'Whey Protein Isolate',              '1 scoop (32 g)',   1.00, 120, 27.0,  1.5,  0.5);
+
+INSERT INTO water_logs (user_id, fuel_date, amount_ml, container_label) VALUES
+(@alex, CURRENT_DATE, 500, 'Morning Bottle'),
+(@alex, CURRENT_DATE, 750, 'Gym Shaker'),
+(@alex, CURRENT_DATE, 250, 'Glass');
