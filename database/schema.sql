@@ -275,3 +275,17 @@ CREATE TABLE IF NOT EXISTS meal_logs (
     CONSTRAINT fk_meal_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_meal_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- -----------------------------------------------------------------------------
+-- 15. water_logs — timestamped hydration entries (glass, bottle, shaker, custom)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS water_logs (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    fuel_date       DATE NOT NULL,
+    amount_ml       SMALLINT UNSIGNED NOT NULL,
+    container_label VARCHAR(40) NOT NULL DEFAULT 'Glass',
+    logged_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_water_amount CHECK (amount_ml BETWEEN 50 AND 5000),
+    CONSTRAINT fk_water_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
