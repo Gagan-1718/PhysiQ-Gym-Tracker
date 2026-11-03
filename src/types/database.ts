@@ -150,7 +150,79 @@ export interface DailyFuel {
   water_target_ml: number;
   water_logged_ml: number;
   calorie_target: number;
+  calories_logged?: number;
+  carbs_target_g?: number;
+  carbs_logged_g?: number;
+  fat_target_g?: number;
+  fat_logged_g?: number;
   body_weight_kg: number | null;
+}
+
+export type FoodCategory =
+  | 'protein'
+  | 'grains_carbs'
+  | 'dairy_eggs'
+  | 'fruits_veg'
+  | 'fats_nuts'
+  | 'drinks_supps'
+  | 'meals';
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export interface FoodItem {
+  id: number;
+  user_id: number | null;
+  name: string;
+  category: FoodCategory;
+  serving_label: string;
+  serving_grams: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  created_at?: string;
+}
+
+export interface MealLog {
+  id: number;
+  user_id: number;
+  fuel_date: string;
+  meal_type: MealType;
+  food_id: number | null;
+  food_name: string;
+  serving_label: string;
+  servings: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  logged_at: string;
+}
+
+export interface WaterLog {
+  id: number;
+  user_id: number;
+  fuel_date: string;
+  amount_ml: number;
+  container_label: string;
+  logged_at: string;
+}
+
+export interface DailyNutritionHistory {
+  fuel_date: string;
+  calorie_target: number;
+  calories_logged: number;
+  protein_target_g: number;
+  protein_logged_g: number;
+  water_target_ml: number;
+  water_logged_ml: number;
+}
+
+export interface NutritionResponse {
+  fuel: DailyFuel;
+  meals: MealLog[];
+  waterLogs: WaterLog[];
+  history: DailyNutritionHistory[];
 }
 
 export interface WeeklySummary {
