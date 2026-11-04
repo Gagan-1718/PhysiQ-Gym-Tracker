@@ -7,13 +7,11 @@ import { useSession } from 'next-auth/react';
 import { Flame } from 'lucide-react';
 import { SectionHeader } from '@/components/ui/Card';
 import { ErrorNote, Skeleton } from '@/components/ui/Feedback';
-import { useToast } from '@/components/ui/Toast';
 import { UpNextCard } from '@/components/today/UpNextCard';
 import { RecoveryStrip } from '@/components/today/RecoveryStrip';
 import { ActivityCard } from '@/components/today/ActivityCard';
 import { WeekCard } from '@/components/today/WeekCard';
 import { RecentPRs } from '@/components/today/RecentPRs';
-import { send } from '@/lib/client';
 import { greeting, localDateISO, longDate } from '@/lib/format';
 import type { DailyFuel, PersonalRecord, Recommendation, SplitDayStatus, WeeklySummary } from '@/types/database';
 
@@ -34,33 +32,12 @@ interface ProgressResponse {
 
 export default function TodayPage() {
   const { data: session } = useSession();
-  const toast = useToast();
   const today = useMemo(() => localDateISO(), []);
   const split = useSWR<SplitResponse>('/api/splits');
   const progress = useSWR<ProgressResponse>('/api/progress');
   const fuel = useSWR<DailyFuel>(`/api/fuel?date=${today}`);
   const firstName = session?.user?.name?.split(' ')[0];
   const initial = session?.user?.name?.[0]?.toUpperCase() ?? '·';
-
-  // Optimistic: the ring moves instantly; the database's clamped result replaces it
-  async function logFuel(proteinDelta: number, waterDelta: number) {
-    const current = fuel.data;
-    if (!current) return;
-    navigator.vibrate?.(10);
-    try {
-      await fuel.mutate(send<DailyFuel>('/api/fuel', 'POST', { date: today, proteinDelta, waterDelta }), {
-        optimisticData: {
-          ...current,
-          protein_logged_g: current.protein_logged_g + proteinDelta,
-          water_logged_ml: current.water_logged_ml + waterDelta,
-        },
-        rollbackOnError: true,
-        revalidate: false,
-      });
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not log', 'error');
-    }
-  }
 
   return (
     <>
@@ -91,11 +68,11 @@ export default function TodayPage() {
 
       {!split.data ? <Skeleton className="h-64 rounded-[1.75rem]" /> : <UpNextCard rec={split.data.recommendation} days={split.data.days} />}
 
-      <SectionHeader title="Activity" href="/fuel" />
+      <SectionHeader title="Activity" />
       {!progress.data ? (
         <Skeleton className="h-60 rounded-[1.75rem]" />
       ) : (
-        <ActivityCard sessions={progress.data.thisWeek?.sessions_completed ?? 0} goal={progress.data.weeklyGoal} fuel={fuel.data} onLog={logFuel} />
+        <ActivityCard sessions={progress.data.thisWeek?.sessions_completed ?? 0} goal={progress.data.weeklyGoal} fuel={fuel.data} />
       )}
 
       <SectionHeader title="Recovery" action={split.data?.splitName && <span className="text-footnote text-fg-3">{split.data.splitName}</span>} />
