@@ -17,7 +17,7 @@ function Metric({ label, value, target, unit, color, done }: { label: string; va
         <span className="h-[3px] w-3.5 rounded-full" style={{ background: color }} aria-hidden />
         {label}
         {done && (
-          <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold text-black" style={{ background: color }}>
+          <span className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[11px] font-bold text-black" style={{ background: color }}>
             <Check className="h-3 w-3" strokeWidth={3} /> Goal hit
           </span>
         )}
