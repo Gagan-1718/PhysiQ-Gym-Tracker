@@ -146,3 +146,17 @@ test('vector search API (/api/vector/search): ranks exercises and foods by 32-d 
   assert.equal(foodRes.body.results.length, 4);
   assert.ok(foodRes.body.results[0].cosine_similarity > 0.4);
 });
+
+test("vector search never anchors on another member's custom food", async () => {
+  // The admin account doubles as "another member" here; its custom foods are private to it
+  const admin = await signedIn('admin@physiq.test');
+  const created = await admin.post('/api/foods', { name: `Private probe food ${Date.now()}`, category: 'meals', calories: 300, proteinG: 20 });
+  assert.equal(created.status, 201);
+
+  const own = await admin.get(`/api/vector/search?domain=food&similarTo=${created.body.id}&k=3`);
+  assert.equal(own.status, 200, 'the owner can search from it');
+
+  const other = await alex.get(`/api/vector/search?domain=food&similarTo=${created.body.id}&k=3`);
+  assert.equal(other.status, 404, 'another member gets "not found", not its name or embedding');
+  assert.ok(!JSON.stringify(other.body).includes('Private probe food'));
+});
