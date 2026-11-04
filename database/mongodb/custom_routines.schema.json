@@ -1,0 +1,50 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "custom_routines",
+    "description": "User-built workout templates. Nested, ordered exercise lists with supersets and per-exercise targets fit a document better than 3+ join tables.",
+    "required": ["user_id", "name", "exercises", "created_at", "updated_at"],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "user_id": {
+        "bsonType": "int",
+        "minimum": 1,
+        "description": "users.id in MySQL (cross-store reference, checked by the API)"
+      },
+      "name": { "bsonType": "string", "minLength": 1, "maxLength": 60 },
+      "focus": {
+        "bsonType": ["string", "null"],
+        "maxLength": 50,
+        "description": "Split day label this routine is meant for, e.g. Push"
+      },
+      "notes": { "bsonType": ["string", "null"], "maxLength": 500 },
+      "exercises": {
+        "bsonType": "array",
+        "minItems": 1,
+        "maxItems": 20,
+        "items": {
+          "bsonType": "object",
+          "required": ["exercise_id", "name", "target_sets"],
+          "properties": {
+            "exercise_id": { "bsonType": "int", "minimum": 1, "description": "exercises.id in MySQL" },
+            "name": { "bsonType": "string", "description": "Snapshot of the exercise name for fast reads" },
+            "target_sets": { "bsonType": "int", "minimum": 1, "maximum": 10 },
+            "rep_min": { "bsonType": "int", "minimum": 1, "maximum": 100 },
+            "rep_max": { "bsonType": "int", "minimum": 1, "maximum": 100 },
+            "rest_seconds": { "bsonType": "int", "minimum": 0, "maximum": 600 },
+            "superset": {
+              "bsonType": ["string", "null"],
+              "maxLength": 2,
+              "description": "Exercises sharing a letter are done back to back"
+            },
+            "notes": { "bsonType": ["string", "null"], "maxLength": 200 }
+          }
+        }
+      },
+      "times_used": { "bsonType": "int", "minimum": 0 },
+      "last_used_at": { "bsonType": ["date", "null"] },
+      "created_at": { "bsonType": "date" },
+      "updated_at": { "bsonType": "date" }
+    }
+  }
+}

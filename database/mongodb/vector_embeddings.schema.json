@@ -1,0 +1,72 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "title": "physiq.vector_embeddings",
+    "description": "Dense float vector embeddings for semantic search and KNN similarity over exercises and foods.",
+    "required": [
+      "domain",
+      "entity_id",
+      "title",
+      "subtitle",
+      "semantic_text",
+      "dimensions",
+      "embedding",
+      "metadata",
+      "updated_at"
+    ],
+    "properties": {
+      "_id": { "bsonType": "objectId" },
+      "domain": {
+        "enum": ["exercise", "food"],
+        "description": "Which MySQL master entity this embedding represents"
+      },
+      "entity_id": {
+        "bsonType": ["int", "long"],
+        "minimum": 1,
+        "description": "Primary key in MySQL exercises.id or foods.id"
+      },
+      "user_id": {
+        "bsonType": ["int", "long", "null"],
+        "description": "NULL for global library items; users.id for member-created custom foods"
+      },
+      "title": {
+        "bsonType": "string",
+        "minLength": 2,
+        "maxLength": 150
+      },
+      "subtitle": {
+        "bsonType": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "semantic_text": {
+        "bsonType": "string",
+        "minLength": 5,
+        "maxLength": 1500
+      },
+      "dimensions": {
+        "bsonType": ["int", "long"],
+        "minimum": 32,
+        "maximum": 32,
+        "description": "Fixed 32-dimensional L2-normalized embedding space"
+      },
+      "embedding": {
+        "bsonType": "array",
+        "minItems": 32,
+        "maxItems": 32,
+        "items": {
+          "bsonType": ["double", "int", "long"],
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "description": "L2-normalized dense vector [-1..1] for Cosine Similarity and Euclidean L2 distance"
+      },
+      "metadata": {
+        "bsonType": "object"
+      },
+      "updated_at": {
+        "bsonType": "date"
+      }
+    }
+  }
+}

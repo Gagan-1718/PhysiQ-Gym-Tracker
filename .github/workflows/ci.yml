@@ -1,0 +1,131 @@
+name: CI
+
+# Builds both databases from the repository's SQL / JSON files, runs the database
+# tests, builds the production app, then runs the API tests and the browser
+# (end-to-end + accessibility) tests against it.
+on:
+  push:
+    branches: [main, Gagan-iterations, the-DEMIGOD-iteration]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+
+    env:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ci_password
+      MYSQL_DATABASE: physiq_db
+      # The app and the privilege tests use the least-privilege account (role physiq_app),
+      # created by db:init. '%' because the service container sees the runner as a remote host.
+      MYSQL_APP_USER: physiq_web
+      MYSQL_APP_PASSWORD: ci_app_password
+      MYSQL_APP_HOST: '%'
+      MONGODB_URI: mongodb://127.0.0.1:27017
+      MONGODB_DB: physiq
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789abcdef
+      BASE_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Runtime dependencies only: build tooling (Tailwind 3's glob/PostCSS chain) never runs on user input
+      - name: Dependency audit (runtime packages, high severity and above)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build MySQL + MongoDB (schema, routines, triggers, views, indexes, seeds)
+        run: npm run db:init
+
+      - name: Database tests (constraints, triggers, procedures, views, Mongo validators)
+        run: npm run test:db
+
+      - name: Production build
+        run: npm run build
+
+      - name: Start the production server
+        run: |
+          npm start > server.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/api/health > /dev/null && break
+            sleep 1
+          done
+          curl -sf http://localhost:3000/api/health
+
+      - name: API tests against the production build
+        run: npm run test:api
+
+      # The browser tests expect the demo data exactly as seeded (its dates are relative to today),
+      # so rebuild both databases, restart the server on them, and drive a real Chromium.
+      # They also run with the production Content-Security-Policy: any violation is a console error and fails them.
+      - name: Fresh data and Chromium
+        run: |
+          pkill -f "next start" || true
+          pkill -f "next-server" || true
+          npm run db:reset
+          npx playwright-core install --with-deps chromium
+          npm start > server.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/api/health > /dev/null && break
+            sleep 1
+          done
+
+      - name: Browser tests (accessibility at 320 / 390 / 1280 px, full workout, Journey, account)
+        run: |
+          npm run test:e2e 2>&1 | tee e2e.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Server log (on failure)
+        if: failure()
+        run: cat server.log || true
+
+      # Workflow logs need a sign-in to read; annotations are visible on the run page and through the API.
+      - name: Failure details as annotations
+        if: failure()
+        run: |
+          for f in e2e.log server.log; do
+            [ -s "$f" ] || continue
+            body=$(tail -c 4000 "$f" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Tail of $f::$body"
+          done
