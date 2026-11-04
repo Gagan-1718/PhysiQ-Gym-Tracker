@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, ChevronRight, Plus } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { Rings } from '@/components/ui/Rings';
 import { kg } from '@/lib/format';
 import type { DailyFuel } from '@/types/database';
@@ -32,30 +32,18 @@ function Metric({ label, value, target, unit, color, done }: { label: string; va
   );
 }
 
-function QuickAdd({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="press inline-flex h-10 flex-1 items-center justify-center gap-1 rounded-xl bg-surface-2 text-[15px] font-semibold text-fg hover:bg-surface-3 disabled:opacity-40"
-    >
-      <Plus className="h-4 w-4 text-fg-3" />
-      {label}
-    </button>
-  );
-}
-
-/** Apple-style rings: training sessions vs weekly goal, protein and water vs daily targets. */
+/**
+ * Rings: training sessions vs weekly goal, protein and water vs daily targets.
+ * Food and water are logged on the Fuel page (meal and water logs, kept in sync by triggers), not here.
+ */
 export function ActivityCard({
   sessions,
   goal,
   fuel,
-  onLog,
 }: {
   sessions: number;
   goal: number;
   fuel: DailyFuel | undefined;
-  onLog: (proteinDelta: number, waterDelta: number) => void;
 }) {
   const protein = fuel ? fuel.protein_logged_g / fuel.protein_target_g : 0;
   const water = fuel ? fuel.water_logged_ml / fuel.water_target_ml : 0;
@@ -92,20 +80,8 @@ export function ActivityCard({
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-2">
-        <p className="text-footnote font-medium text-fg-3">Protein</p>
-        <p className="text-footnote font-medium text-fg-3">Water</p>
-        <div className="flex gap-1.5">
-          <QuickAdd label="10 g" onClick={() => onLog(10, 0)} disabled={!fuel} />
-          <QuickAdd label="25 g" onClick={() => onLog(25, 0)} disabled={!fuel} />
-        </div>
-        <div className="flex gap-1.5">
-          <QuickAdd label="250" onClick={() => onLog(0, 250)} disabled={!fuel} />
-          <QuickAdd label="500" onClick={() => onLog(0, 500)} disabled={!fuel} />
-        </div>
-      </div>
       {fuel && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
           <p className="text-footnote text-fg-3">
             {fuel.calories_logged !== undefined
               ? `${fuel.calories_logged.toLocaleString()} / ${fuel.calorie_target.toLocaleString()} kcal · ${kg(fuel.body_weight_kg)} kg`
@@ -113,9 +89,9 @@ export function ActivityCard({
           </p>
           <Link
             href="/fuel"
-            className="inline-flex items-center gap-0.5 text-footnote font-semibold text-accent hover:brightness-110"
+            className="press inline-flex h-11 items-center gap-1 rounded-xl bg-surface-2 px-4 text-[15px] font-semibold text-fg hover:bg-surface-3"
           >
-            Food & Water log <ChevronRight className="h-3.5 w-3.5" />
+            Log food & water <ChevronRight className="h-4 w-4 text-accent" />
           </Link>
         </div>
       )}
