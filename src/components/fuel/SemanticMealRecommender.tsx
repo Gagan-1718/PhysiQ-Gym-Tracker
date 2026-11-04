@@ -40,13 +40,12 @@ export function SemanticMealRecommender({
   const { data } = useSWR<VectorFoodResponse>(url);
 
   return (
-    <Card aria-label="Semantic vector meal recommender">
+    <Card aria-label="Meal suggestions">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-water/15 px-2.5 py-0.5 text-xs font-bold text-water">
-            <Sparkles className="h-3.5 w-3.5" /> Vector Nutrition Match
+            <Sparkles className="h-3.5 w-3.5" /> Smart suggestions
           </span>
-          <span className="text-xs text-fg-3">32-d Cosine Similarity</span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -71,7 +70,7 @@ export function SemanticMealRecommender({
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-3" />
         <input
           type="search"
-          aria-label="Semantic meal search"
+          aria-label="Search meal ideas"
           placeholder="Search by goal: e.g. high protein low carb recovery..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -102,7 +101,7 @@ export function SemanticMealRecommender({
       {data && data.results.length > 0 && (
         <div className="mt-4 border-t border-line pt-3">
           <p className="mb-2 text-xs font-semibold text-fg-3">
-            Top semantic matches for <span className="text-fg-2">“{data.query}”</span>
+            Best matches for <span className="text-fg-2">“{data.query}”</span>
           </p>
           <ul className="divide-y divide-line">
             {data.results.map((hit) => {
@@ -113,7 +112,7 @@ export function SemanticMealRecommender({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="truncate text-[15px] font-semibold text-fg">{hit.title}</span>
                       <span className="tabular rounded-md bg-surface-3 px-1.5 py-0.5 text-[11px] font-bold text-water">
-                        {hit.match_pct}% · cos {hit.cosine_similarity.toFixed(2)}
+                        {hit.match_pct}% match
                       </span>
                     </div>
                     <p className="mt-0.5 truncate text-xs text-fg-3">{hit.subtitle}</p>
