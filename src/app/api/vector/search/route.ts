@@ -36,7 +36,7 @@ export const GET = route(async (req) => {
     const db = await getMongoDb();
     const anchor = await db
       .collection<VectorDocument>('vector_embeddings')
-      .findOne({ domain, entity_id: entityId });
+      .findOne({ domain, entity_id: entityId, $or: [{ user_id: null }, { user_id: me.id }] }); // never another member's custom food
     if (!anchor) {
       throw new ApiError(404, 'Reference item not found in vector store.');
     }
