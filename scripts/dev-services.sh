@@ -5,6 +5,13 @@
 
 set -e
 
+# Only for a Mac with Homebrew MySQL + MongoDB. Anywhere else (Windows services, Linux, CI) do nothing:
+# without the Homebrew binaries the table check below reads 0 and would DROP and rebuild the database.
+if [ "$(uname -s)" != "Darwin" ] || [ ! -x /opt/homebrew/bin/mysqld ]; then
+  echo "dev-services: Homebrew MySQL/MongoDB not found, nothing to do (start your own MySQL and MongoDB services)."
+  exit 0
+fi
+
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MYSQL_DIR="$HOME/.physiq-brew-mysql"
 MONGO_CONF="/opt/homebrew/etc/mongod.conf"
