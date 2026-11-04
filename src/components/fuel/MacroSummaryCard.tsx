@@ -25,12 +25,13 @@ function MacroBar({
   const hit = target > 0 && logged >= target;
   return (
     <div className="min-w-0">
-      <div className="flex items-baseline justify-between gap-1 text-footnote">
-        <span className="font-semibold text-fg-2">{label}</span>
-        <span className="tabular font-semibold text-fg">
+      {/* Label above the numbers: side by side, three columns on a phone ran them together ("154gCarbs") */}
+      <div className="text-footnote">
+        <p className="font-semibold text-fg-2">{label}</p>
+        <p className="tabular font-semibold text-fg">
           {Math.round(logged)}
           <span className="text-fg-3">/{target}g</span>
-        </span>
+        </p>
       </div>
       <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-surface-3">
         <div
@@ -82,7 +83,7 @@ export function MacroSummaryCard({ fuel }: { fuel: DailyFuel | undefined }) {
               <Flame className="h-3.5 w-3.5" /> Daily Energy
             </span>
             {calLogged >= calTarget && calTarget > 0 && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-ready/20 px-2 py-0.5 text-xs font-bold text-ready">
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-protein/15 px-2 py-0.5 text-xs font-bold text-protein">
                 <Check className="h-3 w-3" /> Goal reached
               </span>
             )}
