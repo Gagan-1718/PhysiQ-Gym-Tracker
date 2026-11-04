@@ -40,17 +40,15 @@ PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN
 
 ```bash
 npm install
-npm run services:start        # starts isolated MySQL (port 3307) & MongoDB
-cp .env.example .env          # preconfigured for zero-setup local dev
+cp .env.example .env          # fill in MYSQL_PASSWORD, MYSQL_APP_PASSWORD and a NEXTAUTH_SECRET
 npm run db:init               # builds MySQL + MongoDB, creates the app account, loads demo data
 npm run dev                   # http://localhost:3000
 ```
 
-To manage background databases:
-```bash
-npm run services:status       # check database health
-npm run services:stop         # stop background databases
-```
+**On a Mac with Homebrew MySQL and MongoDB** you can let the repo run them for you
+(`npm run services:start` / `services:status` / `services:stop`). That MySQL listens on
+port 3307 with no root password, so set `MYSQL_PORT=3307` and an empty `MYSQL_PASSWORD`
+in `.env`. On Windows and Linux, start your own MySQL and MongoDB services instead.
 
 **Demo accounts** (password `physiq123`):
 
