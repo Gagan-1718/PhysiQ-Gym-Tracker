@@ -37,6 +37,7 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false, // do not advertise the framework
+  devIndicators: false,
   turbopack: {
     root: process.cwd(),
   },
