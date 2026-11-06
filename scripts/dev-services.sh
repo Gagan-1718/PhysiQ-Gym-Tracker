@@ -15,8 +15,19 @@ fi
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MYSQL_DIR="$HOME/.physiq-brew-mysql"
 MONGO_CONF="/opt/homebrew/etc/mongod.conf"
-MONGO_LOG="$MYSQL_DIR/mongod.log"
-MYSQL_LOG="$MYSQL_DIR/mysqld.log"
+MONGO_LOG="/tmp/physiq-mongod.log"
+MYSQL_LOG="/tmp/physiq-mysqld.log"
+
+init_mysql_datadir() {
+  pkill -f "mysqld.*3307" 2>/dev/null || true
+  rm -rf "$MYSQL_DIR"
+  mkdir -p "$MYSQL_DIR"
+  /opt/homebrew/bin/mysqld --no-defaults \
+    --initialize-insecure \
+    --user="$(whoami)" \
+    --datadir="$MYSQL_DIR" >>"$MYSQL_LOG" 2>&1
+  rm -f "$MYSQL_DIR"/undo_*
+}
 
 start_services() {
   mkdir -p "$MYSQL_DIR"
@@ -36,8 +47,7 @@ start_services() {
   if ! nc -z 127.0.0.1 3307 2>/dev/null; then
     echo "  Starting MySQL on port 3307..."
     if [ ! -d "$MYSQL_DIR/mysql" ]; then
-      rm -rf "${MYSQL_DIR:?}"/*
-      /opt/homebrew/bin/mysqld --no-defaults --initialize-insecure --user="$(whoami)" --datadir="$MYSQL_DIR" >/dev/null 2>&1
+      init_mysql_datadir
     fi
     rm -f "$MYSQL_DIR/mysql.sock.lock" "$MYSQL_DIR/mysqlx.sock.lock" "$MYSQL_DIR/mysqld.pid"
     perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' /opt/homebrew/bin/mysqld --no-defaults \
@@ -53,9 +63,7 @@ start_services() {
     # Self-heal if datadir had stale undo tablespaces from an unclean shutdown
     if ! nc -z 127.0.0.1 3307 2>/dev/null; then
       echo "  Re-initializing clean MySQL datadir..."
-      pkill -f "mysqld.*3307" 2>/dev/null || true
-      rm -rf "${MYSQL_DIR:?}"/*
-      /opt/homebrew/bin/mysqld --no-defaults --initialize-insecure --user="$(whoami)" --datadir="$MYSQL_DIR" >/dev/null 2>&1
+      init_mysql_datadir
       perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' /opt/homebrew/bin/mysqld --no-defaults \
         --datadir="$MYSQL_DIR" \
         --port=3307 \
