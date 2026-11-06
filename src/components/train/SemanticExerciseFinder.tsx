@@ -12,6 +12,12 @@ const QUICK_PROMPTS = [
   'Shoulder safe chest press',
   'Wide V-taper back & lats',
   'Joint friendly cable arm isolation',
+  'Bicep peak & forearm thickness',
+  'Glute & hamstring hinge builder',
+  'Tricep horseshoe pressdown',
+  'Rear delt & upper back posture',
+  'Quad tear drop hypertrophy',
+  'Core stabilizer & ab endurance',
 ];
 
 interface VectorSearchResponse {

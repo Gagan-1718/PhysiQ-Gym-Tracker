@@ -4,7 +4,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { Plus, Search, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import type { MealType } from '@/types/database';
+import type { FoodItem, MealType } from '@/types/database';
 import type { VectorSearchHit } from '@/lib/vector';
 
 const MEAL_PROMPTS = [
@@ -12,6 +12,12 @@ const MEAL_PROMPTS = [
   'Low calorie fat loss filling snack',
   'Quick morning complex carbs energy',
   'Lean high protein dinner bowl',
+  'Indian vegetarian high protein',
+  'Low carb keto fat burner',
+  'Pre-workout fast digesting carbs',
+  'Late night guilt-free casein snack',
+  'Budget bulk mass gainer meal',
+  'High fiber gut health bowl',
 ];
 
 interface VectorFoodResponse {
@@ -29,15 +35,20 @@ export function SemanticMealRecommender({
   busy: boolean;
   onQuickLogFood: (foodId: number, mealType: MealType) => Promise<void>;
 }) {
-  const [query, setQuery] = useState(MEAL_PROMPTS[0]);
-  const [mealType, setMealType] = useState<MealType>('snack');
+  const [query, setQuery] = useState('');
+  const [mealType, setMealType] = useState<MealType>('lunch');
 
   const url =
     query.trim().length >= 2
-      ? `/api/vector/search?domain=food&q=${encodeURIComponent(query.trim())}&k=4`
+      ? `/api/vector/search?domain=food&q=${encodeURIComponent(query.trim())}&k=5`
       : null;
 
   const { data } = useSWR<VectorFoodResponse>(url);
+  const { data: foodsData } = useSWR<{ foods: FoodItem[] }>('/api/foods');
+
+  const defaultStaples = (foodsData?.foods ?? [])
+    .filter((f) => ['Chicken & Rice Bowl', 'Chicken Breast (Grilled)', 'Whole Eggs (Boiled/Scrambled)', 'Whey Protein Shake', 'Salmon Fillet (Pan-Seared)'].includes(f.name))
+    .slice(0, 5);
 
   return (
     <Card aria-label="Meal suggestions">
@@ -98,7 +109,7 @@ export function SemanticMealRecommender({
         })}
       </div>
 
-      {data && data.results.length > 0 && (
+      {data && data.results.length > 0 ? (
         <div className="mt-4 border-t border-line pt-3">
           <p className="mb-2 text-xs font-semibold text-fg-3">
             Best matches for <span className="text-fg-2">“{data.query}”</span>
@@ -132,7 +143,43 @@ export function SemanticMealRecommender({
             })}
           </ul>
         </div>
-      )}
+      ) : defaultStaples.length > 0 ? (
+        <div className="mt-4 border-t border-line pt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold text-fg-3">
+              Recommended Daily Staples <span className="text-fg-3 font-normal">(select tag or search above)</span>
+            </p>
+            <span className="rounded-md bg-surface-3 px-2 py-0.5 text-[10px] font-bold text-fg-2 uppercase">Default Staples</span>
+          </div>
+          <ul className="divide-y divide-line">
+            {defaultStaples.map((food) => (
+              <li key={food.id} className="flex items-center justify-between gap-2 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="truncate text-[15px] font-semibold text-fg">{food.name}</span>
+                    <span className="tabular rounded-md bg-surface-3 px-1.5 py-0.5 text-[11px] font-semibold text-protein">
+                      {food.protein_g}g P
+                    </span>
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-fg-3">
+                    {food.serving_label} · {food.calories} kcal · {food.carbs_g}g C · {food.fat_g}g F
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onQuickLogFood(food.id, mealType)}
+                  aria-label={`Log ${food.name}`}
+                  className="press inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-accent-solid px-2.5 text-xs font-bold text-white disabled:opacity-40"
+                >
+                  <Plus className="h-3.5 w-3.5" /> {food.calories} kcal
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </Card>
   );
 }
