@@ -11,18 +11,22 @@ import { useToast } from '@/components/ui/Toast';
 import { LineChart } from '@/components/charts/LineChart';
 import { send } from '@/lib/client';
 import { cn, kg, localDateISO, shortDate } from '@/lib/format';
-import type { BodyMeasurement } from '@/types/database';
+import type { BodyMeasurement, User } from '@/types/database';
 
 export function Body() {
   const toast = useToast();
   const { data, mutate } = useSWR<BodyMeasurement[]>('/api/body');
+  const me = useSWR<User>('/api/me');
   const { mutate: mutateAll } = useSWRConfig();
   const latest = [...(data ?? [])].reverse().find((m) => m.weight !== null);
+  const baselineWeight = me.data?.starting_weight ?? null;
+  const currentDisplayWeight = latest?.weight ?? baselineWeight;
+
   const [weight, setWeight] = useState<number | null>(null);
   const [more, setMore] = useState(false);
   const [circ, setCirc] = useState<{ waist: number | null; chest: number | null; arms: number | null }>({ waist: null, chest: null, arms: null });
   const [saving, setSaving] = useState(false);
-  const shownWeight = weight ?? latest?.weight ?? null;
+  const shownWeight = weight ?? currentDisplayWeight ?? null;
 
   async function save() {
     setSaving(true);
@@ -61,7 +65,7 @@ export function Body() {
           <div>
             <p className="text-footnote text-fg-3">Body weight</p>
             <p className="font-display text-[44px] font-extrabold leading-none">
-              {latest ? kg(latest.weight) : '–'}
+              {currentDisplayWeight ? kg(currentDisplayWeight) : '–'}
               <span className="text-lg text-fg-3"> kg</span>
             </p>
           </div>

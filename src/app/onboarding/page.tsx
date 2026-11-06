@@ -129,6 +129,9 @@ export default function OnboardingPage() {
 
     try {
       await send('/api/me', 'PATCH', { goal: primaryGoal, height, starting_weight: weight });
+      if (weight) {
+        await send('/api/body', 'POST', { date: new Date().toISOString().slice(0, 10), weight }).catch(() => {});
+      }
       await send('/api/splits', 'POST', { name: template.name, minRestDays: template.minRestDays, days: template.days });
       router.replace('/');
       router.refresh();
