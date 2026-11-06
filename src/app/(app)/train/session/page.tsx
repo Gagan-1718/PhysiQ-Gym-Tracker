@@ -49,6 +49,13 @@ export default function SessionPage() {
     if (status === 'authenticated' && userId && !result && !peekDraft(userId)) router.replace('/train');
   }, [status, userId, result, router]);
 
+  // Open picker automatically for empty freestyle workouts
+  useEffect(() => {
+    if (draft && draft.exercises.length === 0) {
+      setPickerOpen(true);
+    }
+  }, [draft]);
+
   const update = useCallback((fn: (d: WorkoutDraft) => WorkoutDraft) => setDraft(fn), [setDraft]);
   const patchExercise = useCallback(
     (exKey: string, fn: (e: DraftExercise) => DraftExercise) =>
