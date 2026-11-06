@@ -16,6 +16,7 @@ import { fetcher, send } from '@/lib/client';
 import { cn, relativeDay } from '@/lib/format';
 import { buildDraft, useLibrary } from '@/lib/training';
 import { useWorkoutDraft } from '@/lib/workout-draft';
+import { SPLIT_TEMPLATES } from '@/lib/split-templates';
 import { SemanticExerciseFinder } from '@/components/train/SemanticExerciseFinder';
 import type { Exercise, Recommendation, Routine, SplitDayStatus } from '@/types/database';
 
@@ -37,7 +38,35 @@ function TrainHome() {
   const library = useLibrary();
   const [starting, setStarting] = useState<string | null>(null);
   const [pendingStart, setPendingStart] = useState<(() => Promise<void>) | null>(null);
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const autoStarted = useRef(false);
+
+  const startFreestyle = () =>
+    start('freestyle', async () =>
+      buildDraft({
+        userId: userId!,
+        splitDayId: null,
+        bodyPart: 'Freestyle Workout',
+        exercises: [],
+      })
+    );
+
+  async function applySplit(tId: string) {
+    const t = SPLIT_TEMPLATES.find((x) => x.id === tId);
+    if (!t) return;
+    setSwitching(true);
+    try {
+      await send('/api/splits', 'POST', { name: t.name, minRestDays: t.minRestDays, days: t.days });
+      toast(`Switched split to ${t.name}. Muscles trained within the last 72h are recovering.`);
+      await split.mutate();
+      setSplitOpen(false);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not change split', 'error');
+    } finally {
+      setSwitching(false);
+    }
+  }
 
   async function start(key: string, build: () => Promise<Parameters<typeof setDraft>[0]>) {
     if (!userId) return;
@@ -136,39 +165,61 @@ function TrainHome() {
         </Card>
       )}
 
-      <SectionHeader title="Your split" action={split.data?.splitName && <span className="text-footnote text-fg-3">{split.data.splitName}</span>} />
+      <SectionHeader
+        title="Your split"
+        action={
+          <div className="flex items-center gap-2">
+            {split.data?.splitName && <span className="text-footnote text-fg-3">{split.data.splitName}</span>}
+            <Button variant="secondary" size="sm" onClick={() => setSplitOpen(true)}>
+              Change split
+            </Button>
+          </div>
+        }
+      />
       {!split.data ? (
         <Skeleton className="h-56" />
       ) : (
-        <Card className="divide-y divide-line p-0 sm:p-0">
-          {[...split.data.days]
-            .sort((a, b) => a.priority_rank - b.priority_rank)
-            .map((day) => {
-              const key = `day-${day.split_day_id}`;
-              return (
-                <button
-                  key={day.split_day_id}
-                  onClick={() => startDay(day)}
-                  disabled={starting !== null}
-                  className="press flex w-full items-center gap-3 px-4 py-4 text-left transition-colors first:rounded-t-card last:rounded-b-card hover:bg-surface-2 sm:px-5"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-headline">{day.body_part}</span>
-                      {day.split_day_id === recId && <span className="rounded-full bg-accent-solid px-2 py-0.5 text-[11px] font-bold text-white">UP NEXT</span>}
+        <>
+          <Card className="divide-y divide-line p-0 sm:p-0">
+            {[...split.data.days]
+              .sort((a, b) => a.priority_rank - b.priority_rank)
+              .map((day) => {
+                const key = `day-${day.split_day_id}`;
+                return (
+                  <button
+                    key={day.split_day_id}
+                    onClick={() => startDay(day)}
+                    disabled={starting !== null}
+                    className="press flex w-full items-center gap-3 px-4 py-4 text-left transition-colors first:rounded-t-card last:rounded-b-card hover:bg-surface-2 sm:px-5"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-headline">{day.body_part}</span>
+                        {day.split_day_id === recId && <span className="rounded-full bg-accent-solid px-2 py-0.5 text-[11px] font-bold text-white">UP NEXT</span>}
+                      </div>
+                      <p className="truncate text-footnote text-fg-3">
+                        {day.muscles.join(' · ')} {day.last_trained_date && `· ${relativeDay(day.last_trained_date)}`}
+                      </p>
                     </div>
-                    <p className="truncate text-footnote text-fg-3">
-                      {day.muscles.join(' · ')} {day.last_trained_date && `· ${relativeDay(day.last_trained_date)}`}
-                    </p>
-                  </div>
-                  <StatusPill status={day.status} />
-                  <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full', starting === key ? 'bg-accent-solid text-white' : 'bg-surface-3 text-fg-2')}>
-                    {starting === key ? <span className="h-3 w-3 animate-ping rounded-full bg-black" /> : <Play className="h-4 w-4 fill-current" />}
-                  </span>
-                </button>
-              );
-            })}
-        </Card>
+                    <StatusPill status={day.status} />
+                    <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full', starting === key ? 'bg-accent-solid text-white' : 'bg-surface-3 text-fg-2')}>
+                      {starting === key ? <span className="h-3 w-3 animate-ping rounded-full bg-black" /> : <Play className="h-4 w-4 fill-current" />}
+                    </span>
+                  </button>
+                );
+              })}
+          </Card>
+
+          <Button
+            variant="secondary"
+            block
+            className="mt-3 border border-line bg-surface-1 hover:bg-surface-2"
+            onClick={startFreestyle}
+            disabled={starting !== null}
+          >
+            <Plus className="h-4 w-4" /> Start Freestyle Workout (Any Muscles / Exercises)
+          </Button>
+        </>
       )}
 
       <SectionHeader title="Routines" />
@@ -229,6 +280,36 @@ function TrainHome() {
           )
         }
       />
+
+      <Sheet open={splitOpen} onClose={() => setSplitOpen(false)} title="Change training split">
+        <p className="mb-4 text-[15px] text-fg-2">
+          Pick a new split template. Muscles trained within the last 72 hours are automatically placed on recovery cooldown.
+        </p>
+        <div className="space-y-3">
+          {SPLIT_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              disabled={switching}
+              onClick={() => applySplit(t.id)}
+              className="press block w-full rounded-2xl border border-line bg-surface-1 p-4 text-left transition-colors hover:border-accent hover:bg-surface-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-headline">{t.name}</span>
+                <span className="text-footnote text-fg-3">{t.days.length} days</span>
+              </div>
+              <p className="mt-0.5 text-xs text-fg-2">{t.blurb}</p>
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {t.days.map((d) => (
+                  <span key={d.label} className="rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-semibold text-fg-2">
+                    {d.label}
+                  </span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      </Sheet>
 
       <Sheet open={pendingStart !== null} onClose={() => setPendingStart(null)} title="Workout in progress">
         <p className="text-[15px] text-fg-2">
