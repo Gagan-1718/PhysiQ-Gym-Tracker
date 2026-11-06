@@ -13,6 +13,7 @@ import { MealSectionList } from '@/components/fuel/MealSectionList';
 import { WaterTrackerCard } from '@/components/fuel/WaterTrackerCard';
 import { AddMealSheet } from '@/components/fuel/AddMealSheet';
 import { SemanticMealRecommender } from '@/components/fuel/SemanticMealRecommender';
+import { PrepMethodMealBuilder } from '@/components/fuel/PrepMethodMealBuilder';
 import { send } from '@/lib/client';
 import { localDateISO, parseLocalDate, relativeDay, shortDate } from '@/lib/format';
 import type { MealType, NutritionResponse } from '@/types/database';
@@ -185,6 +186,9 @@ export default function FuelPage() {
                 busy={busy}
                 onQuickLogFood={(foodId, mealType) => handleLogLibraryFood(foodId, 1, mealType)}
               />
+
+              <SectionHeader title="Prep Method & Compound Meals" />
+              <PrepMethodMealBuilder onLogMeal={handleLogQuickMeal} />
 
               <SectionHeader
                 title="Meals"
