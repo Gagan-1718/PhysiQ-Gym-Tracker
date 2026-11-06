@@ -43,15 +43,34 @@ export const POST = route(async (req) => {
     await execute('UPDATE splits SET is_active = FALSE WHERE user_id = ? AND is_active', [me.id], conn);
     const created = await execute('INSERT INTO splits (user_id, split_name, is_active) VALUES (?, ?, TRUE)', [me.id, split.name], conn);
 
+    const effectiveRestDays = Math.max(split.minRestDays, 3); // 72-hour muscle recovery rule
+
     for (const [index, day] of split.days.entries()) {
       const dayRow = await execute(
         'INSERT INTO split_days (split_id, body_part, day_order, min_rest_days) VALUES (?, ?, ?, ?)',
-        [created.insertId, day.label, index + 1, split.minRestDays],
+        [created.insertId, day.label, index + 1, effectiveRestDays],
         conn
       );
       const pairs = [...new Set(day.muscles)].map((m) => [dayRow.insertId, idByName.get(m)]);
       await execute('INSERT INTO split_day_muscles (split_day_id, muscle_group_id) VALUES ?', [pairs], conn);
     }
+
+    // Inherit muscle history across split change: 72-hour muscle recovery lock
+    await execute(
+      `UPDATE split_days sd
+       SET sd.last_trained_date = (
+         SELECT MAX(ws.session_date)
+         FROM workout_sessions ws
+         JOIN sets s ON s.session_id = ws.id
+         JOIN exercises e ON e.id = s.exercise_id
+         JOIN split_day_muscles sdm ON sdm.split_day_id = sd.id AND sdm.muscle_group_id = e.muscle_group_id
+         WHERE ws.user_id = ?
+       )
+       WHERE sd.split_id = ?`,
+      [me.id, created.insertId],
+      conn
+    );
+
     return created.insertId;
   });
 
