@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const [goal, setGoal] = useState<Goal>('hypertrophy');
   const [weeklyGoal, setWeeklyGoal] = useState<number | null>(4);
   const [height, setHeight] = useState<number | null>(null);
+  const [heightUnit, setHeightUnit] = useState<'cm' | 'ft_in'>('cm');
   const [saving, setSaving] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
@@ -155,8 +156,76 @@ export default function ProfilePage() {
           </div>
           <p className="mb-2 mt-5 text-footnote font-medium text-fg-2">Sessions per week (Train ring)</p>
           <Stepper label="sessions per week" value={weeklyGoal} onChange={setWeeklyGoal} step={1} min={1} max={7} size="md" />
-          <p className="mb-2 mt-4 text-footnote font-medium text-fg-2">Height</p>
-          <Stepper label="height" value={height} onChange={setHeight} step={1} min={100} max={250} unit="cm" size="md" />
+          <div className="mb-2 mt-4 flex items-center justify-between">
+            <p className="text-footnote font-medium text-fg-2">Height</p>
+            <div className="flex rounded-lg bg-surface-3 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setHeightUnit('cm')}
+                className={cn(
+                  'rounded-md px-2 py-0.5 font-semibold transition-colors',
+                  heightUnit === 'cm' ? 'bg-surface-4 text-fg' : 'text-fg-3 hover:text-fg-2'
+                )}
+              >
+                cm
+              </button>
+              <button
+                type="button"
+                onClick={() => setHeightUnit('ft_in')}
+                className={cn(
+                  'rounded-md px-2 py-0.5 font-semibold transition-colors',
+                  heightUnit === 'ft_in' ? 'bg-surface-4 text-fg' : 'text-fg-3 hover:text-fg-2'
+                )}
+              >
+                ft / in
+              </button>
+            </div>
+          </div>
+          {heightUnit === 'cm' ? (
+            <Stepper label="height" value={height} onChange={setHeight} step={1} min={100} max={250} unit="cm" size="md" />
+          ) : (
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="mb-1 text-caption text-fg-3">Feet</p>
+                  <Stepper
+                    label="height feet"
+                    value={Math.floor(Math.round((height ?? 175) / 2.54) / 12)}
+                    onChange={(f) => {
+                      const totalIn = Math.round((height ?? 175) / 2.54);
+                      const inVal = totalIn % 12;
+                      setHeight(Math.round(((f ?? 5) * 12 + inVal) * 2.54));
+                    }}
+                    step={1}
+                    min={3}
+                    max={7}
+                    unit="ft"
+                    size="md"
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 text-caption text-fg-3">Inches</p>
+                  <Stepper
+                    label="height inches"
+                    value={Math.round((height ?? 175) / 2.54) % 12}
+                    onChange={(inc) => {
+                      const totalIn = Math.round((height ?? 175) / 2.54);
+                      const ftVal = Math.floor(totalIn / 12);
+                      setHeight(Math.round((ftVal * 12 + (inc ?? 0)) * 2.54));
+                    }}
+                    step={1}
+                    min={0}
+                    max={11}
+                    unit="in"
+                    size="md"
+                  />
+                </div>
+              </div>
+              <p className="text-right text-caption text-fg-3">
+                ≈ {height} cm ({Math.floor(Math.round((height ?? 175) / 2.54) / 12)}&apos;{Math.round((height ?? 175) / 2.54) % 12}&quot;)
+              </p>
+            </div>
+          )}
           <p className="mt-3 text-footnote text-fg-3">
             Log body weight in{' '}
             <Link href="/progress" className="text-accent underline underline-offset-2">
