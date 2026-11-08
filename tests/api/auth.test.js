@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
+const { MongoClient } = require('mongodb');
 const { client, signedIn, uniqueEmail, DEMO_PASSWORD, BASE } = require('./helpers');
 
 const cleanup = [];
@@ -106,10 +107,21 @@ test('account deletion needs the password and signs the session out of the data'
   const email = uniqueEmail('delete');
   const c = client();
   await c.post('/api/auth/register', { name: 'Delete Me', email, password: DEMO_PASSWORD });
-  await c.login(email);
+  const user = await c.login(email);
+  // A custom food also gets a vector document in MongoDB, tagged with the owner's id
+  assert.equal((await c.post('/api/foods', { name: 'Delete Me Shake', category: 'drinks_supps', calories: 200 })).status, 201);
   assert.equal((await c.del('/api/me', { password: 'wrong-password' })).status, 403);
   assert.equal((await c.del('/api/me', { password: DEMO_PASSWORD })).status, 200);
   assert.equal((await c.get('/api/me')).status, 401, 'the deleted account no longer resolves');
+
+  const mongo = new MongoClient(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017');
+  try {
+    await mongo.connect();
+    const left = await mongo.db(process.env.MONGODB_DB || 'physiq').collection('vector_embeddings').countDocuments({ user_id: Number(user.id) });
+    assert.equal(left, 0, "no vectors of the deleted member's foods are left behind");
+  } finally {
+    await mongo.close();
+  }
   assert.ok(BASE);
 });
 

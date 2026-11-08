@@ -93,12 +93,17 @@ out.push('- **Commit counts depend on commit size.** The history on this branch 
 out.push('- **The foundation is Dhruvanth\'s original schema, Mongo model, Next.js scaffold and the 10-phase plan** (`PLAN.md`). Much of that code was later rewritten or replaced as the design changed, so surviving lines understate what it provided.');
 out.push('- **Both members worked on the database and on the application**, as the course requires (see the area table).');
 
-// Commits that exist on other branches but are not part of this branch yet
+// Commits that exist on other branches but are not part of this branch yet.
+// --cherry-pick compares patches, and commits copied with `git cherry-pick -x` name their original
+// in the message, so either way a commit brought over to this branch counts as present.
+const picked = new Set([...git(['log', '--format=%b', 'HEAD']).matchAll(/cherry picked from commit ([0-9a-f]{40})/g)].map((m) => m[1].slice(0, 7)));
 const others = [];
 for (const ref of git(['for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin']).split('\n').filter(Boolean)) {
   if (/\/(HEAD|main)$/.test(ref) || ref === `origin/${branch}`) continue;
-  const ahead = git(['log', '--no-merges', '--format=%h %an %ad %s', '--date=short', `HEAD..${ref}`]).trim();
-  if (ahead) others.push([ref, ahead.split('\n')]);
+  const ahead = git(['log', '--no-merges', '--cherry-pick', '--right-only', '--abbrev=7', '--format=%h %an %ad %s', '--date=short', `HEAD...${ref}`])
+    .split('\n')
+    .filter((line) => line && !picked.has(line.slice(0, 7)));
+  if (ahead.length) others.push([ref, ahead]);
 }
 for (const [ref, commits] of others) {
   out.push(`- **${ref}** has ${commits.length} commit${commits.length === 1 ? ' that is' : 's that are'} not on this branch yet: ${commits.map((c) => `\`${c.split(' ')[0]}\` (${c.split(' ').slice(1).join(' ')})`).join('; ')}`);

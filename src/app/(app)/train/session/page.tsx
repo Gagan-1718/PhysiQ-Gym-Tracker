@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR, { useSWRConfig } from 'swr';
 import { useSession } from 'next-auth/react';
@@ -49,11 +49,12 @@ export default function SessionPage() {
     if (status === 'authenticated' && userId && !result && !peekDraft(userId)) router.replace('/train');
   }, [status, userId, result, router]);
 
-  // Open picker automatically for empty freestyle workouts
+  // A freestyle workout starts empty: open the exercise picker once, straight away
+  const pickerPrompted = useRef(false);
   useEffect(() => {
-    if (draft && draft.exercises.length === 0) {
-      setPickerOpen(true);
-    }
+    if (!draft || pickerPrompted.current) return;
+    pickerPrompted.current = true;
+    if (draft.exercises.length === 0) setPickerOpen(true);
   }, [draft]);
 
   const update = useCallback((fn: (d: WorkoutDraft) => WorkoutDraft) => setDraft(fn), [setDraft]);

@@ -20,6 +20,9 @@ const MEAL_PROMPTS = [
   'High fiber gut health bowl',
 ];
 
+/** Shown before a search: names exactly as seeded in the foods table, in this order */
+const STAPLES = ['Chicken Breast (Grilled)', 'Whole Large Eggs (2 eggs)', 'Greek Yogurt (0% Non-Fat)', 'Whey Protein Isolate', 'Chicken & Rice Bowl'];
+
 interface VectorFoodResponse {
   domain: 'food';
   query: string;
@@ -46,9 +49,8 @@ export function SemanticMealRecommender({
   const { data } = useSWR<VectorFoodResponse>(url);
   const { data: foodsData } = useSWR<{ foods: FoodItem[] }>('/api/foods');
 
-  const defaultStaples = (foodsData?.foods ?? [])
-    .filter((f) => ['Chicken & Rice Bowl', 'Chicken Breast (Grilled)', 'Whole Eggs (Boiled/Scrambled)', 'Whey Protein Shake', 'Salmon Fillet (Pan-Seared)'].includes(f.name))
-    .slice(0, 5);
+  const builtIn = (foodsData?.foods ?? []).filter((f) => f.user_id === null);
+  const defaultStaples = STAPLES.map((name) => builtIn.find((f) => f.name === name)).filter((f): f is FoodItem => Boolean(f));
 
   return (
     <Card aria-label="Meal suggestions">
@@ -145,12 +147,7 @@ export function SemanticMealRecommender({
         </div>
       ) : defaultStaples.length > 0 ? (
         <div className="mt-4 border-t border-line pt-3">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold text-fg-3">
-              Recommended Daily Staples <span className="text-fg-3 font-normal">(select tag or search above)</span>
-            </p>
-            <span className="rounded-md bg-surface-3 px-2 py-0.5 text-[10px] font-bold text-fg-2 uppercase">Default Staples</span>
-          </div>
+          <p className="mb-2 text-xs font-semibold text-fg-3">Popular staples · or search above</p>
           <ul className="divide-y divide-line">
             {defaultStaples.map((food) => (
               <li key={food.id} className="flex items-center justify-between gap-2 py-2.5">

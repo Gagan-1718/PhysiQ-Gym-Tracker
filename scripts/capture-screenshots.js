@@ -82,6 +82,16 @@ async function main() {
     await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
     await shot(page, '09-profile');
 
+    await page.goto(`${BASE}/fuel`, { waitUntil: 'networkidle' });
+    await shot(page, '15-fuel');
+    const builder = page.getByRole('button', { name: /Build a plate/ });
+    await builder.click();
+    await page.getByRole('button', { name: 'Chicken Breast (Grilled)', exact: true }).click();
+    await page.getByRole('button', { name: 'Jasmine White Rice (Cooked)', exact: true }).click();
+    await page.getByLabel('How Chicken Breast (Grilled) was cooked').selectOption('pan');
+    await scrollToTop(page, page.getByRole('listitem').filter({ hasText: '1 serving = 150 g cooked' }));
+    await shot(page, '16-fuel-plate');
+
     // ---- admin
     page = await newPage(browser);
     await login(page, 'admin@physiq.test');

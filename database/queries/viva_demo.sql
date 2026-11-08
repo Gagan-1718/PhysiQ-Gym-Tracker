@@ -13,7 +13,7 @@ SET @alex  = (SELECT id FROM users WHERE email = 'alex@physiq.test');
 SET @admin = (SELECT id FROM users WHERE email = 'admin@physiq.test');
 
 -- -----------------------------------------------------------------------------
--- 1. The design at a glance: 12 tables, 5 views, 11 triggers, 16 routines
+-- 1. The design at a glance: 15 tables, 7 views, 15 triggers, 22 routines
 -- -----------------------------------------------------------------------------
 SELECT 'tables'   AS object, COUNT(*) AS n FROM information_schema.TABLES   WHERE TABLE_SCHEMA = 'physiq_db' AND TABLE_TYPE = 'BASE TABLE'
 UNION ALL SELECT 'views',    COUNT(*) FROM information_schema.VIEWS     WHERE TABLE_SCHEMA = 'physiq_db'
@@ -203,3 +203,17 @@ SHOW GRANTS FOR 'physiq_readonly'@'%';
 --   DROP TABLE users;                                    -- ERROR 1142: DROP command denied
 --   ALTER TABLE users ADD COLUMN hacked INT;             -- ERROR 1142: ALTER command denied
 --   CREATE USER 'intruder'@'%' IDENTIFIED BY 'x';        -- ERROR 1227: needs the CREATE USER privilege
+
+-- =============================================================================
+-- 12. Meals and water: procedures log them, AFTER INSERT triggers keep the day's
+--     totals in user_daily_fuel (no app code adds anything up)
+-- =============================================================================
+SET @bowl = (SELECT id FROM foods WHERE name = 'Chicken & Rice Bowl' AND user_id IS NULL);
+START TRANSACTION;
+  CALL sp_ensure_daily_fuel(@alex, CURRENT_DATE);
+  SELECT 'before' AS moment, calories_logged, protein_logged_g, water_logged_ml FROM user_daily_fuel WHERE user_id = @alex AND fuel_date = CURRENT_DATE;
+  CALL sp_log_meal(@alex, CURRENT_DATE, 'lunch', @bowl, NULL, NULL, 1.5, 0, 0, 0, 0);  -- 1.5 bowls from the food library
+  CALL sp_log_water(@alex, CURRENT_DATE, 500, 'Bottle');
+  SELECT 'after' AS moment, calories_logged, protein_logged_g, water_logged_ml FROM user_daily_fuel WHERE user_id = @alex AND fuel_date = CURRENT_DATE;
+  --  +840 kcal, +72 g protein, +500 ml: written by trg_meal_logs_ai and trg_water_logs_ai
+ROLLBACK;

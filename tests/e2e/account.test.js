@@ -23,8 +23,12 @@ test('a new member registers, goes through onboarding and lands on a personalise
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.waitForURL('**/onboarding', { timeout: 30000 });
 
-    // Step 1: goal. Step 2: body. Step 3: split
-    await page.getByRole('radio', { name: /Get stronger/ }).click();
+    // Step 1: goals (several can be ticked). Step 2: body. Step 3: split
+    await page.getByRole('checkbox', { name: /Get stronger/ }).click();
+    await page.getByRole('checkbox', { name: /Build muscle/ }).click(); // untick the default
+    await page.getByRole('checkbox', { name: /Lose fat/ }).click();
+    // Strength + fat loss is saved as the fat-loss goal, and the summary says so
+    assert.match(await page.locator('main, body').first().innerText(), /Strength cut[\s\S]*-400 kcal deficit/);
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('height', { exact: true }).fill('178');
     await page.getByLabel('height', { exact: true }).blur();
@@ -38,7 +42,9 @@ test('a new member registers, goes through onboarding and lands on a personalise
 
     assert.equal(await page.locator('#up-next-title').innerText(), 'Upper', 'first day of the new split, never trained');
     const me = (await api(page, 'GET', '/api/me')).body;
-    assert.deepEqual([me.goal, me.height, me.starting_weight, me.needsOnboarding], ['strength', 178, 72.5, false]);
+    assert.deepEqual([me.goal, me.height, me.starting_weight, me.needsOnboarding], ['fat_loss', 178, 72.5, false]);
+    const body = (await api(page, 'GET', '/api/body')).body;
+    assert.equal(body.at(-1).weight, 72.5, 'onboarding weight is the first body-weight entry');
     assert.deepEqual(page.problems, []);
   } finally {
     await api(page, 'DELETE', '/api/me', { password: DEMO_PASSWORD });

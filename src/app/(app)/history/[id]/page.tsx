@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import useSWR, { useSWRConfig } from 'swr';
-import { ChevronLeft, Lock, Pencil, Trash2, Trophy } from 'lucide-react';
+import { ChevronLeft, Pencil, Trash2, Trophy } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ErrorNote, Skeleton } from '@/components/ui/Feedback';
@@ -114,21 +114,11 @@ export default function WorkoutDetailPage() {
               <p className="text-eyebrow uppercase text-fg-3">{shortDate(data.session.session_date)}</p>
               <h1 className="mt-1 text-large-title">{data.session.body_part}</h1>
             </div>
-            {!editing && (() => {
-              const sessionTime = new Date(data.session.ended_at || data.session.started_at || data.session.session_date).getTime();
-              const hoursSince = (Date.now() - sessionTime) / (1000 * 60 * 60);
-              const isLocked = hoursSince >= 5;
-
-              return isLocked ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-semibold text-fg-3">
-                  <Lock className="h-3.5 w-3.5 text-accent" /> Locked (5h edit window passed)
-                </span>
-              ) : (
-                <Button variant="secondary" size="sm" onClick={startEdit}>
-                  <Pencil className="h-3.5 w-3.5" /> Edit
-                </Button>
-              );
-            })()}
+            {!editing && (
+              <Button variant="secondary" size="sm" onClick={startEdit}>
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Button>
+            )}
           </div>
 
           <div className="mt-5 grid grid-cols-3 gap-2">

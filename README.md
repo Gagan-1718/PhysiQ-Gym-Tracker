@@ -25,6 +25,8 @@ PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN
   <img src="docs/screenshots/07-journey.png" width="200" alt="Journey timeline backed by MongoDB">
 </p>
 <p align="center">
+  <img src="docs/screenshots/15-fuel.png" width="200" alt="Fuel: calories and macros against database targets, meals by slot">
+  <img src="docs/screenshots/16-fuel-plate.png" width="200" alt="Build a plate from the food library, with cooking oil counted">
   <img src="docs/screenshots/13-one-rep-max.png" width="200" alt="1RM calculator with the rep-max table from a stored procedure">
   <img src="docs/screenshots/14-edit-workout.png" width="200" alt="Editing a saved workout: steppers per set, trash or restore">
 </p>
@@ -67,9 +69,9 @@ on the same Wi-Fi, then use *Add to Home Screen*.
 |---|---|
 | `npm run db:init` | First-time build. Refuses to touch an existing `physiq_db`. |
 | `npm run db:reset` | **Drops** and rebuilds both databases (all data is lost) |
-| `npm run test:db` | 45 database tests (constraints, triggers, procedures, views, Mongo validators and indexes, least-privilege account). Each runs in a rolled-back transaction. |
-| `npm run test:api` | 35 API tests against the running app (auth, roles, workouts and edits, rollback, journey, photos, export, 1RM calculator, progress). Needs `npm run dev` or `npm start` running on a fresh `db:init`. |
-| `npm run test:e2e` | 16 browser tests in a real Chromium: a whole workout, Journey photos and search, sign-up and onboarding, admin, and an **accessibility + overflow audit of every screen at 320, 390 and 1280 px**. Needs the app running on a fresh `db:reset`; set `PW_EXECUTABLE` to use an installed Chrome or Edge, otherwise run `npx playwright-core install chromium` once. |
+| `npm run test:db` | 48 database tests (constraints, triggers, procedures, views, nutrition, Mongo validators and indexes, least-privilege account). Each runs in a rolled-back transaction. |
+| `npm run test:api` | 39 API tests against the running app (auth, roles, workouts and edits, rollback, split switching, journey, photos, export, 1RM calculator, progress, nutrition, smart search). Needs `npm run dev` or `npm start` running on a fresh `db:init`. |
+| `npm run test:e2e` | 16 browser tests in a real Chromium: a whole workout, Journey photos and search, sign-up and onboarding (several goals), admin, and an **accessibility + overflow audit of every screen at 320, 390 and 1280 px**. Needs the app running on a fresh `db:reset`; set `PW_EXECUTABLE` to use an installed Chrome or Edge, otherwise run `npx playwright-core install chromium` once. |
 | `npm test` | All three suites |
 | `npm run viva:mongo` | MongoDB half of the viva demo (validator, indexes, plans, text search, aggregation) |
 | `npm run docs:dictionary` / `docs:er` / `docs:contributions` | Regenerate the data dictionary, ER diagram source and contribution summary from the live database / git |
@@ -86,13 +88,15 @@ from the repo files, runs `npm run test:db`, builds the app, then runs
 ## What's inside
 
 ### The app
-- **Today:** the adaptive *Up Next* recommendation, an **overdue banner** and activity rings (sessions this week, protein, water) with one-tap fuel logging. Also the recovery status of every split day, an 8-week volume chart, recent PRs and an activity streak.
-- **Train:** start the recommended day, already filled with last session's exercises and today's targets. You can also start a saved routine or an empty workout.
+- **Today:** the adaptive *Up Next* recommendation, an **overdue banner** and activity rings (sessions this week, protein, water). Also the recovery status of every split day, an 8-week volume chart, recent PRs and an activity streak.
+- **Train:** start the recommended day, already filled with last session's exercises and today's targets. You can also start a saved routine or a freestyle workout, change your split, and find exercises or alternatives with **smart search** (MongoDB vectors).
 - **Live logger:** big one-thumb steppers, tap ✓ per set, an automatic rest timer (vibration and chime), live PR badges, and the screen stays awake. The workout lives on the device until *Finish*, so a refresh or bad gym signal never loses sets.
+- **Fuel:** calories, protein, carbs and fat against targets computed in MySQL from your weight and goal. Log meals from the food library (28 staples plus your own foods), **build a plate** with portions and cooking oil, get meal ideas from smart search, and track water with a 7-day chart. Triggers keep the daily totals in sync.
 - **Progress:** weekly volume, sets per muscle against the 10–20 set range, e1RM trend per exercise with the next target, body weight, and the **Journey**. The **1RM calculator** takes any weight × reps and shows your estimated max plus what you could lift for 1–12 reps, all computed by a stored procedure.
 - **Journey (MongoDB):** a timeline of workout journals, notes, **progress photos** and automatic milestones, with filters, whole-word search, a mood-by-week chart, and a *Then and now* photo slider. Photos are private, resized on the phone, and stripped of location data.
 - **History:** every session with sets, PR flags and the journal. **Edit** a saved workout (weights, reps, warm-up flags, removed sets) and the UPDATE / DELETE triggers recompute volume and PRs. Deleting a session rolls back PRs and recovery automatically.
-- **Profile:** goal, weekly session goal, height, split switching, reminders, **download all your data as JSON**, account deletion (both databases).
+- **Profile:** goal, weekly session goal, height (cm or ft/in), split switching (recovery carries over to the new split), reminders, **download all your data as JSON**, account deletion (both databases).
+- **Sign-up:** pick one or more goals (the summary shows exactly which calorie rule is saved), enter height and weight in metric or imperial, and choose a split.
 - **Admin:** manage the exercise library and read the audit log.
 - **Reminders:** an optional once-a-day browser notification when a split day is overdue.
 - **Built for the gym floor:** an offline badge (anything you were logging stays on the device), friendly error and 404 pages, and a layout that holds from 320 px phones to a laptop (set rows stack weight and reps on the narrowest screens).
@@ -100,20 +104,20 @@ from the repo files, runs `npm run test:db`, builds the app, then runs
 ### The database (the point of the project)
 
 <p align="center">
-  <img src="docs/diagrams/er-diagram.png" width="560" alt="ER diagram of the 12 MySQL tables">
+  <img src="docs/diagrams/er-diagram.png" width="560" alt="ER diagram of the 15 MySQL tables">
 </p>
 
 | Concept | Where |
 |---|---|
-| 12-table schema in 3NF (`personal_records` in BCNF) | `database/schema.sql` |
-| CHECK constraints, a one-active-split rule via generated column + unique index, an idempotency key | `schema.sql` |
-| 11 triggers: volume, last-trained date, PR detection, `SIGNAL` validation, audit trail | `database/triggers.sql` |
-| 11 procedures and 5 functions: adaptive scheduler, overload estimator, fuel targets, PR rebuild (window function), rep-max table (recursive CTE), schema stats (`SQL SECURITY DEFINER`) | `database/procedures.sql` |
-| 5 views: recovery status with priority rank, PRs, weekly volume, sets per muscle, per-session bests | `database/views.sql` |
+| 15-table schema in 3NF (`personal_records` in BCNF) | `database/schema.sql` |
+| 29 CHECK constraints, 19 foreign keys, a one-active-split rule via generated column + unique index, an idempotency key | `schema.sql` |
+| 15 triggers: volume, last-trained date, PR detection, `SIGNAL` validation, daily fuel totals, audit trail | `database/triggers.sql` |
+| 15 procedures and 7 functions: adaptive scheduler, overload estimator, fuel and macro targets, meal and water logging, PR rebuild (window function), rep-max table (recursive CTE), schema stats (`SQL SECURITY DEFINER`) | `database/procedures.sql` |
+| 7 views: recovery status with priority rank, PRs, weekly volume, sets per muscle, per-session bests, daily nutrition, hydration | `database/views.sql` |
 | Composite indexes with **real** EXPLAIN / EXPLAIN ANALYZE proof (7 rows vs 60,019; 0.07 ms vs 27.5 ms) | `database/indexes.sql`, `docs/QUERY_PERFORMANCE_EXPLAIN.md` |
-| ACID workout logging, split switching, audited admin writes | `src/app/api/workouts`, `src/app/api/splits`, `src/lib/mysql.ts` |
+| ACID workout logging, split switching (recovery carries over through one correlated `UPDATE`), audited admin writes | `src/app/api/workouts`, `src/app/api/splits`, `src/lib/mysql.ts` |
 | Analytical suite: CTEs, window functions (`ROW_NUMBER`, `LAG`, running `MAX`), correlated subquery, anti-join, gaps-and-islands | `database/queries/` |
-| MongoDB: `custom_routines` and `journey_stories` with JSON-schema validators, compound / multikey / **text** indexes, keyset paging and a `$facet` aggregation | `database/mongodb/`, `src/app/api/journey`, `src/app/api/routines` |
+| MongoDB: `custom_routines`, `journey_stories` and `vector_embeddings` with JSON-schema validators, compound / multikey / **text** indexes, keyset paging, a `$facet` aggregation and **cosine-similarity search** over 32-d vectors in an aggregation pipeline | `database/mongodb/`, `src/app/api/journey`, `src/app/api/routines`, `src/lib/vector.ts` |
 | RBAC: `member` / `admin`, bcrypt, every query scoped by the session user | `src/lib/auth.ts`, `src/lib/session.ts` |
 | **Least privilege in MySQL:** the web app connects as its own account (`MYSQL_APP_USER`) holding the `physiq_app` role: row access + `EXECUTE`, no DDL, no `GRANT`; a `physiq_readonly` role exists for reporting. Privileges are tested. | `database/roles.sql`, `scripts/init-db.js`, `tests/db/privileges.test.js` |
 | Security headers and a production Content-Security-Policy (same-origin only, no framing); API responses are never cached | `next.config.mjs` |
@@ -125,7 +129,7 @@ from the repo files, runs `npm run test:db`, builds the app, then runs
 Full write-up: [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) ·
 [`docs/DATA_DICTIONARY.md`](docs/DATA_DICTIONARY.md) ·
 [`docs/QUERY_PERFORMANCE_EXPLAIN.md`](docs/QUERY_PERFORMANCE_EXPLAIN.md) ·
-[`docs/VIVA_DEMO.md`](docs/VIVA_DEMO.md) (5-minute script, 24-step walkthrough, likely questions) ·
+[`docs/VIVA_DEMO.md`](docs/VIVA_DEMO.md) (5-minute script, 29-step walkthrough, likely questions) ·
 [`docs/CONTRIBUTIONS.md`](docs/CONTRIBUTIONS.md) ·
 [`PLAN.md`](PLAN.md)
 
@@ -136,7 +140,7 @@ Full write-up: [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) ·
 ```text
 database/
   schema.sql  procedures.sql  triggers.sql  views.sql  indexes.sql  roles.sql
-  seeds/       exercises.sql (44 movements), demo_data.sql (generated)
+  seeds/       exercises.sql (44 movements, 28 foods), demo_data.sql (generated)
   mongodb/     validators, viva_demo.js
   queries/     analytical suite, EXPLAIN benchmark, viva_demo.sql
 docs/          design, data dictionary (generated), EXPLAIN proof, viva guide,
@@ -148,10 +152,10 @@ tests/e2e/     Playwright + axe-core browser suite (flows, accessibility, overfl
 .github/       CI workflow
 src/
   app/(auth)   login, register
-  app/(app)    today, train, train/session, history, progress, profile, admin
+  app/(app)    today, train, train/session, fuel, history, progress, profile, admin
   app/api/     route handlers (zod-validated, session-scoped)
-  components/  ui kit, charts, logger, today, progress, journey, alerts, shell
-  lib/         mysql.ts, mongodb.ts, auth.ts, photos.ts, journey.ts, notifications.ts, …
+  components/  ui kit, charts, logger, today, train, fuel, progress, journey, alerts, shell
+  lib/         mysql.ts, mongodb.ts, auth.ts, vector.ts, goals.ts, photos.ts, journey.ts, …
 public/        icons, service worker (notifications only)
 ```
 

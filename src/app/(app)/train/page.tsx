@@ -16,7 +16,7 @@ import { fetcher, send } from '@/lib/client';
 import { cn, relativeDay } from '@/lib/format';
 import { buildDraft, useLibrary } from '@/lib/training';
 import { useWorkoutDraft } from '@/lib/workout-draft';
-import { SPLIT_TEMPLATES } from '@/lib/split-templates';
+import { ChangeSplitSheet } from '@/components/train/ChangeSplitSheet';
 import { SemanticExerciseFinder } from '@/components/train/SemanticExerciseFinder';
 import type { Exercise, Recommendation, Routine, SplitDayStatus } from '@/types/database';
 
@@ -39,34 +39,7 @@ function TrainHome() {
   const [starting, setStarting] = useState<string | null>(null);
   const [pendingStart, setPendingStart] = useState<(() => Promise<void>) | null>(null);
   const [splitOpen, setSplitOpen] = useState(false);
-  const [switching, setSwitching] = useState(false);
   const autoStarted = useRef(false);
-
-  const startFreestyle = () =>
-    start('freestyle', async () =>
-      buildDraft({
-        userId: userId!,
-        splitDayId: null,
-        bodyPart: 'Freestyle Workout',
-        exercises: [],
-      })
-    );
-
-  async function applySplit(tId: string) {
-    const t = SPLIT_TEMPLATES.find((x) => x.id === tId);
-    if (!t) return;
-    setSwitching(true);
-    try {
-      await send('/api/splits', 'POST', { name: t.name, minRestDays: t.minRestDays, days: t.days });
-      toast(`Switched split to ${t.name}. Muscles trained within the last 72h are recovering.`);
-      await split.mutate();
-      setSplitOpen(false);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not change split', 'error');
-    } finally {
-      setSwitching(false);
-    }
-  }
 
   async function start(key: string, build: () => Promise<Parameters<typeof setDraft>[0]>) {
     if (!userId) return;
@@ -168,10 +141,10 @@ function TrainHome() {
       <SectionHeader
         title="Your split"
         action={
-          <div className="flex items-center gap-2">
-            {split.data?.splitName && <span className="text-footnote text-fg-3">{split.data.splitName}</span>}
-            <Button variant="secondary" size="sm" onClick={() => setSplitOpen(true)}>
-              Change split
+          <div className="flex min-w-0 items-center gap-2">
+            {split.data?.splitName && <span className="truncate text-footnote text-fg-3">{split.data.splitName}</span>}
+            <Button variant="secondary" size="sm" aria-label="Change split" onClick={() => setSplitOpen(true)}>
+              Change
             </Button>
           </div>
         }
@@ -211,13 +184,14 @@ function TrainHome() {
           </Card>
 
           <Button
-            variant="secondary"
+            variant="ghost"
+            size="lg"
             block
-            className="mt-3 border border-line bg-surface-1 hover:bg-surface-2"
-            onClick={startFreestyle}
+            className="mt-3 border border-dashed border-line"
             disabled={starting !== null}
+            onClick={() => start('freestyle', () => buildDraft({ userId: userId!, splitDayId: null, bodyPart: 'Freestyle' }))}
           >
-            <Plus className="h-4 w-4" /> Start Freestyle Workout (Any Muscles / Exercises)
+            <Plus className="h-5 w-5" /> Freestyle workout
           </Button>
         </>
       )}
@@ -255,17 +229,6 @@ function TrainHome() {
         </div>
       )}
 
-      <Button
-        variant="ghost"
-        size="lg"
-        block
-        className="mt-6 border border-dashed border-line"
-        disabled={starting !== null}
-        onClick={() => start('empty', () => buildDraft({ userId: userId!, splitDayId: null, bodyPart: 'Freestyle' }))}
-      >
-        <Plus className="h-5 w-5" /> Empty workout
-      </Button>
-
       <SectionHeader title="Exercise & alternative finder" />
       <SemanticExerciseFinder
         exercises={library.data?.exercises ?? []}
@@ -281,35 +244,7 @@ function TrainHome() {
         }
       />
 
-      <Sheet open={splitOpen} onClose={() => setSplitOpen(false)} title="Change training split">
-        <p className="mb-4 text-[15px] text-fg-2">
-          Pick a new split template. Muscles trained within the last 72 hours are automatically placed on recovery cooldown.
-        </p>
-        <div className="space-y-3">
-          {SPLIT_TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              disabled={switching}
-              onClick={() => applySplit(t.id)}
-              className="press block w-full rounded-2xl border border-line bg-surface-1 p-4 text-left transition-colors hover:border-accent hover:bg-surface-2"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-headline">{t.name}</span>
-                <span className="text-footnote text-fg-3">{t.days.length} days</span>
-              </div>
-              <p className="mt-0.5 text-xs text-fg-2">{t.blurb}</p>
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {t.days.map((d) => (
-                  <span key={d.label} className="rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-semibold text-fg-2">
-                    {d.label}
-                  </span>
-                ))}
-              </div>
-            </button>
-          ))}
-        </div>
-      </Sheet>
+      <ChangeSplitSheet open={splitOpen} onClose={() => setSplitOpen(false)} currentName={split.data?.splitName ?? null} />
 
       <Sheet open={pendingStart !== null} onClose={() => setPendingStart(null)} title="Workout in progress">
         <p className="text-[15px] text-fg-2">

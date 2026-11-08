@@ -86,22 +86,8 @@ export const PATCH = route<Ctx>(async (req, { params }) => {
   if (overlap) throw new ApiError(400, 'A set cannot be both edited and deleted.');
 
   await withTransaction(async (conn) => {
-    const owned = await selectOne<{ id: number; created_at: string; ended_at: string | null }>(
-      'SELECT id, created_at, ended_at FROM workout_sessions WHERE id = ? AND user_id = ? FOR UPDATE',
-      [id, me.id],
-      conn
-    );
-    if (!owned) throw new ApiError(404, 'Workout not found.');
-
-    // 5-hour edit lock rule
-    const sessionTime = new Date(owned.ended_at || owned.created_at).getTime();
-    const hoursSince = (Date.now() - sessionTime) / (1000 * 60 * 60);
-    if (hoursSince > 5) {
-      throw new ApiError(
-        403,
-        `This workout is locked from edits. Exercises and sets cannot be modified after 5 hours (${hoursSince.toFixed(1)} hours have elapsed).`
-      );
-    }
+    const owned = await select<{ id: number }>('SELECT id FROM workout_sessions WHERE id = ? AND user_id = ? FOR UPDATE', [id, me.id], conn);
+    if (owned.length === 0) throw new ApiError(404, 'Workout not found.');
 
     const touched = [...edit.sets.map((s) => s.id), ...edit.deleteSetIds];
     if (touched.length > 0) {

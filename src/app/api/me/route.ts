@@ -50,13 +50,14 @@ export const DELETE = route(async (req) => {
   const row = await selectOne<{ password_hash: string }>('SELECT password_hash FROM users WHERE id = ?', [me.id]);
   if (!row || !(await bcrypt.compare(password, row.password_hash))) throw new ApiError(403, 'Password is incorrect.');
 
-  // MySQL first: FK cascades remove splits, sessions, sets, PRs, measurements and fuel.
+  // MySQL first: FK cascades remove splits, sessions, sets, PRs, measurements, fuel, custom foods and meal logs.
   await withTransaction((conn) => execute('DELETE FROM users WHERE id = ?', [me.id], conn));
-  // Then the documents that reference this user id from MongoDB.
+  // Then the documents that reference this user id from MongoDB (including the vectors of their custom foods).
   const db = await getMongoDb();
   await Promise.all([
     db.collection('custom_routines').deleteMany({ user_id: me.id }),
     db.collection('journey_stories').deleteMany({ user_id: me.id }),
+    db.collection('vector_embeddings').deleteMany({ user_id: me.id }),
   ]);
   return ok({ deleted: true });
 });

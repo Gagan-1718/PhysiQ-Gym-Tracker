@@ -55,6 +55,18 @@ export default function FuelPage() {
     toast('Meal logged');
   };
 
+  // Suggestions log with one tap, so they report their own errors here
+  const handleQuickLogSuggestion = async (foodId: number, mealType: MealType) => {
+    setBusy(true);
+    try {
+      await handleLogLibraryFood(foodId, 1, mealType);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not log the meal', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleLogQuickMeal = async (payload: {
     mealType: MealType;
     foodName: string;
@@ -181,15 +193,6 @@ export default function FuelPage() {
             <>
               <MacroSummaryCard fuel={data.fuel} />
 
-              <SectionHeader title="Smart meal recommender" />
-              <SemanticMealRecommender
-                busy={busy}
-                onQuickLogFood={(foodId, mealType) => handleLogLibraryFood(foodId, 1, mealType)}
-              />
-
-              <SectionHeader title="Prep Method & Compound Meals" />
-              <PrepMethodMealBuilder onLogMeal={handleLogQuickMeal} />
-
               <SectionHeader
                 title="Meals"
                 action={
@@ -204,6 +207,13 @@ export default function FuelPage() {
                 onOpenAdd={openMealSheet}
                 onDeleteMeal={handleDeleteMeal}
               />
+
+              <div className="mt-4">
+                <PrepMethodMealBuilder onLogMeal={handleLogQuickMeal} />
+              </div>
+
+              <SectionHeader title="Meal ideas" />
+              <SemanticMealRecommender busy={busy} onQuickLogFood={handleQuickLogSuggestion} />
             </>
           )}
 

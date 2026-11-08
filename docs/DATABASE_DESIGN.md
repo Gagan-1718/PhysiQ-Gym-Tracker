@@ -3,9 +3,9 @@
 PhysiQ uses **polyglot persistence**:
 
 - **MySQL 8.0** holds everything relational, transactional and rule-bound: users,
-  splits, workouts, sets, PRs, measurements, fuel and the audit trail.
-- **MongoDB** holds nested, sparse, evolving documents: routine templates and the
-  journey timeline.
+  splits, workouts, sets, PRs, measurements, fuel, foods, meals, water and the audit trail.
+- **MongoDB** holds nested, sparse, evolving documents: routine templates, the
+  journey timeline and the vectors behind smart search.
 
 The core rule of the project is **the database decides**. Recommendations,
 overload targets, PR detection, volume and recovery status are computed by
@@ -24,14 +24,16 @@ PLAN → TRAIN → RECORD → ANALYZE → ADAPT → TRAIN AGAIN
 
 | Data | Store | Why |
 |---|---|---|
-| Users, splits, sessions, sets, PRs, measurements, fuel, audit | **MySQL** | Strict structure, relationships everywhere, multi-row writes that must be atomic (a session and its sets), and integrity rules (FKs, CHECKs, triggers). 3NF prevents update anomalies in the training history. |
+| Users, splits, sessions, sets, PRs, measurements, fuel, foods, meals, water, audit | **MySQL** | Strict structure, relationships everywhere, multi-row writes that must be atomic (a session and its sets), and integrity rules (FKs, CHECKs, triggers). 3NF prevents update anomalies in the training history. |
 | `custom_routines` | **MongoDB** | A routine is an ordered list of exercises with per-exercise targets and optional superset groups. It is read and written as one unit. In SQL this needs 2–3 extra tables and joins for something that is never queried by its parts. |
 | `journey_stories` | **MongoDB** | Journals and progress photos carry sparse, changing attributes: mood, energy, tags, photo angle, free-form highlights. A table would be wide and mostly NULL, and every new attribute would need a migration. The validator still enforces the fields that matter. |
+| `vector_embeddings` | **MongoDB** | One document per exercise or food holding a 32-number vector. Arrays of numbers fit a document naturally, and the similarity ranking runs in an aggregation pipeline next to the data. The MySQL row stays the source of truth; the vector is rebuilt from it. |
 
 **Cross-store references.** Mongo documents store MySQL ids (`user_id`,
 `exercise_id`, `session_id`). No database can enforce an FK across stores, so
 the API checks that every referenced id exists in MySQL before writing to
-Mongo. Deleting a user also deletes their Mongo documents.
+Mongo. Deleting a user also deletes their Mongo documents (routines, stories and
+the vectors of their custom foods).
 
 ---
 
@@ -57,6 +59,10 @@ erDiagram
     users ||--o{ body_measurements : records
     users ||--o{ user_daily_fuel : tracks
     users |o--o{ admin_audit_logs : "acted in"
+    users ||--o{ foods : "adds custom"
+    foods |o--o{ meal_logs : "logged as"
+    users ||--o{ meal_logs : eats
+    users ||--o{ water_logs : drinks
 ```
 
 | Relationship | Cardinality | Delete rule |
@@ -67,6 +73,9 @@ erDiagram
 | split_days → workout_sessions | 1:N (optional) | SET NULL (history survives a split change) |
 | exercises → sets | 1:N | RESTRICT (a trained exercise cannot vanish) |
 | sets → personal_records | 1:0..1 | CASCADE (then triggers promote the next best) |
+| users → foods | 1:N (built-in foods have `user_id` NULL) | CASCADE |
+| users → meal_logs, water_logs | 1:N | CASCADE |
+| foods → meal_logs | 1:N (optional) | SET NULL (the log keeps its own copy of name and macros) |
 
 ---
 
@@ -108,14 +117,17 @@ So the table is in BCNF.
 |---|---|---|---|
 | `split_days.last_trained_date` | `MAX(workout_sessions.session_date)` | read on every dashboard load by the scheduler | triggers on session insert, update and delete |
 | `workout_sessions.total_volume` | `SUM(weight × reps)` of working sets | history lists show volume per session | triggers on set insert, update and delete |
+| `user_daily_fuel.*_logged` | `SUM` of the day's `meal_logs` and `water_logs` | Today and Fuel read one row instead of summing logs | triggers on meal and water insert and delete |
 
-`npm run test:db` proves both caches stay in sync through inserts, edits,
+`npm run test:db` proves the caches stay in sync through inserts, edits,
 deletes, backdated logs and cascades.
 
 **Snapshot attributes (not redundancy).** `workout_sessions.body_part` stores
 the label at training time, so renaming or deleting a split never rewrites
 history. `user_daily_fuel` targets are frozen once a day is over, so a later
-weigh-in does not change past days.
+weigh-in does not change past days. `meal_logs` copies the food's name and
+macros (× servings) at log time, so editing or deleting a food never changes
+what was eaten on an earlier day.
 
 ---
 
@@ -137,7 +149,7 @@ weigh-in does not change past days.
 
 ## 5. Server-side logic
 
-### Triggers (11)
+### Triggers (15)
 | Trigger | Fires | Does |
 |---|---|---|
 | `trg_workout_sessions_bi` / `_bu` | before insert/update | validation (future date, split-day ownership, owner change) |
@@ -146,6 +158,8 @@ weigh-in does not change past days.
 | `trg_workout_sessions_ad` | after delete | recompute the day and rebuild the user's PRs (cascaded sets fire no triggers) |
 | `trg_sets_ai` / `_au` / `_ad` | after set change | maintain `total_volume` and re-check the PR |
 | `trg_exercises_ai` / `_au` / `_ad` | after library change | write `admin_audit_logs` with before/after JSON and the acting admin (`@app_user_id`) |
+| `trg_meal_logs_ai` / `_ad` | after a meal is logged or removed | add or subtract its calories and macros in `user_daily_fuel` (clamped, never negative) |
+| `trg_water_logs_ai` / `_ad` | after water is logged or removed | add or subtract the millilitres in `user_daily_fuel` |
 
 ### Procedures and functions
 | Routine | Purpose |
@@ -153,22 +167,28 @@ weigh-in does not change past days.
 | `sp_get_next_body_part` | adaptive scheduling: highest-priority day of the active split (OUT params) |
 | `sp_estimate_next_target` | double progression: 10+ reps → +2.5 kg at 8; otherwise +1 rep |
 | `sp_check_and_update_pr` / `sp_rebuild_personal_records` | PR maintenance (the rebuild uses `ROW_NUMBER()`) |
-| `sp_get_daily_fuel` / `sp_log_fuel` / `sp_ensure_daily_fuel` | daily protein, water and calorie targets and progress |
+| `sp_get_daily_fuel` / `sp_log_fuel` / `sp_ensure_daily_fuel` | daily calorie, macro and water targets and progress |
+| `sp_log_meal` / `sp_delete_meal` | log a meal from the food library (macros × servings) or as a custom entry; delete only the caller's own |
+| `sp_log_water` / `sp_delete_water` | log or remove a drink |
 | `sp_assert_valid_session`, `sp_refresh_last_trained` | helpers used by the triggers |
 | `sp_rep_max_table(weight, reps)` | the 1RM calculator: estimated one-rep max plus the weight for 1–12 reps, built with a **recursive CTE** over `fn_calculate_1rm`; `SIGNAL`s on invalid input |
 | `sp_schema_stats` | table, view, trigger and routine counts for `/api/health`; `SQL SECURITY DEFINER` so the least-privilege app account can read `information_schema` through it without being granted more |
 | `fn_calculate_1rm` | Epley: `w × (1 + reps/30)` |
 | `fn_current_weight` | latest weigh-in on or before a date, else starting weight |
 | `fn_protein_target_g`, `fn_water_target_ml`, `fn_calorie_target` | 2 g/kg, 40 ml/kg, ~33 kcal/kg ± goal |
+| `fn_fat_target_g`, `fn_carbs_target_g` | 0.9 g fat/kg; carbs fill the calories left after protein and fat |
 
 ### Views
 `view_split_day_status` (recovery status and priority rank),
 `view_personal_records_detailed`, `view_weekly_summary`,
-`view_weekly_muscle_volume`, `view_exercise_session_best`.
+`view_weekly_muscle_volume`, `view_exercise_session_best`,
+`view_daily_nutrition_summary` (meals, calories and macros per day),
+`view_hydration_daily` (drinks and millilitres per day).
 
 ### Notable queries in the API
 - **Last session per exercise** (`/api/train/context`): `ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY session_date DESC)` in a CTE.
 - **Activity streak** (`/api/progress`): a *gaps-and-islands* query. `week_index − ROW_NUMBER()` is constant inside an unbroken run of training weeks, so `GROUP BY` that value gives each streak's length.
+- **Switching splits** (`/api/splits`): one transaction deactivates the old split, inserts the new days, then runs one `UPDATE split_days ... SET last_trained_date = (SELECT MAX(session_date) ...)` whose correlated subquery finds the last working set for any of that day's muscles. Recovery therefore carries over: a muscle trained yesterday is still *recovering* in the new split.
 - **History paging** (`/api/workouts`): keyset pagination on `(session_date, id) < (?, ?)` served by `idx_workout_sessions_user_date`. It avoids `OFFSET`, which gets slower the deeper you page.
 
 ---
@@ -244,6 +264,8 @@ account can see (`ER_NO_REFERENCED_ROW`, `ER_ROW_IS_REFERENCED`) to clean 400 / 
 | `custom_routines` | `user_id` int, 1–20 exercises, each with `exercise_id`, `target_sets` 1–10, optional rep range, rest and superset letter | unique `(user_id, name)`, `(user_id, last_used_at)` |
 | `journey_stories` | `kind` enum, `date` `YYYY-MM-DD`, mood/energy 1–5, ≤ 12 tags, optional `photo_file` (UUID + extension) and `milestone`; **extra fields allowed** | `(user_id, date, _id)` timeline (matches the feed sort and keyset cursor, so no in-memory sort), `(user_id, kind, date)` filtered feed, `(user_id, tags)` multikey, sparse `session_id`, **text index** on `caption` + `tags` |
 
+| `vector_embeddings` | `domain` enum (`exercise` / `food`), `entity_id` (the MySQL id), optional `user_id` for custom foods, `dimensions`, `embedding` array, `semantic_text`, `metadata` | unique `(domain, entity_id)`, `(domain, user_id)` |
+
 Validators are applied with `validationLevel: strict` and
 `validationAction: error`, and `npm run test:db` checks them.
 
@@ -257,6 +279,15 @@ Validators are applied with `validationLevel: strict` and
 | Mood by week, top tags, counts per kind | one **aggregation** using `$facet`: `$group`, `$dateTrunc` (Monday weeks), `$unwind`, `$sort`, `$limit` | `GET /api/journey/insights` |
 | Workout journals with embedded PR highlights | **nested arrays** of free-form objects, written after the MySQL commit | `POST /api/workouts` |
 | Milestone stories (1st, 10th, 25th, 50th, 100th, 250th session) | counts sessions in MySQL, inserts once (idempotent check) | `src/lib/milestones.ts` |
+
+### What smart search uses MongoDB for
+
+Every exercise and food has a 32-dimension vector built from its name, muscle group or
+category, and description (`src/lib/embedding-engine.js`). Train → smart search and
+Fuel → meal ideas embed the typed text the same way and rank items with **cosine
+similarity computed inside an aggregation pipeline** (`$reduce` for the dot product
+and norms, then `$sort` and `$limit`), filtered by `domain` and by the member's own
+custom foods. New exercises and custom foods get their vector when they are created.
 
 ### Progress photos: where the bytes live
 
@@ -280,18 +311,18 @@ the angle, and the **body weight in force on that date, read from MySQL with
 
 | File | Contents |
 |---|---|
-| `database/schema.sql` | 12 tables |
-| `database/procedures.sql` | functions and procedures (loaded before triggers) |
-| `database/triggers.sql` | 11 triggers |
-| `database/views.sql` | 5 views |
+| `database/schema.sql` | 15 tables |
+| `database/procedures.sql` | 15 procedures and 7 functions (loaded before triggers) |
+| `database/triggers.sql` | 15 triggers |
+| `database/views.sql` | 7 views |
 | `database/indexes.sql` | composite indexes |
 | `database/roles.sql` | MySQL 8 roles `physiq_app` and `physiq_readonly` (least privilege) |
 | `database/seeds/` | exercise library, demo data (generated by `scripts/generate-demo-data.js`) |
-| `database/mongodb/` | JSON-schema validators |
+| `database/mongodb/` | JSON-schema validators for the 3 collections, `viva_demo.js` |
 | `database/queries/` | analytical suite, EXPLAIN benchmark |
 
 ```bash
 npm run db:init     # first-time build of MySQL + MongoDB (refuses if physiq_db exists)
 npm run db:reset    # DROP and rebuild (destroys data)
-npm run test:db     # 45 tests, each inside a rolled-back transaction
+npm run test:db     # 48 tests, each inside a rolled-back transaction
 ```

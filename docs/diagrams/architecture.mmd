@@ -1,6 +1,6 @@
 flowchart TB
   subgraph Client["Phone / laptop (PWA)"]
-    UI["Next.js pages<br/>Today · Train · Progress · Journey"]
+    UI["Next.js pages<br/>Today · Train · Fuel · Progress · Journey"]
     Draft[("localStorage<br/>in-progress workout")]
     SW["Service worker<br/>notifications only"]
   end
@@ -11,15 +11,16 @@ flowchart TB
   end
 
   subgraph MySQL["MySQL 8 · system of record · ACID · 3NF"]
-    Tables["12 tables"]
-    Trg["11 triggers<br/>volume · PRs · last trained · audit"]
-    Proc["procedures + functions<br/>scheduler · overload · fuel"]
-    Views["5 views<br/>recovery status · weekly volume · PRs"]
+    Tables["15 tables"]
+    Trg["15 triggers<br/>volume · PRs · last trained · fuel totals · audit"]
+    Proc["15 procedures + 7 functions<br/>scheduler · overload · fuel · meals · water"]
+    Views["7 views<br/>recovery status · weekly volume · PRs · nutrition"]
   end
 
   subgraph Mongo["MongoDB · flexible documents"]
     Stories[("journey_stories<br/>journals · notes · photos · milestones<br/>photo story keeps weight from fn_current_weight")]
     Routines[("custom_routines<br/>nested exercise lists")]
+    Vectors[("vector_embeddings<br/>32-d vectors of exercises and foods<br/>cosine search in an aggregation pipeline")]
   end
 
   Files[("uploads/&lt;user&gt;/&lt;uuid&gt;.jpg<br/>private photo files")]
@@ -34,7 +35,9 @@ flowchart TB
   API -->|"SELECT"| Views
   API -->|"after MySQL commit, best effort"| Stories
   API --> Routines
+  API -->|"smart search"| Vectors
   API -->|"validated, magic-byte checked"| Files
   Stories -. "session_id · user_id (checked by API)" .-> Tables
   Routines -. "exercise_id (checked by API)" .-> Tables
+  Vectors -. "entity_id (exercise / food)" .-> Tables
   Stories -. "photo_file" .-> Files
