@@ -86,6 +86,7 @@ export default function OnboardingPage() {
   const { data: session } = useSession();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [multiMode, setMultiMode] = useState(false);
   const [goals, setGoals] = useState<Goal[]>(['hypertrophy']);
   const [height, setHeight] = useState<number | null>(175);
   const [weight, setWeight] = useState<number | null>(72);
@@ -114,18 +115,20 @@ export default function OnboardingPage() {
     });
   };
 
+  const handleGoalSelect = (val: Goal) => {
+    if (multiMode) {
+      toggleGoal(val);
+    } else {
+      setGoals([val]);
+    }
+  };
+
   async function finish() {
     const template = SPLIT_TEMPLATES.find((t) => t.id === templateId)!;
     setSaving(true);
 
-    // Resolve primary goal for the database schema
-    const primaryGoal: Goal = goals.includes('hypertrophy')
-      ? 'hypertrophy'
-      : goals.includes('strength')
-      ? 'strength'
-      : goals.includes('fat_loss')
-      ? 'fat_loss'
-      : 'maintenance';
+    // Primary goal sent to user profile
+    const primaryGoal: Goal = goals[0] ?? 'hypertrophy';
 
     try {
       await send('/api/me', 'PATCH', { goal: primaryGoal, height, starting_weight: weight });
@@ -184,20 +187,47 @@ export default function OnboardingPage() {
             {STEPS[step] === 'goal' && (
               <>
                 <h1 className="text-large-title">{firstName ? `Hi ${firstName}.` : 'Welcome.'} What’s the goal?</h1>
-                <p className="mb-4 mt-2 text-[17px] text-fg-2">
-                  Select one or more targets. PhysiQ blends your calories and programming accordingly.
-                </p>
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-footnote text-fg-2">
+                    {multiMode ? 'Choose multiple to blend strategy' : 'Select your primary objective'}
+                  </p>
+                  <div className="flex rounded-xl border border-line bg-surface-2 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMultiMode(false);
+                        if (goals.length > 1) setGoals([goals[0]]);
+                      }}
+                      className={cn(
+                        'rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors',
+                        !multiMode ? 'bg-accent-solid text-white shadow-sm' : 'text-fg-3 hover:text-fg'
+                      )}
+                    >
+                      Single
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMultiMode(true)}
+                      className={cn(
+                        'rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors',
+                        multiMode ? 'bg-accent-solid text-white shadow-sm' : 'text-fg-3 hover:text-fg'
+                      )}
+                    >
+                      Multi-target
+                    </button>
+                  </div>
+                </div>
 
-                <div className="grid gap-3" role="group" aria-label="Fitness goals">
+                <div className="grid gap-3" role="radiogroup" aria-label="Fitness goals">
                   {GOALS.map((g) => {
                     const isSelected = goals.includes(g.value);
                     return (
                       <button
                         key={g.value}
                         type="button"
-                        role="checkbox"
+                        role="radio"
                         aria-checked={isSelected}
-                        onClick={() => toggleGoal(g.value)}
+                        onClick={() => handleGoalSelect(g.value)}
                         className={cn(
                           'press flex items-center justify-between rounded-2xl border p-4 text-left transition-colors',
                           isSelected ? 'border-accent bg-accent/10' : 'border-line bg-surface-1 hover:bg-surface-2'

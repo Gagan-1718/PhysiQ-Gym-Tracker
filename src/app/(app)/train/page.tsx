@@ -168,9 +168,9 @@ function TrainHome() {
       <SectionHeader
         title="Your split"
         action={
-          <div className="flex items-center gap-2">
-            {split.data?.splitName && <span className="text-footnote text-fg-3">{split.data.splitName}</span>}
-            <Button variant="secondary" size="sm" onClick={() => setSplitOpen(true)}>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {split.data?.splitName && <span className="hidden sm:inline text-footnote text-fg-3">{split.data.splitName}</span>}
+            <Button variant="secondary" size="sm" onClick={() => setSplitOpen(true)} className="h-8 px-2.5 text-xs">
               Change split
             </Button>
           </div>
@@ -213,11 +213,11 @@ function TrainHome() {
           <Button
             variant="secondary"
             block
-            className="mt-3 border border-line bg-surface-1 hover:bg-surface-2"
+            className="mt-3 border border-line bg-surface-1 hover:bg-surface-2 whitespace-normal h-auto py-3 px-3 text-sm text-center"
             onClick={startFreestyle}
             disabled={starting !== null}
           >
-            <Plus className="h-4 w-4" /> Start Freestyle Workout (Any Muscles / Exercises)
+            <Plus className="h-4 w-4 shrink-0" /> Start Freestyle Workout
           </Button>
         </>
       )}

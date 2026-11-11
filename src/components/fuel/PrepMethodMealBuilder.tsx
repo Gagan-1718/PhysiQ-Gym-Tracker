@@ -300,7 +300,7 @@ export function PrepMethodMealBuilder({
             <span className="inline-flex items-center gap-1 rounded-full bg-train/15 px-2.5 py-0.5 text-xs font-bold text-train">
               <Utensils className="h-3.5 w-3.5" /> Prep & Compound Meals
             </span>
-            <span className="text-xs font-semibold text-fg-3">Oil Calorie Multiplier</span>
+            <span className="hidden sm:inline text-xs font-semibold text-fg-3">Oil Calorie Multiplier</span>
           </div>
           <p className="mt-1 text-xs text-fg-2">
             Pick staples, choose prep method (boiled vs fried oil weight), and assemble combo plates.
@@ -403,11 +403,11 @@ export function PrepMethodMealBuilder({
                   {/* Cooking method selection (if supported) */}
                   {staple.supportsPrep && (
                     <div className="mt-2.5 border-t border-line/60 pt-2">
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="mb-1 flex flex-wrap items-center justify-between gap-1">
                         <span className="text-[11px] font-semibold text-fg-3">
                           Cooking Method / Oil Weight:
                         </span>
-                        <span className="text-[11px] text-fg-3">
+                        <span className="hidden sm:inline text-[11px] text-fg-3">
                           {COOKING_METHODS.find((m) => m.id === state.method)?.description}
                         </span>
                       </div>
@@ -421,19 +421,19 @@ export function PrepMethodMealBuilder({
                               type="button"
                               onClick={() => setMethod(id, m.id)}
                               className={cn(
-                                'press rounded-xl border p-2 text-left transition-colors',
+                                'press rounded-xl border p-2 text-left transition-colors min-w-0',
                                 isCur
                                   ? 'border-water bg-water/10 text-white'
                                   : 'border-line/60 bg-surface-2 text-fg-2 hover:bg-surface-3'
                               )}
                             >
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold truncate">{m.label}</span>
-                                {isCur && <Check className="h-3 w-3 text-water shrink-0" />}
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="truncate text-xs font-bold">{m.label}</span>
+                                {isCur && <Check className="h-3 w-3 shrink-0 text-water" />}
                               </div>
                               <span
                                 className={cn(
-                                  'mt-0.5 block text-[10px] font-semibold',
+                                  'mt-0.5 block truncate text-[10px] font-semibold',
                                   m.oilGrams === 0 ? 'text-water' : 'text-train'
                                 )}
                               >
@@ -456,16 +456,16 @@ export function PrepMethodMealBuilder({
       {Object.keys(selectedItems).length > 0 && (
         <div className="rounded-2xl border border-accent/30 bg-accent/[0.08] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold text-accent uppercase tracking-wider">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-accent">
                 Combined Combo Plate Summary
               </p>
-              <p className="mt-0.5 text-sm font-semibold text-fg truncate max-w-sm">
+              <p className="mt-0.5 truncate text-sm font-semibold text-fg">
                 {totals.title}
               </p>
-              <div className="mt-1 flex items-center gap-3 text-xs">
+              <div className="mt-1 flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
                 <span className="font-display text-base font-extrabold text-fg">
-                  {totals.calories} <span className="text-xs text-fg-3 font-normal">kcal</span>
+                  {totals.calories} <span className="text-xs font-normal text-fg-3">kcal</span>
                 </span>
                 <span className="font-semibold text-protein">{totals.proteinG}g Protein</span>
                 <span className="font-semibold text-water">{totals.carbsG}g Carbs</span>
@@ -477,7 +477,7 @@ export function PrepMethodMealBuilder({
               size="md"
               loading={logging}
               onClick={handleLogCompoundMeal}
-              className="bg-accent-solid text-white hover:bg-accent-solid/90 shrink-0"
+              className="shrink-0 bg-accent-solid text-white hover:bg-accent-solid/90"
             >
               <Plus className="h-4 w-4" /> Log Combo to {targetMeal}
             </Button>

@@ -57,7 +57,7 @@ export function SemanticMealRecommender({
           <span className="inline-flex items-center gap-1 rounded-full bg-water/15 px-2.5 py-0.5 text-xs font-bold text-water">
             <Sparkles className="h-3.5 w-3.5" /> Vector Nutrition Match
           </span>
-          <span className="text-xs text-fg-3">32-d Cosine Similarity</span>
+          <span className="hidden sm:inline text-xs text-fg-3">32-d Cosine Similarity</span>
         </div>
 
         <div className="flex items-center gap-1">
