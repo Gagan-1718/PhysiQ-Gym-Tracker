@@ -15,12 +15,16 @@ const globalForMySQL = globalThis as unknown as { physiqPool?: Pool };
 
 export function getPool(): Pool {
   if (!globalForMySQL.physiqPool) {
+    const isCloudHost = process.env.MYSQL_HOST && !['127.0.0.1', 'localhost'].includes(process.env.MYSQL_HOST);
+    const useSsl = process.env.MYSQL_SSL === 'true' || isCloudHost;
+
     globalForMySQL.physiqPool = mysql.createPool({
       host: process.env.MYSQL_HOST || '127.0.0.1',
       port: Number(process.env.MYSQL_PORT) || 3306,
       user: process.env.MYSQL_APP_USER || process.env.MYSQL_USER || 'root',
       password: process.env.MYSQL_APP_USER ? (process.env.MYSQL_APP_PASSWORD ?? '') : (process.env.MYSQL_PASSWORD ?? ''),
       database: process.env.MYSQL_DATABASE || 'physiq_db',
+      ssl: useSsl ? { rejectUnauthorized: false } : undefined,
       connectionLimit: 10,
       waitForConnections: true,
       queueLimit: 0,

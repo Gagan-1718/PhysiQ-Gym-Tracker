@@ -162,11 +162,14 @@ function splitSqlStatements(sql) {
 }
 
 function mysqlConfig() {
+  const isCloudHost = process.env.MYSQL_HOST && !['127.0.0.1', 'localhost'].includes(process.env.MYSQL_HOST);
+  const useSsl = process.env.MYSQL_SSL === 'true' || isCloudHost;
   return {
     host: process.env.MYSQL_HOST || '127.0.0.1',
     port: Number(process.env.MYSQL_PORT) || 3306,
     user: process.env.MYSQL_USER || 'root',
     password: process.env.MYSQL_PASSWORD || '',
+    ssl: useSsl ? { rejectUnauthorized: false } : undefined,
   };
 }
 
