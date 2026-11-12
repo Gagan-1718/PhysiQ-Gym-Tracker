@@ -2,22 +2,27 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { ArrowRightLeft, Play, Search, Sparkles } from 'lucide-react';
+import { ArrowRightLeft, ChevronDown, ChevronUp, Play, Search, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import type { Exercise } from '@/types/database';
 import type { VectorSearchHit } from '@/lib/vector';
 
-const QUICK_PROMPTS = [
-  'Lower back friendly leg builder',
-  'Shoulder safe chest press',
-  'Wide V-taper back & lats',
-  'Joint friendly cable arm isolation',
-  'Bicep peak & forearm thickness',
-  'Glute & hamstring hinge builder',
-  'Tricep horseshoe pressdown',
-  'Rear delt & upper back posture',
-  'Quad tear drop hypertrophy',
-  'Core stabilizer & ab endurance',
+interface PromptItem {
+  label: string;
+  query: string;
+}
+
+const QUICK_PROMPTS: PromptItem[] = [
+  { label: 'Legs & Lower Back', query: 'Lower back friendly leg builder' },
+  { label: 'Chest Press', query: 'Shoulder safe chest press' },
+  { label: 'Back & Lats', query: 'Wide V-taper back & lats' },
+  { label: 'Cables & Arms', query: 'Joint friendly cable arm isolation' },
+  { label: 'Biceps & Forearms', query: 'Bicep peak & forearm thickness' },
+  { label: 'Glutes & Hinges', query: 'Glute & hamstring hinge builder' },
+  { label: 'Triceps', query: 'Tricep horseshoe pressdown' },
+  { label: 'Rear Delts', query: 'Rear delt & upper back posture' },
+  { label: 'Quads', query: 'Quad tear drop hypertrophy' },
+  { label: 'Core & Abs', query: 'Core stabilizer & ab endurance' },
 ];
 
 interface VectorSearchResponse {
@@ -35,8 +40,9 @@ export function SemanticExerciseFinder({
   exercises: Exercise[];
   onStartExercise: (exercise: Exercise) => void;
 }) {
-  const [query, setQuery] = useState(QUICK_PROMPTS[0]);
+  const [query, setQuery] = useState(QUICK_PROMPTS[0].query);
   const [similarToId, setSimilarToId] = useState<number | null>(null);
+  const [expandedTags, setExpandedTags] = useState(false);
 
   const url = similarToId
     ? `/api/vector/search?domain=exercise&similarTo=${similarToId}&k=4`
@@ -76,16 +82,16 @@ export function SemanticExerciseFinder({
       </div>
 
       {/* Prompt chips */}
-      <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {QUICK_PROMPTS.map((p) => {
-          const active = !similarToId && query === p;
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {(expandedTags ? QUICK_PROMPTS : QUICK_PROMPTS.slice(0, 4)).map((p) => {
+          const active = !similarToId && query === p.query;
           return (
             <button
-              key={p}
+              key={p.label}
               type="button"
               onClick={() => {
                 setSimilarToId(null);
-                setQuery(p);
+                setQuery(p.query);
               }}
               className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
                 active
@@ -93,10 +99,25 @@ export function SemanticExerciseFinder({
                   : 'bg-surface-2 text-fg-2 hover:bg-surface-3 hover:text-fg'
               }`}
             >
-              {p}
+              {p.label}
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setExpandedTags(!expandedTags)}
+          className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 px-2.5 py-1 text-xs font-semibold text-fg-3 hover:bg-surface-3 hover:text-fg"
+        >
+          {expandedTags ? (
+            <>
+              Less <ChevronUp className="h-3 w-3" />
+            </>
+          ) : (
+            <>
+              +{QUICK_PROMPTS.length - 4} more <ChevronDown className="h-3 w-3" />
+            </>
+          )}
+        </button>
       </div>
 
       {/* Results list */}

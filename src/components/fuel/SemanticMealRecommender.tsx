@@ -2,22 +2,27 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { Plus, Search, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Search, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import type { FoodItem, MealType } from '@/types/database';
 import type { VectorSearchHit } from '@/lib/vector';
 
-const MEAL_PROMPTS = [
-  'High protein post-workout recovery',
-  'Low calorie fat loss filling snack',
-  'Quick morning complex carbs energy',
-  'Lean high protein dinner bowl',
-  'Indian vegetarian high protein',
-  'Low carb keto fat burner',
-  'Pre-workout fast digesting carbs',
-  'Late night guilt-free casein snack',
-  'Budget bulk mass gainer meal',
-  'High fiber gut health bowl',
+interface MealPromptItem {
+  label: string;
+  query: string;
+}
+
+const MEAL_PROMPTS: MealPromptItem[] = [
+  { label: 'High Protein', query: 'High protein post-workout recovery' },
+  { label: 'Fat Loss', query: 'Low calorie fat loss filling snack' },
+  { label: 'Quick Carbs', query: 'Quick morning complex carbs energy' },
+  { label: 'Lean Dinner', query: 'Lean high protein dinner bowl' },
+  { label: 'Vegetarian', query: 'Indian vegetarian high protein' },
+  { label: 'Low Carb', query: 'Low carb keto fat burner' },
+  { label: 'Pre-Workout', query: 'Pre-workout fast digesting carbs' },
+  { label: 'Night Snack', query: 'Late night guilt-free casein snack' },
+  { label: 'Mass Gainer', query: 'Budget bulk mass gainer meal' },
+  { label: 'High Fiber', query: 'High fiber gut health bowl' },
 ];
 
 interface VectorFoodResponse {
@@ -37,6 +42,7 @@ export function SemanticMealRecommender({
 }) {
   const [query, setQuery] = useState('');
   const [mealType, setMealType] = useState<MealType>('lunch');
+  const [expandedTags, setExpandedTags] = useState(false);
 
   const url =
     query.trim().length >= 2
@@ -90,24 +96,39 @@ export function SemanticMealRecommender({
         />
       </div>
 
-      <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {MEAL_PROMPTS.map((p) => {
-          const active = query === p;
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {(expandedTags ? MEAL_PROMPTS : MEAL_PROMPTS.slice(0, 4)).map((p) => {
+          const active = query === p.query;
           return (
             <button
-              key={p}
+              key={p.label}
               type="button"
-              onClick={() => setQuery(p)}
+              onClick={() => setQuery(p.query)}
               className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
                 active
                   ? 'bg-water text-black'
                   : 'bg-surface-2 text-fg-2 hover:bg-surface-3 hover:text-fg'
               }`}
             >
-              {p}
+              {p.label}
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setExpandedTags(!expandedTags)}
+          className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 px-2.5 py-1 text-xs font-semibold text-fg-3 hover:bg-surface-3 hover:text-fg"
+        >
+          {expandedTags ? (
+            <>
+              Less <ChevronUp className="h-3 w-3" />
+            </>
+          ) : (
+            <>
+              +{MEAL_PROMPTS.length - 4} more <ChevronDown className="h-3 w-3" />
+            </>
+          )}
+        </button>
       </div>
 
       {data && data.results.length > 0 ? (
