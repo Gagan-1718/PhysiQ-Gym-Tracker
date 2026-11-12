@@ -41,7 +41,7 @@
       "photo_file": {
         "bsonType": ["string", "null"],
         "pattern": "^[a-f0-9-]{36}\\.(jpg|png|webp)$",
-        "description": "File name of the private upload (uploads/<user_id>/<photo_file>); served only to its owner by /api/photos"
+        "description": "File name in the GridFS bucket progress_photos (metadata.user_id = owner); served only to its owner by /api/photos"
       },
       "photo_angle": { "enum": ["front", "side", "back", "other", null] },
       "milestone": {

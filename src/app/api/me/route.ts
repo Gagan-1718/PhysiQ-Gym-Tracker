@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { ApiError, ok, readJson, route } from '@/lib/api';
 import { execute, selectOne, withTransaction } from '@/lib/mysql';
 import { getMongoDb } from '@/lib/mongodb';
+import { deleteAllPhotos } from '@/lib/photos';
 import { requireUser } from '@/lib/session';
 import type { User } from '@/types/database';
 
@@ -62,6 +63,7 @@ export const DELETE = route(async (req) => {
     db.collection('custom_routines').deleteMany({ user_id: me.id }),
     db.collection('journey_stories').deleteMany({ user_id: me.id }),
     db.collection('vector_embeddings').deleteMany({ user_id: me.id }),
+    deleteAllPhotos(me.id), // progress photos in the GridFS bucket
   ]);
   return ok({ deleted: true });
 });

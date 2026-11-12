@@ -224,3 +224,31 @@ show('17. vector indexes and the plan for the pre-filter', {
   docsExamined: vplan.executionStats.totalDocsExamined,
   returned: vplan.executionStats.nReturned,
 });
+
+// =============================================================================
+// C. FILES IN THE DATABASE: GridFS bucket progress_photos
+//
+// Progress photos are stored in MongoDB itself, not on the server's disk:
+//   progress_photos.files   one document per photo (filename, length, uploadDate,
+//                           metadata.user_id = owner, metadata.content_type)
+//   progress_photos.chunks  the bytes in 255 KB pieces, keyed by (files_id, n)
+// The app reads a photo by filename AND the signed-in user's id, so a member
+// can never open someone else's photo. Add a progress photo in the app first.
+// =============================================================================
+
+// 18. Photos per member: count and total size, from the files collection
+show('18. progress photos per member', await db.progress_photos.files.aggregate([
+  { $group: { _id: '$metadata.user_id', photos: { $sum: 1 }, totalBytes: { $sum: '$length' }, latest: { $max: '$uploadDate' } } },
+  { $project: { _id: 0, user_id: '$_id', photos: 1, totalKB: { $round: [{ $divide: ['$totalBytes', 1024] }, 1] }, latest: 1 } },
+]).toArray());
+
+// 19. One photo's file document and how many chunks hold its bytes, plus the bucket's indexes
+const photo = await db.progress_photos.files.findOne({}, { sort: { uploadDate: -1 } });
+show('19. newest photo and its chunks', photo
+  ? { filename: photo.filename, length: photo.length, chunkSize: photo.chunkSize, metadata: photo.metadata,
+      chunks: await db.progress_photos.chunks.countDocuments({ files_id: photo._id }) }
+  : 'no photos yet: add one in Progress -> Journey');
+show('19b. GridFS indexes', {
+  files: (await db.progress_photos.files.getIndexes()).map((i) => ({ name: i.name, key: i.key, unique: i.unique ?? false })),
+  chunks: (await db.progress_photos.chunks.getIndexes()).map((i) => ({ name: i.name, key: i.key, unique: i.unique ?? false })),
+});

@@ -1,6 +1,18 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const { MongoClient } = require('mongodb');
 const { client, signedIn, today, photoForm, PNG_1X1, uniqueEmail, DEMO_PASSWORD } = require('./helpers');
+
+/** The GridFS file document of a stored photo (progress_photos.files), or null */
+async function gridFsFile(filename) {
+  const mongo = new MongoClient(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017');
+  try {
+    await mongo.connect();
+    return await mongo.db(process.env.MONGODB_DB || 'physiq').collection('progress_photos.files').findOne({ filename });
+  } finally {
+    await mongo.close();
+  }
+}
 
 let alex;
 let admin;
@@ -81,6 +93,14 @@ test('progress photo: upload, private download, access control, delete', async (
   assert.equal(img.headers.get('x-content-type-options'), 'nosniff');
   assert.ok(img.body.equals(PNG_1X1), 'bytes round-trip unchanged');
 
+  // Stored in MongoDB GridFS with its owner, not on the server's disk
+  const stored = await gridFsFile(up.body.photoUrl.split('/').pop());
+  assert.ok(stored, 'progress_photos.files has the photo');
+  assert.equal(stored.length, PNG_1X1.length);
+  assert.equal(stored.metadata.content_type, 'image/png');
+  const me = (await alex.get('/api/me')).body;
+  assert.equal(stored.metadata.user_id, me.id, 'owner recorded in the file metadata');
+
   assert.equal((await admin.get(up.body.photoUrl)).status, 404, 'another member cannot fetch it');
   assert.equal((await client().get(up.body.photoUrl)).status, 401, 'anonymous cannot fetch it');
 
@@ -93,6 +113,7 @@ test('progress photo: upload, private download, access control, delete', async (
   assert.equal((await alex.del(`/api/journey/${up.body.id}`)).status, 200);
   created.splice(created.indexOf(up.body.id), 1);
   assert.equal((await alex.get(up.body.photoUrl)).status, 404, 'file is removed with the story');
+  assert.equal(await gridFsFile(up.body.photoUrl.split('/').pop()), null, 'and from GridFS');
 });
 
 test('photo upload rejects non-images, spoofed types, bad angles and oversize files', async () => {

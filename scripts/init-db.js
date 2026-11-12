@@ -438,6 +438,15 @@ async function initMongo() {
       await db.collection(coll.name).createIndexes(coll.indexes);
       console.log(`  ✓ ${dbName}.${coll.name} (validator + ${coll.indexes.length} indexes)`);
     }
+    // GridFS bucket for private progress photos: progress_photos.files (one document per photo,
+    // metadata.user_id = owner) + progress_photos.chunks (the bytes in 255 KB pieces)
+    for (const name of ['progress_photos.files', 'progress_photos.chunks']) if (existing.has(name)) await db.collection(name).drop();
+    await db.collection('progress_photos.files').createIndexes([
+      { key: { filename: 1, uploadDate: 1 }, name: 'filename_1_uploadDate_1' },
+      { key: { 'metadata.user_id': 1, filename: 1 }, name: 'uq_owner_photo', unique: true },
+    ]);
+    await db.collection('progress_photos.chunks').createIndex({ files_id: 1, n: 1 }, { name: 'files_id_1_n_1', unique: true });
+    console.log(`  ✓ ${dbName}.progress_photos (GridFS bucket: files + chunks, 3 indexes)`);
     await seedMongoVectors(db);
     if (WITH_DEMO) await seedMongoDemo(db);
   } finally {

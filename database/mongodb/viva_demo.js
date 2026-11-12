@@ -138,6 +138,13 @@ const show = (label, value) => console.log(`${label}:`, typeof value === 'string
     .toArray();
   show('Top-3 KNN exercise vectors for "lower back friendly leg builder"', knn);
 
+  h(9, 'Files in the database: GridFS bucket progress_photos');
+  const photoFiles = db.collection('progress_photos.files');
+  show('stored', `${await photoFiles.countDocuments()} photos in ${await db.collection('progress_photos.chunks').countDocuments()} chunks (255 KB each)`);
+  show('indexes on progress_photos.files', (await photoFiles.indexes()).map((i) => i.name));
+  const newest = await photoFiles.findOne({}, { sort: { uploadDate: -1 }, projection: { _id: 0, filename: 1, length: 1, chunkSize: 1, uploadDate: 1, metadata: 1 } });
+  show('newest photo (owner in metadata.user_id)', newest ?? 'none yet: add one in Progress -> Journey');
+
   await sql.end();
   await client.close();
 })().catch((err) => {

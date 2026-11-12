@@ -8,8 +8,9 @@ import { requireUser } from '@/lib/session';
 const ANGLES = ['front', 'side', 'back', 'other'] as const;
 
 // POST /api/journey/photo — multipart: file, date, angle, caption?, tags? (comma separated)
-// The image goes to private disk storage; the story document (MongoDB) records the
-// file name, angle and the body weight in force on that date (fn_current_weight, MySQL).
+// The image goes to MongoDB GridFS (bucket progress_photos, owner in metadata); the story
+// document records the file name, angle and the body weight in force on that date
+// (fn_current_weight, MySQL).
 export const POST = route(async (req) => {
   const me = await requireUser();
 
