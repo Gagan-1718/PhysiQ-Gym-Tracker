@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
+import type { VectorSearchHit } from '@/lib/vector';
 import { Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
@@ -74,6 +75,18 @@ export function AddMealSheet({
     return true;
   });
 
+  // Smart search: foods that match what was typed by meaning ("high protein snack"),
+  // ranked by vector similarity in MongoDB, shown under the name matches.
+  const q = search.trim();
+  const { data: smart } = useSWR<{ results: VectorSearchHit[] }>(
+    open && mode === 'library' && q.length >= 3 ? `/api/vector/search?domain=food&q=${encodeURIComponent(q)}&k=5` : null
+  );
+  const listed = new Set(foods.map((f) => f.id));
+  const byId = new Map((data?.foods ?? []).map((f) => [f.id, f]));
+  const similar = (smart?.results ?? [])
+    .map((hit) => byId.get(hit.entity_id))
+    .filter((f): f is FoodItem => f !== undefined && !listed.has(f.id) && (category === 'all' || f.category === category));
+
   const resetForm = () => {
     setName('');
     setServingLabel('1 serving');
@@ -144,6 +157,40 @@ export function AddMealSheet({
     }
   };
 
+  const foodRow = (food: FoodItem) => {
+    const scaledCal = Math.round(food.calories * servings);
+    const scaledPro = Math.round(food.protein_g * servings);
+    const scaledCarb = Math.round(food.carbs_g * servings);
+    const scaledFat = Math.round(food.fat_g * servings);
+    return (
+      <li key={food.id} className="flex items-center justify-between gap-2 py-2.5">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-fg">
+            {food.name}
+            {food.user_id !== null && (
+              <span className="ml-1.5 rounded bg-surface-4 px-1.5 py-0.5 text-[10px] font-bold text-fg-2">
+                Custom
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-fg-3">
+            {servings !== 1 ? `${servings} × ` : ''}
+            {food.serving_label} · <span className="text-fg-2">{scaledPro}g P</span> ·{' '}
+            {scaledCarb}g C · {scaledFat}g F
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => handleLibraryPick(food)}
+          className="press inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-accent-solid px-3 text-xs font-bold text-white disabled:opacity-40"
+        >
+          <Plus className="h-3.5 w-3.5" /> {scaledCal} kcal
+        </button>
+      </li>
+    );
+  };
+
   return (
     <Sheet open={open} onClose={onClose} title="Log Food & Macros">
       <div className="space-y-4">
@@ -186,7 +233,7 @@ export function AddMealSheet({
               <input
                 type="search"
                 aria-label="Search foods"
-                placeholder="Search chicken, oats, whey, rice..."
+                placeholder="Search by name or need, e.g. high protein snack"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-11 w-full rounded-xl border border-line bg-surface-2 pl-10 pr-4 text-[15px] text-fg placeholder:text-fg-3 focus:border-accent/60 focus:outline-none"
@@ -236,40 +283,12 @@ export function AddMealSheet({
             </div>
 
             <ul className="max-h-72 divide-y divide-line overflow-y-auto rounded-2xl border border-line bg-surface-2 px-3">
-              {foods.map((food) => {
-                const scaledCal = Math.round(food.calories * servings);
-                const scaledPro = Math.round(food.protein_g * servings);
-                const scaledCarb = Math.round(food.carbs_g * servings);
-                const scaledFat = Math.round(food.fat_g * servings);
-                return (
-                  <li key={food.id} className="flex items-center justify-between gap-2 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-fg">
-                        {food.name}
-                        {food.user_id !== null && (
-                          <span className="ml-1.5 rounded bg-surface-4 px-1.5 py-0.5 text-[10px] font-bold text-fg-2">
-                            Custom
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-fg-3">
-                        {servings !== 1 ? `${servings} × ` : ''}
-                        {food.serving_label} · <span className="text-fg-2">{scaledPro}g P</span> ·{' '}
-                        {scaledCarb}g C · {scaledFat}g F
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => handleLibraryPick(food)}
-                      className="press inline-flex h-9 shrink-0 items-center gap-1 rounded-xl bg-accent-solid px-3 text-xs font-bold text-white disabled:opacity-40"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> {scaledCal} kcal
-                    </button>
-                  </li>
-                );
-              })}
-              {foods.length === 0 && (
+              {foods.map(foodRow)}
+              {similar.length > 0 && (
+                <li className="pb-1 pt-3 text-xs font-semibold text-fg-3">Similar foods</li>
+              )}
+              {similar.map(foodRow)}
+              {foods.length === 0 && similar.length === 0 && (
                 <li className="py-6 text-center text-sm text-fg-3">
                   No matching foods found. Use Quick Macros or New Food to add it.
                 </li>

@@ -13,22 +13,38 @@ below are the ones you will see after `npm run db:reset`.
 | 4 | Log in as `alex@physiq.test` (password `physiq123`) in a phone-sized window (browser dev tools, 390 px) and `admin@physiq.test` in a second window | member and admin roles |
 | 5 | MySQL Workbench: open `database/queries/viva_demo.sql` | all SQL for the demo, section by section |
 | 6 | A terminal in the repo: ready to run `npm run viva:mongo` | MongoDB half of the demo |
-| 7 | Have these open as tabs: `docs/diagrams/er-diagram.png`, `docs/diagrams/architecture.png`, GitHub Actions page of the repo | diagrams and CI |
+| 7 | Have these open as tabs: `docs/PROJECT_REPORT.md`, `docs/diagrams/er-diagram.png`, `docs/diagrams/architecture.png`, GitHub Actions page of the repo | report, diagrams and CI |
+| 8 | MongoDB Compass (or `mongosh`): open `database/mongodb/queries.mongodb.js` | every MongoDB query, including vector search, section by section |
 
-Check: `npm test` should print **45 + 35 + 16 passing** (database, API, browser). The API and browser tests need the app running; run `npm run db:reset` again before the browser tests, and set `PW_EXECUTABLE` to your Chrome or Edge if Playwright's Chromium is not installed.
+Check: `npm test` should print **51 + 40 + 16 passing** (database, API, browser). The API and browser tests need the app running; run `npm run db:reset` again before the browser tests, and set `PW_EXECUTABLE` to your Chrome or Edge if Playwright's Chromium is not installed.
 
 After the demo: `npm run db:reset` again.
 
 ---
 
+## Demonstration order required by the brief (§16)
+
+| # | The brief asks for | Show |
+|---|---|---|
+| 1 | Problem statement and motivation | `PROJECT_REPORT.md` §1–§2 (30 seconds) |
+| 2 | ER diagram and database design | `er-diagram.png`; `DATABASE_DESIGN.md` §2–§3 (normalisation) |
+| 3 | Relational schema | `PROJECT_REPORT.md` §6 |
+| 4 | Database implementation | `schema.sql`, `migrations/001`–`004` (`ALTER TABLE`), `procedures.sql`, `triggers.sql`, `views.sql`; `viva_demo.sql` section 1 (counts) |
+| 5 | Important queries / operations | `viva_demo.sql` sections 2–7 and 12; `demo_analytical_queries.sql`; `queries.mongodb.js` |
+| 6 | Next.js interface | the app: Today → Train → logger → Fuel → Progress → Journey → Admin |
+| 7 | Database integration | a workout saved from the app appears in MySQL (volume and PR set by triggers) and its journal in MongoDB (`viva_demo.sql` §3, `npm run viva:mongo` §7) |
+| 8 | Advanced database features | transactions, views, procedures/functions, triggers, indexing (`EXPLAIN`), full-text search, `$facet` aggregation, vector similarity search: `PROJECT_REPORT.md` §9.3 |
+| 9 | Test cases | `npm test` (51 + 40 + 16), the GitHub Actions run |
+| 10 | Individual contribution | `CONTRIBUTIONS.md`, `PROJECT_REPORT.md` Appendix B |
+
 ## 1. The 5-minute script
 
 | Time | Show | Say |
 |---|---|---|
-| 0:00–0:40 | `architecture.png`, then `er-diagram.png` | "PhysiQ is database-driven. **MySQL is the system of record** (15 tables, 3NF, 15 triggers, 22 procedures and functions, 7 views). **MongoDB** holds flexible documents: journals, notes, routines, and the vectors behind smart search. The app only displays what the databases decide." |
+| 0:00–0:40 | `architecture.png`, then `er-diagram.png` | "PhysiQ is database-driven. **MySQL is the system of record** (17 tables, 3NF, 15 triggers, 23 procedures and functions, 7 views). **MongoDB** holds flexible documents: journals, notes, routines, and the vectors behind smart search. The app only displays what the databases decide." |
 | 0:40–1:20 | Today screen (member). Workbench section 2 | "The app recommends **Pull, overdue**, because `view_split_day_status` ranks split days by recovery: never trained, overdue, ready, recovering. `sp_get_next_body_part` takes rank 1. No fixed weekdays: miss a day and it adapts." |
 | 1:20–2:10 | Workbench **section 3** (run it *before* you finish anything in the app) | "A workout is one **ACID transaction**. Watch: after the inserts the triggers have already set the session volume (2255), found a **new PR** (135 × 9, e1RM 175.5 beats 173.33) and marked Pull as trained. Then `ROLLBACK`: nothing is kept." |
-| 2:10–3:20 | App: tap **Start Pull**. Tick the warm-up and set 1. Set set 2 to **135 kg × 9**: a **PR** badge appears. Tick it, **Finish** | "Same thing from the app. Every set was pre-filled by `sp_estimate_next_target`: last time 130 × 10, so the target is 132.5 × 8. This time the transaction is kept, and the success screen shows the volume and PRs read back from MySQL." |
+| 2:10–3:20 | App: tap **Start Pull**, then **Start workout**. The deadlift fills the screen with its muscles in red. Tap **Done** on the warm-up and on set 1. Set 2: slide the ruler (or tap +) to **135 kg**, reps **9**: a **PR** badge appears. **Done** (set 3 is already 145 kg), then **Finish** | "Same thing from the app. The top set comes from `sp_estimate_next_target` (last time 130 × 10, so 132.5 × 8); the lighter sets ramp up to it in 10 kg steps because the deadlift's `weight_step_kg` is 10, and the red muscles come from `exercise_muscles`. This time the transaction is kept, and the success screen shows the volume and PRs read back from MySQL." |
 | 3:20–3:50 | Progress → Strength; Workbench section 4 | "`fn_calculate_1rm` is the Epley formula, deterministic, in the database. The trend chart reads `view_exercise_session_best`." |
 | 3:50–4:30 | Progress → Journey, then `npm run viva:mongo` | "**Polyglot persistence.** Journals and notes are documents with sparse fields. Mongo gives a **validator** (invalid mood rejected), a **text index**, a **compound index** that serves the feed with no sort, and an **aggregation** with `$facet`. A story points at the MySQL session by id and the app joins them." |
 | 4:30–4:50 | Fuel → **Log Food** → Chicken & Rice Bowl; admin window → Audit log | "Calorie and macro targets come from body weight and goal through `sp_get_daily_fuel`. The meal goes through `sp_log_meal`, and a **trigger** updates the day's totals, so the rings move without the app adding anything up. Library changes by admins are written by a trigger that knows who acted." |
@@ -43,15 +59,15 @@ This is tight. To save time, skip the ER diagram, or show Strength only briefly.
 
 ### A. Architecture and design
 1. **Architecture diagram** (`docs/diagrams/architecture.png`). Browser → route handlers → MySQL (ACID) and MongoDB (documents). Photos on private disk. Two stores cooperate through ids.
-2. **ER diagram** (`docs/diagrams/er-diagram.png`, generated from the live schema by `npm run docs:er`). 15 tables, 19 foreign keys. Point out `personal_records.set_id` (unique, one-to-one with `sets`).
+2. **ER diagram** (`docs/diagrams/er-diagram.png`, generated from the live schema by `npm run docs:er`). 17 tables, 22 foreign keys. Point out `personal_records.set_id` (unique, one-to-one with `sets`).
 3. **Normalisation** (`docs/DATABASE_DESIGN.md` §3). 1NF → BCNF. Two **documented denormalised caches**: `split_days.last_trained_date` and `workout_sessions.total_volume`, both maintained by triggers and covered by tests.
 
 ### B. Relational features (Workbench, `viva_demo.sql`)
-4. **Section 1.** Counts: 15 tables, 7 views, 15 triggers, 22 routines, 29 CHECK constraints, 19 foreign keys.
+4. **Section 1.** Counts: 17 tables, 7 views, 15 triggers, 23 routines, 35 CHECK constraints, 22 foreign keys.
 5. **Constraints** (end of the file, run one at a time): a set with 0 reps → `chk_sets_reps`; a future workout → trigger `SIGNAL`; a second active split → unique index on a generated column; deleting a trained exercise → `ON DELETE RESTRICT`.
 6. **Section 2.** The view and `sp_get_next_body_part` choose Pull. Explain the status rule: overdue = rest window + 2 days.
 7. **Section 3.** The live transaction. Show **before**, **inside**, **after rollback**: volume 2255 and PR 135 × 9 appear by trigger, and vanish on `ROLLBACK`.
-8. **Section 4.** `sp_estimate_next_target` (132.5 kg × 8, with its rationale) and `fn_calculate_1rm`.
+8. **Section 4.** `sp_estimate_next_target` (132.5 kg × 8, with its rationale) and `fn_calculate_1rm`. Then **section 13** (migration 003): the muscles each exercise works (many-to-many `exercise_muscles` with a primary / secondary role), its weight step (+10 kg deadlift, +5 lat pulldown, +2.5 face pull, 0 pull-up) and `fn_starting_weight`, a first-timer's weight from body weight (47.5 kg deadlift for Alex).
 
 ### C. Server-side logic
 9. **Triggers.** Open `database/triggers.sql`. Point at the session-delete trigger: *foreign-key cascades do not fire triggers*, so deleting a session rebuilds PRs explicitly.
@@ -63,7 +79,7 @@ This is tight. To save time, skip the ER diagram, or show Strength only briefly.
 
 ### D. The application
 15. **Today.** Overdue banner, Up Next, rings (sessions this week, protein, water), recovery per day. Food and water are logged on **Fuel** (step 28).
-16. **Start Pull** (do this *after* step 7, because Finish saves the workout). Pre-filled sets, big steppers, a **rest timer** after each tick, a **PR badge** on 135 × 9, and the screen is kept awake where the browser supports it.
+16. **Start Pull** (do this *after* step 7, because Finish saves the workout). First the exercise list: remove or reorder, then **Start workout**. One set at a time on a full-screen stage: the animated demonstration (drawings linked by `exercises.media_key`, migration 002) and a front / back **body map with the worked muscles in red** (`exercise_muscles`, migration 003). The weight is pre-set; slide the **weight ruler** to change it and tap **Done**: a **rest timer** starts and the next set is already heavier by the exercise's step (+10 kg on the deadlift). A **PR badge** on 135 × 9, and the screen is kept awake where the browser supports it.
 17. **Reload the page mid-workout.** The workout survives (device draft); only **Finish** writes to the database.
 18. **Finish.** Mood and tags (MongoDB), success screen with volume and PRs *read back from MySQL*.
 19. **Double-tap Finish / retry.** `UNIQUE (user_id, client_ref)` returns the saved workout instead of a duplicate.
@@ -75,15 +91,15 @@ This is tight. To save time, skip the ER diagram, or show Strength only briefly.
 23. **Progress photos.** (Optional live: Progress → Journey → Add → Progress photo.) Resized on the phone with location data stripped, stored privately, weight snapshot read from MySQL by `fn_current_weight`; another member cannot open the URL (404).
 
 ### F. Quality
-24. **CI and tests.** `npm test` (48 DB + 39 API + 16 browser tests); the GitHub Actions run audits dependencies, builds both databases from the repo files on a clean machine, and runs all three suites against the production build. `QUERY_PERFORMANCE_EXPLAIN.md` has the measured index results.
+24. **CI and tests.** `npm test` (51 DB + 40 API + 16 browser tests); the GitHub Actions run audits dependencies, builds both databases from the repo files on a clean machine, and runs all three suites against the production build. `QUERY_PERFORMANCE_EXPLAIN.md` has the measured index results.
 
 ### G. Hardening (added in the final phase)
 25. **Least privilege.** `viva_demo.sql` section 11: `SHOW GRANTS` for the `physiq_app` and `physiq_readonly` roles. The web app connects as an account holding `physiq_app` (row access + `EXECUTE`), never as root. In a second connection as that account, `SELECT` and `CALL` work while `DROP TABLE`, `ALTER TABLE` and `CREATE USER` are refused (`tests/db/privileges.test.js` proves it).
-26. **Editing a saved workout.** `viva_demo.sql` section 10: an `UPDATE` of one set's weight and a `DELETE` of another change `total_volume` through the `AFTER UPDATE` / `AFTER DELETE` triggers; `ROLLBACK` restores it. In the app: History → a session → **Edit** → change a weight → **Save**: the new volume and PR badge come from the database. Also `CALL sp_rep_max_table(100, 5)` (section 4), the recursive-CTE behind Progress → Strength → **1RM calculator**.
+26. **Editing a saved workout.** `viva_demo.sql` section 10: an `UPDATE` of one set's weight and a `DELETE` of another change `total_volume` through the `AFTER UPDATE` / `AFTER DELETE` triggers; `ROLLBACK` restores it. In the app: History → a session → **Edit** → change a weight → **Save**: the new volume and PR badge come from the database. Also `CALL sp_rep_max_table(100, 5)` (section 4), the recursive CTE behind `GET /api/calc/one-rep-max`.
 27. **Quality gate.** `npm run test:e2e` drives a real browser through a whole workout, the Journey and sign-up, and audits **every screen for accessibility (axe-core, WCAG 2.2 AA) and sideways scrolling at 320, 390 and 1280 px**. Because it runs on the production build it also fails on any Content-Security-Policy violation.
 
 ### H. Nutrition and smart search
-28. **Fuel.** `viva_demo.sql` section 12: `sp_log_meal` (1.5 Chicken & Rice Bowls from the food library) and `sp_log_water` inside a transaction; `trg_meal_logs_ai` and `trg_water_logs_ai` raise the day's totals in `user_daily_fuel` (+840 kcal, +72 g protein, +500 ml), and `ROLLBACK` undoes it. In the app: Fuel → **Log Food**, then **Build a plate**: foods from the `foods` table, a portion each, and cooking oil (fat, 9 kcal per gram) logged as one meal.
+28. **Fuel.** `viva_demo.sql` section 12: `sp_log_meal` (1.5 Chicken & Rice Bowls from the food library) and `sp_log_water` inside a transaction; `trg_meal_logs_ai` and `trg_water_logs_ai` raise the day's totals in `user_daily_fuel` (+840 kcal, +72 g protein, +500 ml), and `ROLLBACK` undoes it. In the app: Fuel → **Log Food**; typing "high protein snack" also lists similar foods found by vector search.
 29. **Smart search and split switching.** Train → smart search "shoulder safe chest press": `npm run viva:mongo` section 8 shows the same cosine-similarity ranking over 32-d vectors in a MongoDB aggregation pipeline. Then Train → **Change** split: the new days inherit their last-trained dates through one correlated `UPDATE`, so a muscle trained yesterday is still *recovering* after the switch.
 
 ---
@@ -95,9 +111,6 @@ Everything is in 3NF (`personal_records` in BCNF). Two derived values are cached
 
 **Why MySQL *and* MongoDB?**
 Workouts are relational and transactional: a session without its sets would corrupt history. Journals, notes and routines are sparse, nested and read as whole units; in SQL they would be wide mostly-NULL tables or extra join tables. Each store does what it is best at.
-
-**Sign-up lets me tick several goals. How does that fit one `goal` column?**
-`users.goal` stays one ENUM value (1NF), because `fn_calorie_target` needs exactly one rule. Onboarding maps each combination to the goal whose calorie rule fits it (muscle + fat loss is recomposition, so maintenance; strength + fat loss is a cut, so fat loss), and the screen shows the calorie rule that will really be saved.
 
 **What if MySQL commits but MongoDB is down?**
 The workout is safe. MongoDB writes happen after the MySQL commit and are best-effort; the API returns a warning. MySQL is the system of record.
@@ -135,14 +148,17 @@ Triggers fire with their definer's rights, so the app needs no `TRIGGER` privile
 **What happens when someone edits a saved workout?**
 One transaction: lock the session row (`FOR UPDATE`), check every set id belongs to it, apply the updates and deletes, and refuse to leave an empty workout. The `AFTER UPDATE` / `AFTER DELETE` triggers on `sets` then recompute `total_volume` and re-check personal records, so correctness does not depend on the browser.
 
-**Why is the 1RM calculator a stored procedure?**
-The formula already lives in the database (`fn_calculate_1rm`), so the calculator reuses it instead of duplicating it in JavaScript. `sp_rep_max_table` uses a recursive CTE to produce reps 1–12 and `SIGNAL`s on impossible input, so every client gets the same answer and the same validation.
+**Why is the rep-max table a stored procedure?**
+The formula already lives in the database (`fn_calculate_1rm`), so `sp_rep_max_table` reuses it instead of duplicating it in JavaScript. `sp_rep_max_table` uses a recursive CTE to produce reps 1–12 and `SIGNAL`s on impossible input, so every client gets the same answer and the same validation.
+
+**Why a separate `exercise_muscles` table for the red body map?**
+One exercise works several muscles and one muscle is worked by many exercises: a many-to-many relationship with an attribute (`role`: primary or secondary). A comma-separated column would break 1NF and could not be checked; here every region code must exist in `muscle_regions` (foreign key), and deleting an exercise cascades its rows. The same table answers "which exercises hit my rear delts?" with one join.
 
 **How is the web app itself hardened?**
 Security headers on every response (no framing, no MIME sniffing, strict referrer, permissions policy), a production Content-Security-Policy that allows only same-origin scripts, styles, images and connections, `no-store` on API responses, and photos served only through an authenticated route. The browser tests run on the production build, so a CSP violation shows up as a failing console-error check. CI also fails on high-severity advisories in runtime dependencies.
 
 **What are the limitations?** (say them before you are asked)
-- Notifications appear when the app is opened or returns to the foreground (once a day). True background push needs a push server, which is not part of this project.
+- No reminders or push notifications: the overdue banner shows inside the app. Background push needs a push server, which is not part of this project.
 - Photos are stored on the server's disk, not in cloud storage.
 - No email verification or password reset.
 - Single-node databases; no replication or backups are configured.

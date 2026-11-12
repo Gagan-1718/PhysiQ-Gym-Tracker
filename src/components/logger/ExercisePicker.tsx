@@ -63,7 +63,7 @@ export function ExercisePicker({ open, onClose, onPick, addedIds, focusMuscles, 
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search 44 exercises"
+            placeholder="Search 45 exercises"
             className="h-11 w-full rounded-xl border border-line bg-surface-2 pl-10 pr-4 text-[16px] placeholder:text-fg-3 focus:border-accent/60 focus:outline-none"
           />
         </label>

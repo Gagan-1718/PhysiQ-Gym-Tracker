@@ -48,8 +48,8 @@ for (const width of WIDTHS) {
     await page.goto(`${BASE}/progress`, { waitUntil: 'networkidle' });
     await check(page, '/progress (overview)');
     await page.getByRole('radio', { name: 'Strength' }).click();
-    await page.waitForSelector('text=1RM calculator');
-    await check(page, '/progress (strength + 1RM calculator)');
+    await page.waitForSelector('text=Next target');
+    await check(page, '/progress (strength)');
     await page.getByRole('radio', { name: 'Body' }).click();
     await check(page, '/progress (body)');
     await page.getByRole('radio', { name: 'Journey' }).click();
@@ -70,8 +70,20 @@ for (const width of WIDTHS) {
     await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await page.getByRole('link', { name: /Start Pull/ }).click();
     await page.waitForURL('**/train/session');
-    await page.waitForSelector('section[aria-label="Barbell Deadlift"]');
-    await check(page, '/train/session (live logger)');
+    await page.getByRole('button', { name: 'Start workout', exact: true }).waitFor();
+    await check(page, '/train/session (choose exercises)');
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await page.getByRole('button', { name: 'Continue' }).waitFor();
+    await check(page, '/train/session (weigh in)');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('heading', { name: 'Barbell Deadlift' }).waitFor();
+    await check(page, '/train/session (set weight)');
+    await page.getByRole('button', { name: 'Start warm-up' }).click();
+    await page.getByRole('button', { name: 'Done' }).waitFor();
+    await check(page, '/train/session (doing the set)');
+    await page.getByRole('button', { name: /^Done/ }).click();
+    await page.getByRole('timer').waitFor();
+    await check(page, '/train/session (resting)');
     await page.getByRole('button', { name: 'Discard workout' }).click();
     await page.getByRole('button', { name: 'Discard', exact: true }).click();
 

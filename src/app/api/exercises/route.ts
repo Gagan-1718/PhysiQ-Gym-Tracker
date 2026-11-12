@@ -3,9 +3,10 @@ import { execute, select, selectOne, withTransaction } from '@/lib/mysql';
 import { requireAdmin, requireUser } from '@/lib/session';
 import { ExerciseSchema } from '@/lib/schemas';
 import { upsertExerciseVector } from '@/lib/vector';
+import { EXERCISE_COLUMNS } from '@/lib/exercise-sql';
 import type { Exercise } from '@/types/database';
 
-const EXERCISE_COLUMNS = `e.id, e.name, e.muscle_group_id, mg.name AS muscle_group, e.equipment_needed, e.instructions`;
+
 
 // GET /api/exercises — master library, sorted by muscle group then name
 export const GET = route(async () => {

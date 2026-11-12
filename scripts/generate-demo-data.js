@@ -50,7 +50,7 @@ const PROGRAM = {
     { name: 'Barbell Deadlift', weight: 130, reps: 5, warmup: true },
     { name: 'Lat Pulldown', weight: 55, reps: 9 },
     { name: 'Seated Cable Row', weight: 55, reps: 10 },
-    { name: 'Hammer Curl', weight: 14, reps: 10 },
+    { name: 'Dumbbell Bicep Curl', weight: 14, reps: 10 },
   ],
   Legs: [
     { name: 'Barbell Back Squat', weight: 100, reps: 6, warmup: true },
@@ -95,9 +95,10 @@ emit();
 emit('USE physiq_db;');
 emit();
 emit('-- Demo accounts');
-emit('INSERT INTO users (name, email, password_hash, role, goal, height, starting_weight) VALUES');
-emit(`('PhysiQ Admin', 'admin@physiq.test', '${DEMO_PASSWORD_HASH}', 'admin', 'maintenance', 175.00, 72.00),`);
-emit(`('Alex Mercer', 'alex@physiq.test', '${DEMO_PASSWORD_HASH}', 'member', 'hypertrophy', 178.00, 76.00);`);
+emit('-- Both demo accounts have already seen the app tour (Profile -> "Replay the app tour" shows it again)');
+emit('INSERT INTO users (name, email, password_hash, role, goal, height, starting_weight, tour_completed_at) VALUES');
+emit(`('PhysiQ Admin', 'admin@physiq.test', '${DEMO_PASSWORD_HASH}', 'admin', 'maintenance', 175.00, 72.00, NOW()),`);
+emit(`('Alex Mercer', 'alex@physiq.test', '${DEMO_PASSWORD_HASH}', 'member', 'hypertrophy', 178.00, 76.00, NOW());`);
 emit("SET @alex = (SELECT id FROM users WHERE email = 'alex@physiq.test');");
 emit();
 emit('-- An older, inactive split (only one split per user may be active)');

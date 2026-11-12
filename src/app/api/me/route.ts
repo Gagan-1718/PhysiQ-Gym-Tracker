@@ -10,7 +10,7 @@ import type { User } from '@/types/database';
 export const GET = route(async () => {
   const me = await requireUser();
   const user = await selectOne<User & { has_active_split: number }>(
-    `SELECT u.id, u.name, u.email, u.role, u.goal, u.height, u.starting_weight, u.weekly_goal, u.created_at,
+    `SELECT u.id, u.name, u.email, u.role, u.goal, u.height, u.starting_weight, u.weekly_goal, u.tour_completed_at, u.created_at,
             EXISTS (SELECT 1 FROM splits s WHERE s.user_id = u.id AND s.is_active) AS has_active_split
      FROM users u WHERE u.id = ?`,
     [me.id]
@@ -27,18 +27,22 @@ const ProfileSchema = z
     height: z.number().min(100).max(250).nullable(),
     starting_weight: z.number().min(30).max(300).nullable(),
     weekly_goal: z.number().int().min(1).max(7),
+    /** true = the app tour was finished or skipped; false = show it again */
+    tour_completed: z.boolean(),
   })
   .partial()
   .strict();
 
-// PATCH /api/me — update name, goal and body metrics
+// PATCH /api/me — update name, goal and body metrics, or mark the app tour as seen
 export const PATCH = route(async (req) => {
   const me = await requireUser();
-  const changes = ProfileSchema.parse(await readJson(req));
-  if (Object.keys(changes).length === 0) throw new ApiError(400, 'Nothing to update.');
+  const { tour_completed, ...changes } = ProfileSchema.parse(await readJson(req));
+  const columns: Record<string, unknown> = { ...changes };
+  if (tour_completed !== undefined) columns.tour_completed_at = tour_completed ? new Date() : null;
+  if (Object.keys(columns).length === 0) throw new ApiError(400, 'Nothing to update.');
   // Column names come from the zod schema keys above, values are parameterised
-  await execute('UPDATE users SET ? WHERE id = ?', [changes, me.id]);
-  return ok({ updated: Object.keys(changes) });
+  await execute('UPDATE users SET ? WHERE id = ?', [columns, me.id]);
+  return ok({ updated: Object.keys(columns) });
 });
 
 const DeleteSchema = z.object({ password: z.string().min(1) });

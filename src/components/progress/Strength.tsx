@@ -8,7 +8,6 @@ import { Chip } from '@/components/ui/Pill';
 import { EmptyState, Skeleton } from '@/components/ui/Feedback';
 import { ButtonLink } from '@/components/ui/Button';
 import { LineChart } from '@/components/charts/LineChart';
-import { OneRepMaxCalculator } from './OneRepMaxCalculator';
 import { kg, relativeDay, shortDate } from '@/lib/format';
 import type { OverloadTarget, PersonalRecord } from '@/types/database';
 
@@ -38,15 +37,12 @@ export function Strength() {
   if (!list.data) return <Skeleton className="h-96" />;
   if (list.data.length === 0) {
     return (
-      <>
-        <EmptyState
-          icon={<Dumbbell className="h-5 w-5" />}
-          title="No lifts yet"
-          body="Strength trends appear after your first workout."
-          action={<ButtonLink href="/train">Start training</ButtonLink>}
-        />
-        <OneRepMaxCalculator />
-      </>
+      <EmptyState
+        icon={<Dumbbell className="h-5 w-5" />}
+        title="No lifts yet"
+        body="Strength trends appear after your first workout."
+        action={<ButtonLink href="/train">Start training</ButtonLink>}
+      />
     );
   }
 
@@ -134,8 +130,6 @@ export function Strength() {
         </div>
       )}
 
-      {/* Seeded from the selected lift's record; remounts when another lift is chosen */}
-      <OneRepMaxCalculator key={selected ?? 'none'} defaultWeight={d?.pr?.weight ?? null} defaultReps={d?.pr?.reps ?? null} />
     </>
   );
 }

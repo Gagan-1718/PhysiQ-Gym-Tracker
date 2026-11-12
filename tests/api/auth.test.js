@@ -22,9 +22,9 @@ test('anonymous visitors: pages redirect to login, APIs answer 401, health shows
   assert.deepEqual(health.body, { status: 'ok' }, 'no database details for anonymous callers');
 });
 
-test('the PWA assets and service worker are public', async () => {
+test('the PWA assets and exercise drawings are public', async () => {
   const anon = client();
-  for (const path of ['/manifest.webmanifest', '/sw.js', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png', '/apple-icon.png', '/icon.svg']) {
+  for (const path of ['/manifest.webmanifest', '/exercises/barbell-bench-press/0.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png', '/apple-icon.png', '/icon.svg']) {
     assert.equal((await anon.get(path)).status, 200, path);
   }
   const manifest = (await anon.get('/manifest.webmanifest')).body;
@@ -71,6 +71,14 @@ test('a session exposes id, name, email and role; profile edits are validated an
   assert.equal((await alex.patch('/api/me', { height: 50 })).status, 400);
   assert.equal((await alex.patch('/api/me', {})).status, 400, 'nothing to update');
   assert.equal((await alex.patch('/api/me', { weekly_goal: 4 })).status, 200);
+
+  // The app tour (migration 004): seeded accounts have seen it; false shows it again, true stores the time
+  assert.ok(me.tour_completed_at, 'demo accounts skip the first-login tour');
+  assert.equal((await alex.patch('/api/me', { tour_completed: 'yes' })).status, 400);
+  assert.equal((await alex.patch('/api/me', { tour_completed: false })).status, 200);
+  assert.equal((await alex.get('/api/me')).body.tour_completed_at, null);
+  assert.equal((await alex.patch('/api/me', { tour_completed: true })).status, 200);
+  assert.ok((await alex.get('/api/me')).body.tour_completed_at);
 });
 
 test('health details, library writes and the audit log are role-gated', async () => {
@@ -81,7 +89,7 @@ test('health details, library writes and the audit log are role-gated', async ()
   assert.equal(detail.status, 'ok');
   assert.equal(detail.mysql.ok, true);
   assert.equal(detail.mongodb.ok, true);
-  assert.equal(detail.mysql.value.tables, 15);
+  assert.equal(detail.mysql.value.tables, 17);
   assert.equal(detail.mysql.value.triggers, 15);
 
   assert.equal((await alex.post('/api/exercises', { name: 'Member Move', muscleGroupId: 1, equipment: 'Machine' })).status, 403);
@@ -93,7 +101,20 @@ test('health details, library writes and the audit log are role-gated', async ()
   const audit = await admin.get('/api/admin/audit');
   assert.equal(audit.body[0].action, 'INSERT');
   assert.equal(audit.body[0].admin_name, 'PhysiQ Admin', 'the trigger recorded who acted');
-  assert.equal((await admin.del(`/api/exercises/${added.body.id}`)).status, 200);
+
+  // The exercise's vector in MongoDB follows the MySQL row: re-embedded on edit, removed on delete
+  const mongo = new MongoClient(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017');
+  try {
+    await mongo.connect();
+    const vectors = mongo.db(process.env.MONGODB_DB || 'physiq').collection('vector_embeddings');
+    const renamed = { name: 'Auth Test Cable Fly', muscleGroupId: 1, equipment: 'Cable' };
+    assert.equal((await admin.patch(`/api/exercises/${added.body.id}`, renamed)).status, 200);
+    assert.equal((await vectors.findOne({ domain: 'exercise', entity_id: added.body.id })).title, 'Auth Test Cable Fly');
+    assert.equal((await admin.del(`/api/exercises/${added.body.id}`)).status, 200);
+    assert.equal(await vectors.countDocuments({ domain: 'exercise', entity_id: added.body.id }), 0);
+  } finally {
+    await mongo.close();
+  }
 
   // A trained exercise cannot be deleted: ON DELETE RESTRICT -> 409 (also with the restricted app account,
   // which receives the short foreign-key error codes)

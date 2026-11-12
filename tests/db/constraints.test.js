@@ -19,6 +19,37 @@ test('CHECK constraints reject impossible sets', () =>
     );
   }));
 
+test('exercise demonstrations (migration 002): every seeded exercise has one, and keys must be lowercase slugs', () =>
+  inRollback(async (conn) => {
+    const [[seeded]] = await conn.query('SELECT COUNT(*) AS total, COUNT(media_key) AS with_media FROM exercises');
+    assert.equal(seeded.with_media, seeded.total, 'all 45 built-in exercises point at their drawings');
+    const bench = await exerciseId(conn, 'Barbell Bench Press');
+    await rejects(conn.query("UPDATE exercises SET media_key = 'Bench Press!' WHERE id = ?", [bench]), 'ER_CHECK_CONSTRAINT_VIOLATED');
+    await rejects(conn.query("UPDATE exercises SET media_key = '-bench' WHERE id = ?", [bench]), 'ER_CHECK_CONSTRAINT_VIOLATED');
+    await conn.query('UPDATE exercises SET media_key = NULL WHERE id = ?', [bench]); // no photos is allowed
+  }));
+
+test('exercise knowledge (migration 003): every exercise has a target muscle, valid weight steps, regions are a closed list', () =>
+  inRollback(async (conn) => {
+    const [[gaps]] = await conn.query(
+      `SELECT COUNT(*) AS n FROM exercises e
+       WHERE NOT EXISTS (SELECT 1 FROM exercise_muscles em WHERE em.exercise_id = e.id AND em.role = 'primary')`
+    );
+    assert.equal(gaps.n, 0, 'each seeded exercise names at least one primary muscle');
+    const [[regions]] = await conn.query('SELECT COUNT(*) AS n FROM muscle_regions');
+    assert.equal(regions.n, 15);
+    const bench = await exerciseId(conn, 'Barbell Bench Press');
+    await rejects(conn.query("INSERT INTO exercise_muscles VALUES (?, 'wings', 'primary')", [bench]), 'ER_NO_REFERENCED_ROW_2');
+    await rejects(conn.query("INSERT INTO exercise_muscles VALUES (?, 'chest', 'secondary')", [bench]), 'ER_DUP_ENTRY');
+    await rejects(conn.query('UPDATE exercises SET weight_step_kg = 7.5 WHERE id = ?', [bench]), 'ER_CHECK_CONSTRAINT_VIOLATED');
+    // Deleting an exercise takes its muscle links with it (ON DELETE CASCADE)
+    const [made] = await conn.query("INSERT INTO exercises (name, muscle_group_id) SELECT 'Test Fly', id FROM muscle_groups WHERE name = 'Chest'");
+    await conn.query("INSERT INTO exercise_muscles VALUES (?, 'chest', 'primary')", [made.insertId]);
+    await conn.query('DELETE FROM exercises WHERE id = ?', [made.insertId]);
+    const [[left]] = await conn.query('SELECT COUNT(*) AS n FROM exercise_muscles WHERE exercise_id = ?', [made.insertId]);
+    assert.equal(left.n, 0);
+  }));
+
 test('the same set number cannot be logged twice for one exercise in a session', () =>
   inRollback(async (conn) => {
     const userId = await createUser(conn);

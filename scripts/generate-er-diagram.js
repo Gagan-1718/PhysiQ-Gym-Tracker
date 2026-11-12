@@ -20,7 +20,7 @@ const DB = process.env.MYSQL_DATABASE || 'physiq_db';
 const ORDER = [
   'users', 'splits', 'split_days', 'split_day_muscles', 'muscle_groups', 'exercises',
   'workout_sessions', 'sets', 'personal_records', 'body_measurements', 'user_daily_fuel', 'admin_audit_logs',
-  'foods', 'meal_logs', 'water_logs',
+  'foods', 'meal_logs', 'water_logs', 'muscle_regions', 'exercise_muscles',
 ];
 
 // Mermaid attribute types cannot contain commas or spaces
@@ -47,6 +47,7 @@ async function main() {
     `SELECT TABLE_NAME t, INDEX_NAME i, COLUMN_NAME c, NON_UNIQUE nu
      FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ?`
   );
+  const baseTables = await q("SELECT TABLE_NAME AS t FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME");
   await conn.end();
 
   // Columns that are UNIQUE on their own: the only column of a unique index or primary key.
@@ -62,6 +63,8 @@ async function main() {
   const fkSet = new Set(fks.map((f) => `${f.t}.${f.c}`));
   const colInfo = new Map(columns.map((c) => [`${c.t}.${c.c}`, c]));
 
+  // Any table added later and not listed above is still drawn, at the end
+  for (const { t } of baseTables) if (!ORDER.includes(t)) ORDER.push(t);
   const out = ['erDiagram'];
   for (const table of ORDER) {
     out.push(`  ${table} {`);
@@ -78,7 +81,7 @@ async function main() {
   out.push('');
   // Declaring relationships in dependency order (parents before children) gives the layout engine
   // the cleanest ranking: user -> split chain first, then the lookup tables, then training data.
-  const REL_ORDER = ['splits', 'split_days', 'split_day_muscles', 'exercises', 'workout_sessions', 'sets', 'personal_records', 'body_measurements', 'user_daily_fuel', 'admin_audit_logs', 'foods', 'meal_logs', 'water_logs'];
+  const REL_ORDER = ['splits', 'split_days', 'split_day_muscles', 'exercises', 'workout_sessions', 'sets', 'personal_records', 'body_measurements', 'user_daily_fuel', 'admin_audit_logs', 'foods', 'meal_logs', 'water_logs', 'muscle_regions', 'exercise_muscles'];
   for (const f of fks.sort((a, b) => REL_ORDER.indexOf(a.t) - REL_ORDER.indexOf(b.t) || ORDER.indexOf(a.rt) - ORDER.indexOf(b.rt))) {
     const col = colInfo.get(`${f.t}.${f.c}`);
     const optional = col.n === 'YES';

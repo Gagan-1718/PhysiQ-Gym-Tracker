@@ -19,7 +19,7 @@ export const GET = route<Ctx>(async (_req, { params }) => {
   const me = await requireUser();
   const id = parseId((await params).id);
   const session = await selectOne<Omit<SessionSummary, 'exercise_count' | 'working_sets' | 'pr_count'>>(
-    `SELECT id, session_date, body_part, split_day_id, started_at, ended_at, total_volume, notes
+    `SELECT id, session_date, body_part, split_day_id, started_at, ended_at, total_volume, notes, weight_before, weight_after
      FROM workout_sessions WHERE id = ? AND user_id = ?`,
     [id, me.id]
   );

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { AlertTriangle, ArrowRight, X } from 'lucide-react';
 import { localDateISO } from '@/lib/format';
-import { notifyOverdueOnce } from '@/lib/notifications';
 import type { OverdueAlert } from '@/types/database';
 
 const DISMISS_KEY = 'physiq.overdue-dismissed';
@@ -29,10 +28,6 @@ export function OverdueBanner() {
   useEffect(() => setHidden(dismissedToday()), []);
 
   const worst = data?.alerts[0];
-  useEffect(() => {
-    if (worst) void notifyOverdueOnce(worst);
-  }, [worst]);
-
   if (!worst || hidden) return null;
   const extra = data!.alerts.length - 1;
 

@@ -91,13 +91,20 @@ test('sp_estimate_next_target: under 10 reps -> same weight, +1 rep, using the l
     assert.equal(t.suggested_reps, 7);
   }));
 
-test('sp_estimate_next_target: bodyweight adds a rep; no history leaves weight to the user', () =>
+test('sp_estimate_next_target: first time starts from body weight (fn_starting_weight); bodyweight adds a rep', () =>
   inRollback(async (conn) => {
-    const userId = await createUser(conn);
+    const userId = await createUser(conn); // 75 kg
     const pullUp = await exerciseId(conn, 'Pull-Up');
     const fresh = await target(conn, userId, pullUp);
-    assert.equal(fresh.suggested_weight, null);
+    assert.equal(fresh.suggested_weight, 0, 'bodyweight move: no added load');
     assert.equal(fresh.suggested_reps, 10);
+
+    // Weighted first time: 75 kg x 0.40 (bench press ratio) = 30 kg, rounded to 2.5 kg
+    const bench = await target(conn, userId, await exerciseId(conn, 'Barbell Bench Press'));
+    assert.equal(bench.suggested_weight, 30);
+    assert.match(bench.rationale, /starting weight for your body weight/);
+    const [[noWeight]] = await conn.query('SELECT fn_starting_weight(?, ?) AS w', [await createUser(conn, { starting_weight: null }), await exerciseId(conn, 'Barbell Bench Press')]);
+    assert.equal(noWeight.w, null, 'unknown body weight: the member picks');
 
     await addSet(conn, await createSession(conn, { userId }), pullUp, { reps: 12, weight: 0 });
     const t = await target(conn, userId, pullUp);

@@ -12,7 +12,6 @@ import { Skeleton } from '@/components/ui/Feedback';
 import { Sheet } from '@/components/ui/Sheet';
 import { Stepper } from '@/components/ui/Stepper';
 import { HeightField } from '@/components/ui/UnitFields';
-import { ReminderSettings } from '@/components/alerts/ReminderSettings';
 import { ChangeSplitSheet } from '@/components/train/ChangeSplitSheet';
 import { useToast } from '@/components/ui/Toast';
 import { send } from '@/lib/client';
@@ -154,8 +153,6 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      <SectionHeader title="Reminders" />
-      <ReminderSettings />
 
       {session?.user?.role === 'admin' && (
         <>
@@ -165,6 +162,21 @@ export default function ProfilePage() {
             <span className="flex-1">
               <span className="block text-headline">Exercise library & audit log</span>
               <span className="text-footnote text-fg-3">Every change is recorded by a database trigger</span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-fg-3" />
+          </Link>
+        </>
+      )}
+
+      {session?.user?.role !== 'admin' && (
+        <>
+          <SectionHeader title="Help" />
+          <Link href="/?tour=1" className="press flex items-center gap-3 rounded-card border border-line bg-surface-1 p-4 hover:bg-surface-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/coach-face.webp" alt="" width={44} height={44} className="h-11 w-11 shrink-0 rounded-full border-2 border-accent object-cover" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-headline">Replay the app tour</span>
+              <span className="text-footnote text-fg-3">Q walks you through PhysiQ again</span>
             </span>
             <ChevronRight className="h-5 w-5 text-fg-3" />
           </Link>

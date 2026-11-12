@@ -68,7 +68,7 @@ test('the app cannot see triggers in the system catalogue, but sp_schema_stats (
   assert.equal(direct.n, 0, 'no TRIGGER privilege, so the catalogue shows none');
   const [[[stats]]] = [(await app.query('CALL sp_schema_stats()'))[0]];
   assert.equal(stats.triggers_count, 15);
-  assert.equal(stats.tables_count, 15);
+  assert.equal(stats.tables_count, 17);
   assert.equal(stats.views_count, 7);
 });
 

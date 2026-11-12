@@ -44,8 +44,8 @@ interface RestTimerProps {
   onSkip: () => void;
 }
 
-/** Floating rest countdown; vibrates and chimes when rest is over. */
-export function RestTimer({ endsAt, total, onAdjust, onSkip }: RestTimerProps) {
+/** Rest countdown (floating, or `inline` in the page flow); vibrates and chimes when rest is over. */
+export function RestTimer({ endsAt, total, onAdjust, onSkip, raised = false, inline = false }: RestTimerProps & { raised?: boolean; inline?: boolean }) {
   const toast = useToast();
   const left = useCountdown(endsAt);
   const firedFor = useRef<number | null>(null);
@@ -63,11 +63,11 @@ export function RestTimer({ endsAt, total, onAdjust, onSkip }: RestTimerProps) {
     <AnimatePresence>
       {endsAt !== null && left > 0 && (
         <motion.div
-          initial={{ y: 120, opacity: 0 }}
+          initial={{ y: inline ? 16 : 120, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 120, opacity: 0 }}
+          exit={{ y: inline ? 16 : 120, opacity: 0 }}
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="pb-safe fixed inset-x-0 bottom-0 z-40 px-3 md:left-64"
+          className={inline ? '' : `pb-safe fixed inset-x-0 z-40 px-3 md:left-64 ${raised ? 'bottom-[4.75rem]' : 'bottom-0'}`}
           role="timer"
           aria-label={`Rest ${clock(left)} remaining`}
         >

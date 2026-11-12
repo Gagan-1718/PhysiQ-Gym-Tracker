@@ -13,7 +13,7 @@ SET @alex  = (SELECT id FROM users WHERE email = 'alex@physiq.test');
 SET @admin = (SELECT id FROM users WHERE email = 'admin@physiq.test');
 
 -- -----------------------------------------------------------------------------
--- 1. The design at a glance: 15 tables, 7 views, 15 triggers, 22 routines
+-- 1. The design at a glance: 17 tables, 7 views, 15 triggers, 23 routines
 -- -----------------------------------------------------------------------------
 SELECT 'tables'   AS object, COUNT(*) AS n FROM information_schema.TABLES   WHERE TABLE_SCHEMA = 'physiq_db' AND TABLE_TYPE = 'BASE TABLE'
 UNION ALL SELECT 'views',    COUNT(*) FROM information_schema.VIEWS     WHERE TABLE_SCHEMA = 'physiq_db'
@@ -217,3 +217,51 @@ START TRANSACTION;
   SELECT 'after' AS moment, calories_logged, protein_logged_g, water_logged_ml FROM user_daily_fuel WHERE user_id = @alex AND fuel_date = CURRENT_DATE;
   --  +840 kcal, +72 g protein, +500 ml: written by trg_meal_logs_ai and trg_water_logs_ai
 ROLLBACK;
+
+-- =============================================================================
+-- 13. What the app knows about an exercise (migration 003): the muscles it works
+--     (exercise_muscles, a many-to-many with a role), how much heavier each set
+--     gets, and a first-timer's starting weight from body weight (fn_starting_weight)
+-- =============================================================================
+SELECT e.name,
+       e.weight_step_kg,
+       fn_starting_weight(@alex, e.id) AS first_time_start_kg,
+       GROUP_CONCAT(CASE WHEN em.role = 'primary'   THEN mr.label END ORDER BY mr.label SEPARATOR ', ') AS main_muscles,
+       GROUP_CONCAT(CASE WHEN em.role = 'secondary' THEN mr.label END ORDER BY mr.label SEPARATOR ', ') AS helping_muscles
+FROM exercises e
+JOIN exercise_muscles em ON em.exercise_id = e.id
+JOIN muscle_regions mr   ON mr.code = em.region_code
+WHERE e.name IN ('Barbell Deadlift', 'Lat Pulldown', 'Face Pull', 'Pull-Up')
+GROUP BY e.id, e.name, e.weight_step_kg
+ORDER BY e.weight_step_kg DESC, e.name;
+
+-- =============================================================================
+-- 14. Weigh-ins and the app tour (migration 004): body weight before and after each
+--     workout (two new columns with CHECKs) and when a member finished the app tour.
+--     trg_workout_sessions_ai copies the before weight into body_measurements when
+--     that day has no weight yet, so the body-weight chart and fuel targets follow it.
+-- =============================================================================
+SELECT session_date, body_part, weight_before, weight_after,
+       ROUND(weight_after - weight_before, 1) AS change_kg
+FROM workout_sessions
+WHERE user_id = @alex AND weight_before IS NOT NULL
+ORDER BY session_date DESC
+LIMIT 5;
+
+SELECT name, role, tour_completed_at FROM users;
+
+-- The most recent of the last 6 days with no weight logged (Alex weighs in weekly, so there is one)
+SET @free_day = (
+    SELECT d FROM (SELECT DATE_SUB(CURRENT_DATE, INTERVAL n DAY) AS d
+                   FROM (SELECT 1 AS n UNION ALL SELECT 2 UNION ALL SELECT 3
+                         UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6) AS k) AS days
+    WHERE NOT EXISTS (SELECT 1 FROM body_measurements b WHERE b.user_id = @alex AND b.recorded_on = days.d)
+    ORDER BY d DESC LIMIT 1);
+START TRANSACTION;
+SELECT @free_day AS day, COUNT(*) AS weights_logged FROM body_measurements
+WHERE user_id = @alex AND recorded_on = @free_day;                                 -- 0: nothing logged that day
+INSERT INTO workout_sessions (user_id, session_date, body_part, weight_before, weight_after)
+VALUES (@alex, @free_day, 'Weigh-in demo', 80.4, 79.8);
+SELECT recorded_on, weight FROM body_measurements
+WHERE user_id = @alex AND recorded_on = @free_day;                                 -- 80.40, written by the trigger
+ROLLBACK;                                                                           -- both rows gone again

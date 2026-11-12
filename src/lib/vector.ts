@@ -108,6 +108,12 @@ export async function upsertFoodVector(food: FoodItem): Promise<void> {
   );
 }
 
+/** Remove an item's vector, e.g. after its MySQL row was deleted. */
+export async function deleteVector(domain: VectorDomain, entityId: number): Promise<void> {
+  const db = await getMongoDb();
+  await db.collection<VectorDocument>('vector_embeddings').deleteOne({ domain, entity_id: entityId });
+}
+
 /**
  * Execute K-Nearest Neighbor (KNN) similarity search in MongoDB using an
  * aggregation pipeline that computes Cosine Similarity (dot product of unit

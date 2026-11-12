@@ -9,14 +9,16 @@ import { Skeleton } from '@/components/ui/Feedback';
 import { Stepper } from '@/components/ui/Stepper';
 import { useToast } from '@/components/ui/Toast';
 import { LineChart } from '@/components/charts/LineChart';
+import { AFTER_COLOR, BEFORE_COLOR, WeighInChart, averageChange, signedKg } from '@/components/charts/WeighInChart';
 import { send } from '@/lib/client';
 import { cn, kg, localDateISO, shortDate } from '@/lib/format';
-import type { BodyMeasurement, User } from '@/types/database';
+import type { BodyMeasurement, User, WeighIn } from '@/types/database';
 
 export function Body() {
   const toast = useToast();
   const { data, mutate } = useSWR<BodyMeasurement[]>('/api/body');
   const me = useSWR<User>('/api/me');
+  const weighIns = useSWR<WeighIn[]>('/api/body/weigh-ins');
   const { mutate: mutateAll } = useSWRConfig();
   const latest = [...(data ?? [])].reverse().find((m) => m.weight !== null);
   const baselineWeight = me.data?.starting_weight ?? null;
@@ -57,6 +59,7 @@ export function Body() {
   if (!data) return <Skeleton className="h-96" />;
   const weights = data.filter((m) => m.weight !== null);
   const change = weights.length > 1 ? Math.round((weights[weights.length - 1].weight! - weights[0].weight!) * 10) / 10 : null;
+  const avgWorkout = weighIns.data ? averageChange(weighIns.data) : null;
 
   return (
     <>
@@ -87,6 +90,38 @@ export function Body() {
           </div>
         )}
       </Card>
+
+      {weighIns.data && weighIns.data.length > 0 && (
+        <>
+          <SectionHeader title="Workout weigh-ins" />
+          <Card>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-footnote text-fg-3">Average change per workout</p>
+                <p className="tabular font-display text-[32px] font-extrabold leading-none">
+                  {avgWorkout !== null ? signedKg(avgWorkout) : '–'}
+                  <span className="text-lg text-fg-3"> kg</span>
+                </p>
+              </div>
+              <ul className="flex shrink-0 gap-3 pb-1 text-footnote font-medium text-fg-2" aria-label="Legend">
+                {[
+                  ['Before', BEFORE_COLOR],
+                  ['After', AFTER_COLOR],
+                ].map(([label, color]) => (
+                  <li key={label} className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="mt-4">
+              <WeighInChart data={weighIns.data} />
+            </div>
+            <p className="mt-2 text-footnote text-fg-3">Asked when you start and finish a workout. The before weight also counts as that day’s body weight.</p>
+          </Card>
+        </>
+      )}
 
       <SectionHeader title="Log today" />
       <Card>

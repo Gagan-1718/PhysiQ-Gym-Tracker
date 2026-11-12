@@ -28,6 +28,13 @@ export interface DraftExercise {
   name: string;
   muscleGroup: string;
   equipment: string;
+  /** Demonstration frames in public/exercises/<mediaKey>/ (optional: older drafts lack it) */
+  mediaKey?: string | null;
+  instructions?: string | null;
+  /** kg added to the next working set after one is done (exercises.weight_step_kg) */
+  weightStep?: number;
+  /** Body-map regions the exercise works (exercise_muscles) */
+  muscles?: { code: string; label?: string; role: 'primary' | 'secondary' }[] | null;
   restSeconds: number;
   superset: string | null;
   target: OverloadTarget | null;
@@ -52,6 +59,49 @@ export interface WorkoutDraft {
   exercises: DraftExercise[];
   restEndsAt: number | null; // epoch ms
   restTotal: number; // seconds of the running rest timer
+  /** 'plan' = choosing and ordering exercises (clock not started); 'guided' = training one exercise at a time.
+   *  Missing on drafts saved by older versions, which were already in progress: treated as 'guided'. */
+  phase?: 'plan' | 'guided';
+  /** Index of the exercise on screen in guided mode */
+  current?: number;
+  /** Key of the set being performed right now (full-screen demonstration + Done).
+   *  Anything else means the next set's weight is being chosen. */
+  active?: string | null;
+  /** Body weight before / after the workout (kg). undefined = not asked yet, null = skipped */
+  weightBefore?: number | null;
+  weightAfter?: number | null;
+  /** Last time anything changed (epoch ms); the clock stops after a long pause */
+  lastActivityMs?: number;
+}
+
+/** The workout clock stops after this long without any activity (the member most likely left). */
+export const IDLE_PAUSE_MS = 30 * 60 * 1000;
+/** An unfinished workout this old (since its last activity) is offered to finish or discard. */
+export const STALE_MS = 4 * 60 * 60 * 1000;
+
+/**
+ * Training time shown on the clock. It does not run while planning, and it stops
+ * IDLE_PAUSE_MS after the last activity, so a forgotten workout never counts for hours.
+ */
+export function workoutClock(d: WorkoutDraft, now: number): { seconds: number; paused: boolean; stale: boolean; started: boolean } {
+  const last = d.lastActivityMs ?? d.startedAtMs;
+  const stale = now - last > STALE_MS;
+  if (d.phase === 'plan') return { seconds: 0, paused: false, stale, started: false };
+  const paused = now - last > IDLE_PAUSE_MS;
+  const end = paused ? last : now;
+  return { seconds: Math.max(0, Math.floor((end - d.startedAtMs) / 1000)), paused, stale, started: true };
+}
+
+/** When the workout really ended: now, or the last activity if the clock had stopped. */
+export function workoutEndMs(d: WorkoutDraft, now: number): number {
+  const last = d.lastActivityMs ?? d.startedAtMs;
+  return now - last > IDLE_PAUSE_MS ? last : now;
+}
+
+/** Leave planning: the clock starts now and the first exercise is shown. */
+export function startGuided(d: WorkoutDraft): WorkoutDraft {
+  const now = new Date();
+  return { ...d, phase: 'guided', current: 0, startedAt: localDateTime(now), startedAtMs: now.getTime(), sessionDate: localDateISO(now) };
 }
 
 const keyFor = (userId: number) => `physiq.workout-draft.v1.${userId}`;
@@ -124,6 +174,9 @@ export function createDraft(userId: number, init: { splitDayId: number | null; b
     exercises: [],
     restEndsAt: null,
     restTotal: 0,
+    phase: 'plan',
+    current: 0,
+    lastActivityMs: now.getTime(),
   };
 }
 
@@ -144,7 +197,8 @@ export function useWorkoutDraft(userId: number | undefined) {
       if (!userId) return;
       const current = read(userId);
       if (typeof next === 'function') {
-        if (current) write(userId, next(current));
+        // Every change counts as activity, which keeps the workout clock running
+        if (current) write(userId, { ...next(current), lastActivityMs: Date.now() });
       } else {
         write(userId, next);
       }

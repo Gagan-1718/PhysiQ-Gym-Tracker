@@ -23,12 +23,8 @@ test('a new member registers, goes through onboarding and lands on a personalise
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.waitForURL('**/onboarding', { timeout: 30000 });
 
-    // Step 1: goals (several can be ticked). Step 2: body. Step 3: split
-    await page.getByRole('checkbox', { name: /Get stronger/ }).click();
-    await page.getByRole('checkbox', { name: /Build muscle/ }).click(); // untick the default
-    await page.getByRole('checkbox', { name: /Lose fat/ }).click();
-    // Strength + fat loss is saved as the fat-loss goal, and the summary says so
-    assert.match(await page.locator('main, body').first().innerText(), /Strength cut[\s\S]*-400 kcal deficit/);
+    // Step 1: goal. Step 2: body. Step 3: split
+    await page.getByRole('radio', { name: /Get stronger/ }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('height', { exact: true }).fill('178');
     await page.getByLabel('height', { exact: true }).blur();
@@ -41,8 +37,24 @@ test('a new member registers, goes through onboarding and lands on a personalise
     await page.waitForSelector('#up-next-title');
 
     assert.equal(await page.locator('#up-next-title').innerText(), 'Upper', 'first day of the new split, never trained');
+
+    // First visit: Q, the coach from the logo, chats through the main features; the member taps a reply each time
+    const tour = page.getByRole('dialog', { name: /App tour with Q/ });
+    await tour.waitFor();
+    assert.equal((await api(page, 'GET', '/api/me')).body.tour_completed_at, null, 'not seen yet');
+    const replies = ['Hi Q!', 'Smart', 'Then?', 'Easy', 'Nice', 'Got it', 'Love it', "Let's go 💪"];
+    for (const [n, reply] of replies.entries()) {
+      await tour.getByText(`Q · ${n + 1}/${replies.length}`, { exact: true }).waitFor();
+      await tour.getByRole('button', { name: reply, exact: true }).click();
+    }
+    await tour.waitFor({ state: 'detached' });
+    await page.waitForFunction(async () => (await (await fetch('/api/me')).json()).tour_completed_at !== null);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('#up-next-title');
+    assert.equal(await tour.count(), 0, 'shown once, remembered in MySQL');
+
     const me = (await api(page, 'GET', '/api/me')).body;
-    assert.deepEqual([me.goal, me.height, me.starting_weight, me.needsOnboarding], ['fat_loss', 178, 72.5, false]);
+    assert.deepEqual([me.goal, me.height, me.starting_weight, me.needsOnboarding], ['strength', 178, 72.5, false]);
     const body = (await api(page, 'GET', '/api/body')).body;
     assert.equal(body.at(-1).weight, 72.5, 'onboarding weight is the first body-weight entry');
     assert.deepEqual(page.problems, []);
@@ -68,26 +80,10 @@ test('sign-in errors are generic and the page guard sends visitors to login', as
   await page.waitForURL('**/train');
 });
 
-test('profile: reminders switch persists, data export downloads, members cannot open the admin area', async () => {
-  const page = await newPage(browser, { permissions: ['notifications'] });
+test('profile: data export downloads, members cannot open the admin area', async () => {
+  const page = await newPage(browser);
   await login(page, 'alex@physiq.test');
   await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
-
-  const sw = page.getByRole('switch', { name: 'Overdue reminders' });
-  assert.equal(await sw.getAttribute('aria-checked'), 'false');
-  // Headless Chromium (what CI uses) always reports notifications as blocked, even when the test grants them.
-  // There the app must say so instead of offering a dead switch; a full browser runs the whole toggle flow.
-  const permission = await page.evaluate(() => ('Notification' in window ? Notification.permission : 'unsupported'));
-  if (permission === 'granted') {
-    await sw.click();
-    await page.waitForFunction(() => document.querySelector('[role=switch]').getAttribute('aria-checked') === 'true');
-    await page.reload({ waitUntil: 'networkidle' });
-    assert.equal(await page.getByRole('switch', { name: 'Overdue reminders' }).getAttribute('aria-checked'), 'true', 'preference persisted on the device');
-    await page.getByRole('switch', { name: 'Overdue reminders' }).click();
-  } else {
-    assert.equal(await sw.isDisabled(), true, `notifications are ${permission} here, so the switch must be disabled`);
-    assert.match(await page.locator('main').innerText(), /Blocked\.|does not support notifications/, 'and the page explains why');
-  }
 
   // The link points at the export endpoint and is marked as a download. (Clicking an <a download> leaves a
   // navigation that Playwright cannot cleanly cancel at browser close, so fetch it with the page's session instead.)
@@ -111,7 +107,7 @@ test('admin: exercise library and the trigger-written audit log', async () => {
   await login(page, 'admin@physiq.test');
   await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
   await page.waitForSelector('ul li button');
-  assert.ok((await page.locator('ul li button').count()) >= 44, 'the 44-exercise library');
+  assert.ok((await page.locator('ul li button').count()) >= 45, 'the 45-exercise library');
 
   await page.getByRole('radio', { name: 'Audit log' }).click();
   await page.waitForSelector('li');

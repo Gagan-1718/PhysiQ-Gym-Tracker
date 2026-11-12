@@ -2,7 +2,7 @@
 
 > Generated from the live `information_schema` by `npm run docs:dictionary`. Do not edit by hand.
 
-**MySQL:** 15 tables, 7 views, 15 procedures, 7 functions, 15 triggers.
+**MySQL:** 17 tables, 7 views, 15 procedures, 8 functions, 15 triggers.
 **MongoDB:** `custom_routines`, `journey_stories`, `vector_embeddings` (validators in `database/mongodb/`).
 
 ## 1. `users`
@@ -18,6 +18,7 @@
 | `height` | decimal(5,2) | yes |  |  | cm |
 | `starting_weight` | decimal(5,2) | yes |  |  | kg, used until the first body measurement is logged |
 | `weekly_goal` | tinyint unsigned | no | 4 |  | target sessions per week (the Train ring) |
+| `tour_completed_at` | datetime | yes |  |  | member finished or skipped the first-login app tour; NULL = show it |
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP |  |  |
 | `updated_at` | timestamp | no | CURRENT_TIMESTAMP |  | on update CURRENT_TIMESTAMP |
 
@@ -44,7 +45,12 @@
 | `muscle_group_id` | int | no |  | MUL | FK → `muscle_groups.id` ON DELETE RESTRICT |
 | `equipment_needed` | enum('Barbell','Dumbbell','Machine','Cable','Bodyweight','Kettlebell','Band','Other') | no | Bodyweight |  |  |
 | `instructions` | text | yes |  |  |  |
+| `media_key` | varchar(60) | yes |  |  | folder under public/exercises with 0.svg and 1.svg; NULL = no drawings |
+| `weight_step_kg` | decimal(3,1) | no | 5.0 |  | added from one working set to the next in a guided workout; 0 = bodyweight |
+| `start_bw_ratio` | decimal(4,3) | yes |  |  | first-timer opening weight = body weight x ratio (per dumbbell); NULL = bodyweight |
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP |  |  |
+
+**Checks:** `chk_exercises_media_key`: `` ((`media_key` is null) or regexp_like(`media_key`,_utf8mb4'^[a-z0-9]+(-[a-z0-9]+)*$',_utf8mb4'c')) `` · `chk_exercises_start_ratio`: `` ((`start_bw_ratio` is null) or (`start_bw_ratio` between 0.010 and 3.000)) `` · `chk_exercises_weight_step`: `` (`weight_step_kg` in (0.0,2.5,5.0,10.0)) ``
 
 **Indexes:** `PRIMARY` (unique) (id) · `idx_exercises_muscle_group_name` (muscle_group_id, name) · `uq_exercises_name` (unique) (name)
 
@@ -96,12 +102,14 @@
 | `body_part` | varchar(50) | no |  |  | label snapshot at training time, so history survives split edits |
 | `started_at` | datetime | yes |  |  |  |
 | `ended_at` | datetime | yes |  |  |  |
+| `weight_before` | decimal(5,2) | yes |  |  | kg, body weight entered before the workout |
+| `weight_after` | decimal(5,2) | yes |  |  | kg, body weight entered after the workout |
 | `total_volume` | decimal(10,2) | no | 0.00 |  | trigger-maintained: SUM(weight*reps) of working sets |
 | `notes` | varchar(500) | yes |  |  |  |
 | `client_ref` | char(36) | yes |  |  | idempotency key from the device: a retried submit cannot create a duplicate session |
 | `created_at` | timestamp | no | CURRENT_TIMESTAMP |  |  |
 
-**Checks:** `chk_sessions_times`: `` ((`started_at` is null) or (`ended_at` is null) or (`ended_at` >= `started_at`)) `` · `chk_sessions_volume`: `` (`total_volume` >= 0) ``
+**Checks:** `chk_sessions_times`: `` ((`started_at` is null) or (`ended_at` is null) or (`ended_at` >= `started_at`)) `` · `chk_sessions_volume`: `` (`total_volume` >= 0) `` · `chk_sessions_weight_after`: `` ((`weight_after` is null) or (`weight_after` between 30 and 300)) `` · `chk_sessions_weight_before`: `` ((`weight_before` is null) or (`weight_before` between 30 and 300)) ``
 
 **Indexes:** `PRIMARY` (unique) (id) · `idx_workout_sessions_split_day_date` (split_day_id, session_date) · `idx_workout_sessions_user_date` (user_id, session_date DESC) · `uq_sessions_client_ref` (unique) (user_id, client_ref)
 
@@ -244,6 +252,29 @@
 
 **Indexes:** `PRIMARY` (unique) (id) · `idx_water_logs_user_date` (user_id, fuel_date, logged_at)
 
+## 16. `muscle_regions`
+
+| Column | Type | Null | Default | Key | Notes |
+|---|---|---|---|---|---|
+| `code` | varchar(20) | no |  | PRI |  |
+| `label` | varchar(40) | no |  | UNI |  |
+| `body_view` | enum('front','back') | no |  |  | which side of the body map shows it |
+| `muscle_group_id` | int | no |  | MUL | FK → `muscle_groups.id` ON DELETE RESTRICT |
+
+**Checks:** `chk_muscle_regions_code`: `` regexp_like(`code`,_utf8mb4'^[a-z]+(_[a-z]+)*$',_utf8mb4'c') ``
+
+**Indexes:** `PRIMARY` (unique) (code) · `fk_muscle_regions_group` (muscle_group_id) · `uq_muscle_regions_label` (unique) (label)
+
+## 17. `exercise_muscles`
+
+| Column | Type | Null | Default | Key | Notes |
+|---|---|---|---|---|---|
+| `exercise_id` | int | no |  | PRI | FK → `exercises.id` ON DELETE CASCADE |
+| `region_code` | varchar(20) | no |  | PRI | FK → `muscle_regions.code` ON DELETE RESTRICT |
+| `role` | enum('primary','secondary') | no |  |  |  |
+
+**Indexes:** `PRIMARY` (unique) (exercise_id, region_code) · `fk_exercise_muscles_region` (region_code)
+
 ## Views
 
 - `view_daily_nutrition_summary`
@@ -262,6 +293,7 @@
 - function `fn_current_weight`
 - function `fn_fat_target_g`
 - function `fn_protein_target_g`
+- function `fn_starting_weight`
 - function `fn_water_target_ml`
 - procedure `sp_assert_valid_session`
 - procedure `sp_check_and_update_pr`

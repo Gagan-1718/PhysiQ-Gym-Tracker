@@ -24,7 +24,18 @@ export interface User {
   height: number | null;
   starting_weight: number | null;
   weekly_goal: number;
+  /** Finished or skipped the first-login app tour (migration 004) */
+  tour_completed_at?: string | null;
   created_at: string;
+}
+
+/** One workout's weigh-ins, for the Body chart (GET /api/body/weigh-ins) */
+export interface WeighIn {
+  id: number;
+  session_date: string;
+  body_part: string;
+  weight_before: number | null;
+  weight_after: number | null;
 }
 
 export interface MuscleGroup {
@@ -40,6 +51,19 @@ export interface Exercise {
   muscle_group: string;
   equipment_needed: Equipment;
   instructions: string | null;
+  /** Folder under public/exercises with the two demonstration drawings, or null */
+  media_key: string | null;
+  /** Added from one working set to the next in a guided workout (0 = bodyweight) */
+  weight_step_kg?: number;
+  /** Body-map regions it works (exercise_muscles), null when none are recorded */
+  muscles?: ExerciseMuscle[] | null;
+}
+
+export interface ExerciseMuscle {
+  code: string;
+  /** muscle_regions.label */
+  label?: string;
+  role: 'primary' | 'secondary';
 }
 
 /** Row of view_split_day_status */
@@ -114,6 +138,9 @@ export interface SessionSummary {
   ended_at: string | null;
   total_volume: number;
   notes: string | null;
+  /** Body weight before / after the workout (migration 004) */
+  weight_before?: number | null;
+  weight_after?: number | null;
   exercise_count: number;
   working_sets: number;
   pr_count: number;

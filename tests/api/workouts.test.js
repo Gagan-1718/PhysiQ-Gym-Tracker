@@ -31,9 +31,9 @@ const workout = (extra = {}) => ({
   ...extra,
 });
 
-test('the library has 44 exercises across 10 muscle groups', async () => {
+test('the library has 45 exercises across 10 muscle groups', async () => {
   const res = await alex.get('/api/exercises');
-  assert.equal(res.body.exercises.length, 44);
+  assert.equal(res.body.exercises.length, 45);
   assert.equal(res.body.muscleGroups.length, 10);
 });
 
@@ -48,7 +48,9 @@ test('training context: overload target from sp_estimate_next_target, last sets 
   assert.match(t.rationale, /Add 2.5 kg/);
   assert.equal(res.body[dl].last.length, 4, 'warm-up + 3 working sets from the last session');
   assert.equal(res.body[dl].pr.weight, 130);
-  assert.equal(res.body[fresh].target.suggested_weight, null, 'never done: the member picks the weight');
+  // Never done: fn_starting_weight scales the opening weight to Alex's 77.2 kg (x 0.20, rounded to 2.5 kg)
+  assert.equal(res.body[fresh].target.suggested_weight, 15);
+  assert.match(res.body[fresh].target.rationale, /starting weight/);
   assert.equal(res.body[fresh].pr, null);
   assert.equal((await alex.get('/api/train/context?ids=abc')).status, 400);
   assert.equal((await alex.get('/api/train/context')).status, 400);
@@ -58,7 +60,7 @@ test('"start Pull" plan returns the exercises of the last Pull session in order'
   const split = (await alex.get('/api/splits')).body;
   const pull = split.days.find((d) => d.body_part === 'Pull');
   const plan = await alex.get(`/api/train/plan?day=${pull.split_day_id}`);
-  assert.deepEqual(plan.body.exercises.map((e) => e.name), ['Barbell Deadlift', 'Lat Pulldown', 'Seated Cable Row', 'Hammer Curl']);
+  assert.deepEqual(plan.body.exercises.map((e) => e.name), ['Barbell Deadlift', 'Lat Pulldown', 'Seated Cable Row', 'Dumbbell Bicep Curl']);
 });
 
 test('saving a workout is one transaction: triggers set volume, PRs and the split day', async () => {
@@ -96,6 +98,32 @@ test('saving a workout is one transaction: triggers set volume, PRs and the spli
   const ctx = (await alex.get(`/api/train/context?ids=${dl}`)).body[dl];
   assert.equal(ctx.pr.weight, 130, 'previous PR promoted');
   assert.equal(ctx.pr.reps, 10);
+});
+
+test('weigh-ins (migration 004): saved with the workout, on its detail page, in the weigh-in history and as the day weight', async () => {
+  const hadToday = (await alex.get('/api/body')).body.some((m) => m.recorded_on === today());
+  assert.equal((await alex.post('/api/workouts', workout({ weightBefore: 20 }))).status, 400, 'outside 30-300 kg');
+
+  const saved = await alex.post('/api/workouts', workout({ weightBefore: 80.4, weightAfter: 79.8 }));
+  assert.equal(saved.status, 201, JSON.stringify(saved.body));
+  savedSessions.push(saved.body.sessionId);
+  const detail = (await alex.get(`/api/workouts/${saved.body.sessionId}`)).body;
+  assert.deepEqual([detail.session.weight_before, detail.session.weight_after], [80.4, 79.8]);
+  const history = (await alex.get('/api/body/weigh-ins')).body;
+  assert.ok(history.length <= 30);
+  assert.deepEqual(history.at(-1), { id: saved.body.sessionId, session_date: today(), body_part: 'Freestyle', weight_before: 80.4, weight_after: 79.8 });
+
+  // Skipping both is fine
+  const skipped = await alex.post('/api/workouts', workout({ weightBefore: null, weightAfter: null }));
+  assert.equal(skipped.status, 201);
+  savedSessions.push(skipped.body.sessionId);
+
+  // The trigger made 80.4 today's body weight unless one was logged already; put the data back as it was
+  const todayRow = (await alex.get('/api/body')).body.find((m) => m.recorded_on === today());
+  if (!hadToday) {
+    assert.equal(todayRow.weight, 80.4, 'trg_workout_sessions_ai copied the weigh-in');
+    await alex.del(`/api/body/${todayRow.id}`);
+  }
 });
 
 test('a failing statement rolls back the whole workout: nothing half-saved', async () => {

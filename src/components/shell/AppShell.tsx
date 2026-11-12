@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/format';
@@ -10,17 +11,36 @@ import { NAV_ITEMS, isActive } from './nav';
 import { ActiveWorkoutBar } from './ActiveWorkoutBar';
 import { OverdueBanner } from '@/components/alerts/OverdueBanner';
 import { OfflineBadge } from './OfflineBadge';
+import { AppTour } from '@/components/tour/AppTour';
+import { send } from '@/lib/client';
 import { useWorkoutDraft } from '@/lib/workout-draft';
 
 /**
  * Phone: content + translucent bottom tab bar (thumb reach).
  * Laptop: fixed sidebar + centred content column.
+ * `tour`: the member has not seen the app tour yet; it starts on Today (also on /?tour=1, from Profile).
  */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, tour = false }: { children: React.ReactNode; tour?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const hideChrome = pathname.startsWith('/train/session');
   const [draft] = useWorkoutDraft(session?.user?.id);
+
+  const tourPending = useRef(tour);
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    if (pathname !== '/') return;
+    const replay = new URLSearchParams(window.location.search).get('tour') === '1';
+    if (tourPending.current || replay) setTourOpen(true);
+  }, [pathname]);
+  const endTour = useCallback(() => {
+    tourPending.current = false;
+    setTourOpen(false);
+    if (new URLSearchParams(window.location.search).has('tour')) router.replace('/');
+    // Remembered in MySQL (users.tour_completed_at), so it shows once per account, not per device
+    send('/api/me', 'PATCH', { tour_completed: true }).catch(() => {});
+  }, [router]);
 
   return (
     <div className="min-h-dvh md:pl-64">
@@ -39,6 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
+                data-tour={`nav-${item.label.toLowerCase()}`}
                 className={cn(
                   'relative flex h-11 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors',
                   active ? 'text-fg' : 'text-fg-3 hover:bg-surface-1 hover:text-fg-2'
@@ -91,6 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
+                  data-tour={`nav-${item.label.toLowerCase()}`}
                   className={cn(
                     'press flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors',
                     active ? 'text-accent' : 'text-fg-3'
@@ -104,6 +126,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
       )}
+
+      {tourOpen && pathname === '/' && <AppTour name={session?.user?.name?.split(' ')[0] ?? null} onDone={endTour} />}
     </div>
   );
 }

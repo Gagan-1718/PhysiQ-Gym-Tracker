@@ -3,11 +3,17 @@
  * Cuts every logo / icon file the app uses out of the master logo (design/physiq-logo.png),
  * using a headless browser's canvas, so no image library is needed:
  *
- *   node scripts/generate-brand-assets.js
+ *   node scripts/generate-brand-assets.js          (every file)
+ *   node scripts/generate-brand-assets.js icon     (only the files whose path contains "icon")
  *
  * Writes public/brand/logo.webp (login hero), public/brand/mark.png (the Q on its own),
  * the PWA icons in public/icons/, and the favicon / Apple touch icon in src/app/.
  * Set PW_EXECUTABLE to use an installed Chrome or Edge instead of Playwright's Chromium.
+ *
+ * Not made here: public/brand/coach.webp and coach-face.webp, Q the coach who guides the app
+ * tour. They come from design/coach-poster.png: the character cut out of the poster (rembg,
+ * u2net_human_seg model) is design/coach-cutout.png, scaled to 480 px wide; the face icon is
+ * a square crop of it on black, 128 px.
  */
 const fs = require('fs');
 const http = require('http');
@@ -48,7 +54,8 @@ async function main() {
     const page = await browser.newPage();
     await page.goto(`http://127.0.0.1:${port}/`);
     await page.waitForFunction(() => document.getElementById('src').complete);
-    for (const out of OUTPUTS) {
+    const only = process.argv[2];
+    for (const out of OUTPUTS.filter((o) => !only || o.file.includes(only))) {
       const dataUrl = await page.evaluate(({ size, crop, pad = 0, mime }) => {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = size;

@@ -160,3 +160,39 @@ test('exercise library changes are audited with the acting admin', () =>
     assert.equal(rows[1].details.before.name, 'Test Audit Press');
     assert.equal(rows[1].details.after.name, 'Test Audit Press v2');
   }));
+
+test('workout weigh-ins (migration 004): range CHECKs, and the before weight becomes the day\'s body weight only if none was logged', () =>
+  inRollback(async (conn) => {
+    const userId = await createUser(conn);
+    const insert = (daysAgo, before, after) =>
+      conn.query(
+        `INSERT INTO workout_sessions (user_id, session_date, body_part, weight_before, weight_after)
+         VALUES (?, DATE_SUB(CURRENT_DATE, INTERVAL ? DAY), 'Push', ?, ?)`,
+        [userId, daysAgo, before, after]
+      );
+    const dayWeight = async (daysAgo) => {
+      const [[row]] = await conn.query(
+        'SELECT weight FROM body_measurements WHERE user_id = ? AND recorded_on = DATE_SUB(CURRENT_DATE, INTERVAL ? DAY)',
+        [userId, daysAgo]
+      );
+      return row ? Number(row.weight) : null;
+    };
+
+    await assert.rejects(insert(0, 20, null), (err) => err.code === 'ER_CHECK_CONSTRAINT_VIOLATED');
+    await assert.rejects(insert(0, 80, 301), (err) => err.code === 'ER_CHECK_CONSTRAINT_VIOLATED');
+
+    // No weight logged that day: the weigh-in fills it in
+    await insert(3, 80.4, 79.8);
+    assert.equal(await dayWeight(3), 80.4);
+    // A weight the member logged themselves wins over a later weigh-in
+    await conn.query('INSERT INTO body_measurements (user_id, recorded_on, weight) VALUES (?, DATE_SUB(CURRENT_DATE, INTERVAL 2 DAY), 81)', [userId]);
+    await insert(2, 82.5, 82);
+    assert.equal(await dayWeight(2), 81);
+    // A day that only had a waist measurement gets the weight added to the same row
+    await conn.query('INSERT INTO body_measurements (user_id, recorded_on, waist) VALUES (?, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), 84)', [userId]);
+    await insert(1, 80.9, null);
+    assert.equal(await dayWeight(1), 80.9);
+    // Skipped weigh-in: nothing is written
+    await insert(5, null, null);
+    assert.equal(await dayWeight(5), null);
+  }));

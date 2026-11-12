@@ -1,0 +1,3 @@
+Exercise illustrations: everkinetic (https://github.com/everkinetic/data, http://www.everkinetic.com),
+commit 446bb9a3d0c3beb6b84f7c9d77dfc8af707a2ab6, licensed under Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0,
+https://creativecommons.org/licenses/by-sa/4.0/). Files are unmodified; the app inverts their colours when displaying them.

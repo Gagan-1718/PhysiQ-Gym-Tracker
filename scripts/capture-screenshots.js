@@ -45,18 +45,35 @@ async function main() {
     await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
     await page.getByRole('link', { name: /Start Pull/ }).click();
     await page.waitForURL('**/train/session');
-    await page.waitForSelector('section[aria-label="Barbell Deadlift"]');
-    const dl = page.locator('section[aria-label="Barbell Deadlift"]');
-    await dl.getByRole('button', { name: 'Complete set W' }).click();
-    await dl.getByRole('button', { name: 'Complete set 1' }).click();
-    await page.getByRole('button', { name: 'Skip' }).click();
-    // 135 x 9 beats the 173.33 kg e1RM record, so the PR badge shows
-    await dl.getByLabel('set 2 weight', { exact: true }).fill('135');
-    await dl.getByLabel('set 2 weight', { exact: true }).blur();
-    await dl.getByLabel('set 2 reps', { exact: true }).fill('9');
-    await dl.getByLabel('set 2 reps', { exact: true }).blur();
-    await dl.getByRole('button', { name: 'Complete set 2' }).click();
+    await page.getByRole('button', { name: 'Start workout', exact: true }).waitFor();
+    await shot(page, '13-workout-plan');
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await page.getByRole('button', { name: 'Continue' }).waitFor();
+    await shot(page, '18-weigh-in');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('heading', { name: 'Barbell Deadlift' }).waitFor();
+    const field = (label) => page.getByLabel(label, { exact: true });
+    // Each set: choose its weight, Start, then Done on the full-screen exercise
+    const doSet = async (start) => {
+      await page.getByRole('button', { name: start, exact: true }).click();
+      await page.getByRole('button', { name: 'Done' }).click();
+      await page.getByRole('button', { name: 'Skip' }).click();
+    };
+    await doSet('Start warm-up');
+    await doSet('Start set 1');
+    // 135 kg for the planned 10 reps beats the 173.33 kg e1RM record, so the PR toast shows; the rest timer runs
+    await field('set 2 weight').fill('135');
+    await field('set 2 weight').blur();
     await shot(page, '04-logger');
+    await page.getByRole('button', { name: 'Start set 2', exact: true }).click();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await shot(page, '16-workout-rest');
+    // The exercise full screen: the bicep curl has a demonstration video
+    await page.getByRole('button', { name: /^Exercise 4: / }).click();
+    await page.getByRole('button', { name: 'Start set 1', exact: true }).click();
+    await page.locator('video').evaluate((v) => new Promise((r) => (v.readyState >= 3 ? r() : v.addEventListener('canplay', () => r(), { once: true }))));
+    await shot(page, '17-workout-set');
+    await page.getByRole('button', { name: 'Change the weight' }).click();
     await page.getByRole('button', { name: 'Discard workout' }).click();
     await page.getByRole('button', { name: 'Discard', exact: true }).click();
 
@@ -64,9 +81,10 @@ async function main() {
     await shot(page, '05-progress-overview');
     await page.getByRole('radio', { name: 'Strength' }).click();
     await shot(page, '06-progress-strength');
-    await page.waitForSelector('ul[aria-label="Estimated weight for each rep count"]');
-    await scrollToTop(page, page.getByText('1RM calculator', { exact: true }));
-    await shot(page, '13-one-rep-max');
+    // Body: the weight line and the before / after weigh-in of each workout
+    await page.getByRole('radio', { name: 'Body' }).click();
+    await scrollToTop(page, page.getByRole('heading', { name: 'Workout weigh-ins' }));
+    await shot(page, '20-progress-weigh-ins');
     await page.getByRole('radio', { name: 'Journey' }).click();
     await page.waitForSelector('article');
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -82,15 +100,17 @@ async function main() {
     await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
     await shot(page, '09-profile');
 
+    // The first-login app tour, replayed from Profile: Q on the "next workout" card
+    await page.goto(`${BASE}/?tour=1`, { waitUntil: 'networkidle' });
+    const tour = page.getByRole('dialog', { name: /App tour with Q/ });
+    await tour.getByRole('button', { name: 'Hi Q!' }).click();
+    await tour.getByRole('button', { name: 'Smart' }).waitFor();
+    await page.waitForTimeout(600);
+    await shot(page, '19-app-tour');
+    await page.keyboard.press('Escape');
+
     await page.goto(`${BASE}/fuel`, { waitUntil: 'networkidle' });
     await shot(page, '15-fuel');
-    const builder = page.getByRole('button', { name: /Build a plate/ });
-    await builder.click();
-    await page.getByRole('button', { name: 'Chicken Breast (Grilled)', exact: true }).click();
-    await page.getByRole('button', { name: 'Jasmine White Rice (Cooked)', exact: true }).click();
-    await page.getByLabel('How Chicken Breast (Grilled) was cooked').selectOption('pan');
-    await scrollToTop(page, page.getByRole('listitem').filter({ hasText: '1 serving = 150 g cooked' }));
-    await shot(page, '16-fuel-plate');
 
     // ---- admin
     page = await newPage(browser);

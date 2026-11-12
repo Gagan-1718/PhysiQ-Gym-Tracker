@@ -137,6 +137,13 @@ export default function WorkoutDetailPage() {
             ))}
           </div>
 
+          {(data.session.weight_before != null || data.session.weight_after != null) && (
+            <p className="tabular mt-2 rounded-2xl bg-surface-1 px-3.5 py-3 text-[15px]">
+              <span className="text-fg-3">Body weight </span>
+              {kg(data.session.weight_before)} → {kg(data.session.weight_after)} kg
+            </p>
+          )}
+
           {data.journal && (
             <Card className="mt-4">
               <p className="text-eyebrow uppercase text-fg-3">Journal</p>

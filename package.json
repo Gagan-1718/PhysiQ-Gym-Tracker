@@ -23,7 +23,8 @@
     "docs:contributions": "node scripts/generate-contributions.js",
     "test:e2e": "node scripts/run-tests.js tests/e2e",
     "brand:assets": "node scripts/generate-brand-assets.js",
-    "docs:screenshots": "node scripts/capture-screenshots.js"
+    "docs:screenshots": "node scripts/capture-screenshots.js",
+    "media:exercises": "node scripts/fetch-exercise-media.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

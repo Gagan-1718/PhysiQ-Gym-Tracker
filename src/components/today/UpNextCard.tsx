@@ -23,6 +23,7 @@ export function UpNextCard({ rec, days }: { rec: Recommendation; days: SplitDayS
     <section
       className="relative overflow-hidden rounded-[1.75rem] border border-line bg-surface-1 p-5 sm:p-6"
       aria-labelledby="up-next-title"
+      data-tour="up-next"
     >
       <div
         aria-hidden

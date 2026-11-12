@@ -1,9 +1,12 @@
 -- =============================================================================
--- PhysiQ Relational Schema (MySQL 8.0+)
--- 12 tables, normalised to 3NF (personal_records is in BCNF).
+-- PhysiQ Relational Schema (MySQL 8.0+): the base design, 12 tables,
+-- normalised to 3NF (personal_records is in BCNF).
+-- migrations/001_nutrition_tracking.sql then adds 3 tables and ALTERs
+-- user_daily_fuel, giving the 15 tables the app uses.
 --
 -- Run order (scripts/init-db.js does this for you):
---   schema.sql -> procedures.sql -> triggers.sql -> views.sql -> indexes.sql -> seeds/*
+--   schema.sql -> migrations/*.sql -> procedures.sql -> triggers.sql -> views.sql
+--   -> indexes.sql -> roles.sql -> seeds/*
 --
 -- Two columns are deliberate, trigger-maintained caches of derivable values:
 --   split_days.last_trained_date   = MAX(workout_sessions.session_date) for that day
@@ -196,6 +199,8 @@ CREATE TABLE IF NOT EXISTS body_measurements (
 --     Targets are a snapshot computed when the day's row is created (from the
 --     body weight and goal at that date), so past days keep the targets that
 --     were actually in force. Created by sp_get_daily_fuel.
+--     This is version 1 (protein and water). migrations/001_nutrition_tracking.sql
+--     extends it with ALTER TABLE: calorie and macro targets and totals.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS user_daily_fuel (
     user_id          INT NOT NULL,
@@ -203,20 +208,12 @@ CREATE TABLE IF NOT EXISTS user_daily_fuel (
     protein_target_g SMALLINT UNSIGNED NOT NULL,
     water_target_ml  SMALLINT UNSIGNED NOT NULL,
     calorie_target   SMALLINT UNSIGNED NOT NULL,
-    carbs_target_g   SMALLINT UNSIGNED NOT NULL DEFAULT 250,
-    fat_target_g     SMALLINT UNSIGNED NOT NULL DEFAULT 70,
     protein_logged_g SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     water_logged_ml  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-    calories_logged  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-    carbs_logged_g   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-    fat_logged_g     SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, fuel_date),
     CONSTRAINT chk_fuel_protein CHECK (protein_logged_g <= 1000),
     CONSTRAINT chk_fuel_water CHECK (water_logged_ml <= 15000),
-    CONSTRAINT chk_fuel_calories CHECK (calories_logged <= 15000),
-    CONSTRAINT chk_fuel_carbs CHECK (carbs_logged_g <= 2000),
-    CONSTRAINT chk_fuel_fat CHECK (fat_logged_g <= 1000),
     CONSTRAINT fk_fuel_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -234,66 +231,4 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
     details      JSON NULL,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_audit_admin FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB;
-
--- -----------------------------------------------------------------------------
--- 13. foods — master food library (user_id NULL = built-in staple food) plus
---     member-created custom foods (user_id = owner, cascaded on account delete)
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS foods (
-    id            INT AUTO_INCREMENT PRIMARY KEY,
-    user_id       INT NULL COMMENT 'NULL = system staple food; otherwise custom food owned by user',
-    name          VARCHAR(100) NOT NULL,
-    category      ENUM('protein', 'grains_carbs', 'dairy_eggs', 'fruits_veg', 'fats_nuts', 'drinks_supps', 'meals') NOT NULL DEFAULT 'meals',
-    serving_label VARCHAR(50) NOT NULL DEFAULT '100 g',
-    serving_grams SMALLINT UNSIGNED NOT NULL DEFAULT 100,
-    calories      SMALLINT UNSIGNED NOT NULL,
-    protein_g     DECIMAL(5,1) NOT NULL DEFAULT 0.0,
-    carbs_g       DECIMAL(5,1) NOT NULL DEFAULT 0.0,
-    fat_g         DECIMAL(5,1) NOT NULL DEFAULT 0.0,
-    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_foods_serving_grams CHECK (serving_grams BETWEEN 1 AND 5000),
-    CONSTRAINT chk_foods_calories CHECK (calories <= 5000),
-    CONSTRAINT chk_foods_macros CHECK (protein_g >= 0 AND protein_g <= 500 AND carbs_g >= 0 AND carbs_g <= 1000 AND fat_g >= 0 AND fat_g <= 500),
-    CONSTRAINT fk_foods_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- -----------------------------------------------------------------------------
--- 14. meal_logs — individual meal entries per user and day (breakfast, lunch,
---     dinner, snack). Macros are snapshotted at log time so editing/deleting a
---     custom food never rewrites historical logs.
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS meal_logs (
-    id            INT AUTO_INCREMENT PRIMARY KEY,
-    user_id       INT NOT NULL,
-    fuel_date     DATE NOT NULL,
-    meal_type     ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL DEFAULT 'snack',
-    food_id       INT NULL,
-    food_name     VARCHAR(100) NOT NULL,
-    serving_label VARCHAR(50) NOT NULL DEFAULT '1 serving',
-    servings      DECIMAL(4,2) NOT NULL DEFAULT 1.00,
-    calories      SMALLINT UNSIGNED NOT NULL,
-    protein_g     DECIMAL(5,1) NOT NULL DEFAULT 0.0,
-    carbs_g       DECIMAL(5,1) NOT NULL DEFAULT 0.0,
-    fat_g         DECIMAL(5,1) NOT NULL DEFAULT 0.0,
-    logged_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_meal_servings CHECK (servings > 0 AND servings <= 20),
-    CONSTRAINT chk_meal_calories CHECK (calories <= 5000),
-    CONSTRAINT chk_meal_macros CHECK (protein_g >= 0 AND protein_g <= 500 AND carbs_g >= 0 AND carbs_g <= 1000 AND fat_g >= 0 AND fat_g <= 500),
-    CONSTRAINT fk_meal_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_meal_food FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE SET NULL
-) ENGINE=InnoDB;
-
--- -----------------------------------------------------------------------------
--- 15. water_logs — timestamped hydration entries (glass, bottle, shaker, custom)
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS water_logs (
-    id              INT AUTO_INCREMENT PRIMARY KEY,
-    user_id         INT NOT NULL,
-    fuel_date       DATE NOT NULL,
-    amount_ml       SMALLINT UNSIGNED NOT NULL,
-    container_label VARCHAR(40) NOT NULL DEFAULT 'Glass',
-    logged_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_water_amount CHECK (amount_ml BETWEEN 50 AND 5000),
-    CONSTRAINT fk_water_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

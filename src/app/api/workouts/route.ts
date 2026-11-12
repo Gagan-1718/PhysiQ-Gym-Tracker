@@ -19,6 +19,9 @@ const WorkoutSchema = z.object({
   startedAt: z.string().regex(DATETIME).nullable(),
   endedAt: z.string().regex(DATETIME).nullable(),
   notes: z.string().trim().max(500).nullable().optional(),
+  /** Body weight before and after the workout (migration 004); either can be skipped */
+  weightBefore: z.number().min(30).max(300).nullable().optional(),
+  weightAfter: z.number().min(30).max(300).nullable().optional(),
   routineId: z.string().regex(/^[a-f0-9]{24}$/).nullable().optional(),
   exercises: z
     .array(
@@ -51,7 +54,7 @@ const WorkoutSchema = z.object({
 });
 
 // POST /api/workouts — log a finished workout as ONE transaction:
-//   INSERT workout_sessions  (trigger: validate, mark split day trained)
+//   INSERT workout_sessions  (triggers: validate, mark split day trained, weigh-in -> body weight)
 //   INSERT sets              (triggers: add volume, detect PRs)
 //   COMMIT                   (any failure -> ROLLBACK, nothing half-saved)
 // Then (outside the SQL transaction) the optional journal goes to MongoDB.
@@ -64,9 +67,9 @@ export const POST = route(async (req) => {
   try {
     sessionId = await withTransaction(async (conn) => {
       const session = await execute(
-        `INSERT INTO workout_sessions (user_id, split_day_id, session_date, body_part, started_at, ended_at, notes, client_ref)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [me.id, w.splitDayId, w.sessionDate, w.bodyPart, w.startedAt, w.endedAt, w.notes || null, w.clientRef],
+        `INSERT INTO workout_sessions (user_id, split_day_id, session_date, body_part, started_at, ended_at, weight_before, weight_after, notes, client_ref)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [me.id, w.splitDayId, w.sessionDate, w.bodyPart, w.startedAt, w.endedAt, w.weightBefore ?? null, w.weightAfter ?? null, w.notes || null, w.clientRef],
         conn
       );
       const rows = w.exercises.flatMap((ex) =>

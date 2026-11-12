@@ -56,6 +56,30 @@ BEGIN
 END$$
 
 -- -----------------------------------------------------------------------------
+-- fn_starting_weight — a first-timer's opening working weight for an exercise:
+-- body weight x exercises.start_bw_ratio (migration 003), rounded to the nearest
+-- 2.5 kg plate step and never below 2.5 kg. 0 for bodyweight moves (no ratio);
+-- NULL when the member's body weight is unknown.
+-- -----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS fn_starting_weight$$
+CREATE FUNCTION fn_starting_weight(p_user_id INT, p_exercise_id INT)
+RETURNS DECIMAL(6,2)
+READS SQL DATA
+BEGIN
+    DECLARE v_ratio DECIMAL(4,3);
+    DECLARE v_body DECIMAL(5,2);
+    SET v_ratio = (SELECT e.start_bw_ratio FROM exercises e WHERE e.id = p_exercise_id);
+    IF v_ratio IS NULL THEN
+        RETURN 0.00;
+    END IF;
+    SET v_body = fn_current_weight(p_user_id, CURRENT_DATE);
+    IF v_body IS NULL THEN
+        RETURN NULL;
+    END IF;
+    RETURN GREATEST(2.50, ROUND(v_body * v_ratio / 2.5) * 2.5);
+END$$
+
+-- -----------------------------------------------------------------------------
 -- Daily fuel formulas (replace the PLAN's single fn_get_daily_fuel_targets,
 -- because a MySQL function can only return one value)
 --   protein  = 2.0 g per kg body weight
@@ -309,8 +333,14 @@ BEGIN
     );
 
     IF v_last_session_id IS NULL THEN
+        -- First time: open with a weight scaled to body weight (fn_starting_weight)
+        SET p_suggested_weight = fn_starting_weight(p_user_id, p_exercise_id);
         SET p_suggested_reps = 10;
-        SET p_rationale = 'First time: pick a weight you can lift for 10 clean reps.';
+        SET p_rationale = CASE
+            WHEN p_suggested_weight IS NULL THEN 'First time: pick a weight you can lift for 10 clean reps.'
+            WHEN p_suggested_weight = 0 THEN 'First time: bodyweight, aim for 10 clean reps.'
+            ELSE 'First time: a starting weight for your body weight. Slide it if it feels off.'
+        END;
     ELSE
         SELECT s.weight, s.reps
         INTO p_last_weight, p_last_reps

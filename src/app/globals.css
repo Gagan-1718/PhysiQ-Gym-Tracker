@@ -85,3 +85,32 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Exercise demonstration: the end-position frame fades in and out over the
+   start-position frame, so the two photos play like a short loop (ExerciseMedia). */
+@keyframes exercise-frames {
+  0%, 38% { opacity: 0; }
+  50%, 88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.exercise-frame {
+  animation: exercise-frames 2.4s ease-in-out infinite;
+}
+
+/* Exercise videos on wide screens: the clip's side edges melt into the black stage
+   (a utility, so it can be used as md:video-fade-x). */
+@layer utilities {
+  .video-fade-x {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
+  }
+}
+
+/* Body map: the exercise's main muscles breathe so the eye finds them (BodyMap). */
+@keyframes muscle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.muscle-pulse {
+  animation: muscle-pulse 1.8s ease-in-out infinite;
+}

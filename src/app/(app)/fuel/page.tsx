@@ -6,19 +6,14 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { SectionHeader } from '@/components/ui/Card';
 import { ErrorNote, Skeleton } from '@/components/ui/Feedback';
-import { Segmented } from '@/components/ui/Segmented';
 import { useToast } from '@/components/ui/Toast';
 import { MacroSummaryCard } from '@/components/fuel/MacroSummaryCard';
 import { MealSectionList } from '@/components/fuel/MealSectionList';
 import { WaterTrackerCard } from '@/components/fuel/WaterTrackerCard';
 import { AddMealSheet } from '@/components/fuel/AddMealSheet';
-import { SemanticMealRecommender } from '@/components/fuel/SemanticMealRecommender';
-import { PrepMethodMealBuilder } from '@/components/fuel/PrepMethodMealBuilder';
 import { send } from '@/lib/client';
 import { localDateISO, parseLocalDate, relativeDay, shortDate } from '@/lib/format';
 import type { MealType, NutritionResponse } from '@/types/database';
-
-type FuelTab = 'all' | 'food' | 'water';
 
 function shiftDate(iso: string, deltaDays: number): string {
   const d = parseLocalDate(iso);
@@ -30,7 +25,6 @@ export default function FuelPage() {
   const toast = useToast();
   const today = useMemo(() => localDateISO(), []);
   const [date, setDate] = useState(today);
-  const [tab, setTab] = useState<FuelTab>('all');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMealType, setSheetMealType] = useState<MealType>('breakfast');
   const [busy, setBusy] = useState(false);
@@ -53,18 +47,6 @@ export default function FuelPage() {
     });
     await mutate();
     toast('Meal logged');
-  };
-
-  // Suggestions log with one tap, so they report their own errors here
-  const handleQuickLogSuggestion = async (foodId: number, mealType: MealType) => {
-    setBusy(true);
-    try {
-      await handleLogLibraryFood(foodId, 1, mealType);
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not log the meal', 'error');
-    } finally {
-      setBusy(false);
-    }
   };
 
   const handleLogQuickMeal = async (payload: {
@@ -168,18 +150,6 @@ export default function FuelPage() {
         </div>
       </header>
 
-      <Segmented<FuelTab>
-        label="Fuel view"
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: 'all', label: 'All' },
-          { value: 'food', label: 'Food & Macros' },
-          { value: 'water', label: 'Hydration' },
-        ]}
-        className="mb-5"
-      />
-
       {error && <ErrorNote message={error.message} onRetry={() => mutate()} />}
 
       {!data ? (
@@ -189,47 +159,26 @@ export default function FuelPage() {
         </div>
       ) : (
         <>
-          {(tab === 'all' || tab === 'food') && (
-            <>
-              <MacroSummaryCard fuel={data.fuel} />
+          <MacroSummaryCard fuel={data.fuel} />
 
-              <SectionHeader
-                title="Meals"
-                action={
-                  <Button size="sm" onClick={() => openMealSheet('snack')}>
-                    <Plus className="h-4 w-4" /> Log Food
-                  </Button>
-                }
-              />
-              <MealSectionList
-                meals={data.meals}
-                busy={busy}
-                onOpenAdd={openMealSheet}
-                onDeleteMeal={handleDeleteMeal}
-              />
+          <SectionHeader
+            title="Meals"
+            action={
+              <Button size="sm" onClick={() => openMealSheet('snack')}>
+                <Plus className="h-4 w-4" /> Log Food
+              </Button>
+            }
+          />
+          <MealSectionList meals={data.meals} busy={busy} onOpenAdd={openMealSheet} onDeleteMeal={handleDeleteMeal} />
 
-              <div className="mt-4">
-                <PrepMethodMealBuilder onLogMeal={handleLogQuickMeal} />
-              </div>
-
-              <SectionHeader title="Meal ideas" />
-              <SemanticMealRecommender busy={busy} onQuickLogFood={handleQuickLogSuggestion} />
-            </>
-          )}
-
-          {(tab === 'all' || tab === 'water') && (
-            <>
-              <SectionHeader title="Hydration" />
-              <WaterTrackerCard
-                fuel={data.fuel}
-                waterLogs={data.waterLogs}
-                history={data.history}
-                busy={busy}
-                onAddWater={handleAddWater}
-                onDeleteWater={handleDeleteWater}
-              />
-            </>
-          )}
+          <SectionHeader title="Water" />
+          <WaterTrackerCard
+            fuel={data.fuel}
+            waterLogs={data.waterLogs}
+            busy={busy}
+            onAddWater={handleAddWater}
+            onDeleteWater={handleDeleteWater}
+          />
         </>
       )}
 

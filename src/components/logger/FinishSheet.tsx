@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Scale } from 'lucide-react';
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Pill';
-import { clock, cn, compact } from '@/lib/format';
+import { clock, cn, compact, kg } from '@/lib/format';
 import { MOODS } from '@/lib/mood';
 
 export interface JournalInput {
@@ -27,9 +27,11 @@ interface FinishSheetProps {
   untickedSets: number;
   defaultRoutineName: string;
   fromRoutine: boolean;
+  /** Body weight before / after (null = skipped) and a way to change the after weight */
+  weighIn?: { before: number | null; after: number | null; onChange: () => void };
 }
 
-export function FinishSheet({ open, onClose, onSave, elapsed, doneSets, volume, untickedSets, defaultRoutineName, fromRoutine }: FinishSheetProps) {
+export function FinishSheet({ open, onClose, onSave, elapsed, doneSets, volume, untickedSets, defaultRoutineName, fromRoutine, weighIn }: FinishSheetProps) {
   const [mood, setMood] = useState<number | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [caption, setCaption] = useState('');
@@ -71,6 +73,26 @@ export function FinishSheet({ open, onClose, onSave, elapsed, doneSets, volume, 
           </div>
         ))}
       </div>
+
+      {weighIn && (
+        <div className="mt-2 flex items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2.5">
+          <Scale className="h-4 w-4 shrink-0 text-water" />
+          <p className="tabular min-w-0 flex-1 text-[15px]">
+            <span className="text-fg-3">Body weight </span>
+            {weighIn.before === null ? '–' : kg(weighIn.before)} → {weighIn.after === null ? '–' : kg(weighIn.after)} kg
+            {weighIn.before !== null && weighIn.after !== null && (
+              <span className="text-fg-3">
+                {' '}
+                ({weighIn.after - weighIn.before > 0 ? '+' : weighIn.after - weighIn.before < 0 ? '−' : '±'}
+                {kg(Math.abs(Math.round((weighIn.after - weighIn.before) * 10) / 10))})
+              </span>
+            )}
+          </p>
+          <button type="button" onClick={weighIn.onChange} className="press shrink-0 rounded-full px-2 py-1 text-footnote font-semibold text-accent">
+            Change
+          </button>
+        </div>
+      )}
 
       {doneSets === 0 && (
         <p className="mt-4 flex items-center gap-2 rounded-2xl bg-train/10 p-3 text-[15px] text-train">

@@ -11,7 +11,6 @@ import { useToast } from '@/components/ui/Toast';
 import { LogoMark } from '@/components/shell/Logo';
 import { send } from '@/lib/client';
 import { cn, localDateISO } from '@/lib/format';
-import { blendGoals } from '@/lib/goals';
 import { SPLIT_TEMPLATES } from '@/lib/split-templates';
 import { GOALS, type Goal } from '@/types/database';
 
@@ -23,7 +22,7 @@ export default function OnboardingPage() {
   const { data: session } = useSession();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
-  const [goals, setGoals] = useState<Goal[]>(['hypertrophy']);
+  const [goal, setGoal] = useState<Goal>('hypertrophy');
   const [height, setHeight] = useState<number | null>(175);
   const [weight, setWeight] = useState<number | null>(72);
   const [templateId, setTemplateId] = useState('ppl');
@@ -34,27 +33,12 @@ export default function OnboardingPage() {
     setStep((s) => Math.min(STEPS.length - 1, Math.max(0, s + delta)));
   };
 
-  const toggleGoal = (val: Goal) => {
-    if (val === 'maintenance') {
-      setGoals(['maintenance']);
-      return;
-    }
-    setGoals((prev) => {
-      const withoutMaint = prev.filter((g) => g !== 'maintenance');
-      if (withoutMaint.includes(val)) {
-        if (withoutMaint.length === 1) return withoutMaint; // keep at least one
-        return withoutMaint.filter((g) => g !== val);
-      }
-      return [...withoutMaint, val];
-    });
-  };
-
   async function finish() {
     const template = SPLIT_TEMPLATES.find((t) => t.id === templateId)!;
     setSaving(true);
 
     try {
-      await send('/api/me', 'PATCH', { goal: goalPlan.goal, height, starting_weight: weight });
+      await send('/api/me', 'PATCH', { goal, height, starting_weight: weight });
       if (weight) {
         // The first body-weight entry, so Progress → Body has a starting point
         await send('/api/body', 'POST', { date: localDateISO(), weight }).catch(() => {});
@@ -70,7 +54,6 @@ export default function OnboardingPage() {
 
   const firstName = session?.user?.name?.split(' ')[0];
 
-  const goalPlan = blendGoals(goals);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pt-safe">
@@ -103,56 +86,30 @@ export default function OnboardingPage() {
             {STEPS[step] === 'goal' && (
               <>
                 <h1 className="text-large-title">{firstName ? `Hi ${firstName}.` : 'Welcome.'} What’s the goal?</h1>
-                <p className="mb-4 mt-2 text-[17px] text-fg-2">
-                  Pick one or more. This sets your daily calories, and you can change it anytime in Profile.
-                </p>
-
-                <div className="grid gap-3" role="group" aria-label="Fitness goals">
-                  {GOALS.map((g) => {
-                    const isSelected = goals.includes(g.value);
-                    return (
-                      <button
-                        key={g.value}
-                        type="button"
-                        role="checkbox"
-                        aria-checked={isSelected}
-                        onClick={() => toggleGoal(g.value)}
-                        className={cn(
-                          'press flex items-center justify-between rounded-2xl border p-4 text-left transition-colors',
-                          isSelected ? 'border-accent bg-accent/10' : 'border-line bg-surface-1 hover:bg-surface-2'
-                        )}
-                      >
-                        <span>
-                          <span className="block text-headline">{g.label}</span>
-                          <span className="text-[15px] text-fg-2">{g.blurb}</span>
-                        </span>
-                        <span
-                          className={cn(
-                            'flex h-6 w-6 items-center justify-center rounded-lg transition-colors',
-                            isSelected ? 'bg-accent-solid text-white' : 'border border-surface-4'
-                          )}
-                        >
-                          {isSelected && <Check className="h-4 w-4" strokeWidth={3} />}
-                        </span>
-                      </button>
-                    );
-                  })}
+                <p className="mb-6 mt-2 text-[17px] text-fg-2">This sets your daily calories. You can change it anytime.</p>
+                <div className="grid gap-3" role="radiogroup" aria-label="Goal">
+                  {GOALS.map((g) => (
+                    <button
+                      key={g.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={goal === g.value}
+                      onClick={() => setGoal(g.value)}
+                      className={cn(
+                        'press flex items-center justify-between rounded-2xl border p-4 text-left transition-colors',
+                        goal === g.value ? 'border-accent bg-accent/10' : 'border-line bg-surface-1 hover:bg-surface-2'
+                      )}
+                    >
+                      <span>
+                        <span className="block text-headline">{g.label}</span>
+                        <span className="text-[15px] text-fg-2">{g.blurb}</span>
+                      </span>
+                      <span className={cn('flex h-6 w-6 items-center justify-center rounded-full', goal === g.value ? 'bg-accent-solid text-white' : 'border border-surface-4')}>
+                        {goal === g.value && <Check className="h-4 w-4" strokeWidth={3} />}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-
-                {goals.length > 1 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 rounded-2xl border border-accent/40 bg-accent/10 p-4"
-                    aria-live="polite"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-headline">{goalPlan.title}</p>
-                      <span className="rounded-full bg-accent-solid px-2.5 py-0.5 text-xs font-semibold text-white">{goalPlan.calories}</span>
-                    </div>
-                    <p className="mt-1 text-[15px] text-fg-2">{goalPlan.blurb}</p>
-                  </motion.div>
-                )}
               </>
             )}
 

@@ -63,6 +63,8 @@ erDiagram
     foods |o--o{ meal_logs : "logged as"
     users ||--o{ meal_logs : eats
     users ||--o{ water_logs : drinks
+    muscle_groups ||--o{ muscle_regions : contains
+    exercises }o--o{ muscle_regions : "works (exercise_muscles, role)"
 ```
 
 | Relationship | Cardinality | Delete rule |
@@ -76,6 +78,8 @@ erDiagram
 | users → foods | 1:N (built-in foods have `user_id` NULL) | CASCADE |
 | users → meal_logs, water_logs | 1:N | CASCADE |
 | foods → meal_logs | 1:N (optional) | SET NULL (the log keeps its own copy of name and macros) |
+| muscle_groups → muscle_regions | 1:N (a group such as Shoulders has front, side and rear delts) | RESTRICT |
+| exercises ↔ muscle_regions | M:N via `exercise_muscles`, with a `role` (primary / secondary) | CASCADE / RESTRICT |
 
 ---
 
@@ -110,6 +114,9 @@ The table has two candidate keys, `(user_id, exercise_id)` and `set_id`. Every
 functional dependency has a superkey on its left-hand side:
 `(user_id, exercise_id) → set_id` and `set_id → (user_id, exercise_id)`.
 So the table is in BCNF.
+
+`muscle_regions` (keys `code` and `label`) and `exercise_muscles` (key `(exercise_id, region_code)`,
+whose only dependency is `→ role`) are in BCNF for the same reason.
 
 ### Controlled denormalisation (documented exceptions)
 
@@ -165,16 +172,17 @@ what was eaten on an earlier day.
 | Routine | Purpose |
 |---|---|
 | `sp_get_next_body_part` | adaptive scheduling: highest-priority day of the active split (OUT params) |
-| `sp_estimate_next_target` | double progression: 10+ reps → +2.5 kg at 8; otherwise +1 rep |
+| `sp_estimate_next_target` | double progression: 10+ reps → +2.5 kg at 8; otherwise +1 rep. First time: `fn_starting_weight` × 10 reps |
 | `sp_check_and_update_pr` / `sp_rebuild_personal_records` | PR maintenance (the rebuild uses `ROW_NUMBER()`) |
 | `sp_get_daily_fuel` / `sp_log_fuel` / `sp_ensure_daily_fuel` | daily calorie, macro and water targets and progress |
 | `sp_log_meal` / `sp_delete_meal` | log a meal from the food library (macros × servings) or as a custom entry; delete only the caller's own |
 | `sp_log_water` / `sp_delete_water` | log or remove a drink |
 | `sp_assert_valid_session`, `sp_refresh_last_trained` | helpers used by the triggers |
-| `sp_rep_max_table(weight, reps)` | the 1RM calculator: estimated one-rep max plus the weight for 1–12 reps, built with a **recursive CTE** over `fn_calculate_1rm`; `SIGNAL`s on invalid input |
+| `sp_rep_max_table(weight, reps)` | rep-max table (`GET /api/calc/one-rep-max`): estimated one-rep max plus the weight for 1–12 reps, built with a **recursive CTE** over `fn_calculate_1rm`; `SIGNAL`s on invalid input |
 | `sp_schema_stats` | table, view, trigger and routine counts for `/api/health`; `SQL SECURITY DEFINER` so the least-privilege app account can read `information_schema` through it without being granted more |
 | `fn_calculate_1rm` | Epley: `w × (1 + reps/30)` |
 | `fn_current_weight` | latest weigh-in on or before a date, else starting weight |
+| `fn_starting_weight(user, exercise)` | a first-timer's weight: body weight × `exercises.start_bw_ratio`, rounded to 2.5 kg (at least 2.5); 0 for bodyweight exercises, NULL if the body weight is unknown |
 | `fn_protein_target_g`, `fn_water_target_ml`, `fn_calorie_target` | 2 g/kg, 40 ml/kg, ~33 kcal/kg ± goal |
 | `fn_fat_target_g`, `fn_carbs_target_g` | 0.9 g fat/kg; carbs fill the calories left after protein and fat |
 
@@ -266,6 +274,9 @@ account can see (`ER_NO_REFERENCED_ROW`, `ER_ROW_IS_REFERENCED`) to clean 400 / 
 
 | `vector_embeddings` | `domain` enum (`exercise` / `food`), `entity_id` (the MySQL id), optional `user_id` for custom foods, `dimensions`, `embedding` array, `semantic_text`, `metadata` | unique `(domain, entity_id)`, `(domain, user_id)` |
 
+All MongoDB queries (CRUD, indexes and plans, text search, aggregation, vector search) are in
+[`database/mongodb/queries.mongodb.js`](../database/mongodb/queries.mongodb.js).
+
 Validators are applied with `validationLevel: strict` and
 `validationAction: error`, and `npm run test:db` checks them.
 
@@ -284,7 +295,7 @@ Validators are applied with `validationLevel: strict` and
 
 Every exercise and food has a 32-dimension vector built from its name, muscle group or
 category, and description (`src/lib/embedding-engine.js`). Train → smart search and
-Fuel → meal ideas embed the typed text the same way and rank items with **cosine
+Fuel → Log food embed the typed text the same way and rank items with **cosine
 similarity computed inside an aggregation pipeline** (`$reduce` for the dot product
 and norms, then `$sort` and `$limit`), filtered by `domain` and by the member's own
 custom foods. New exercises and custom foods get their vector when they are created.
@@ -311,18 +322,21 @@ the angle, and the **body weight in force on that date, read from MySQL with
 
 | File | Contents |
 |---|---|
-| `database/schema.sql` | 15 tables |
-| `database/procedures.sql` | 15 procedures and 7 functions (loaded before triggers) |
+| `database/schema.sql` | the base design: 12 tables |
+| `database/migrations/001_nutrition_tracking.sql` | `ALTER TABLE user_daily_fuel` (calorie and macro columns, CHECKs) and the 3 nutrition tables, giving 15 |
+| `database/migrations/002_exercise_media.sql` | `ALTER TABLE exercises` adds `media_key` (the exercise's demonstration drawings in `public/exercises/`) with a `REGEXP_LIKE` CHECK |
+| `database/migrations/003_exercise_knowledge.sql` | `ALTER TABLE exercises` adds `weight_step_kg` (+0 / 2.5 / 5 / 10 kg between sets) and `start_bw_ratio` with CHECKs; creates `muscle_regions` and `exercise_muscles` (the red body map), giving 17 |
+| `database/procedures.sql` | 15 procedures and 8 functions (loaded before triggers) |
 | `database/triggers.sql` | 15 triggers |
 | `database/views.sql` | 7 views |
 | `database/indexes.sql` | composite indexes |
 | `database/roles.sql` | MySQL 8 roles `physiq_app` and `physiq_readonly` (least privilege) |
 | `database/seeds/` | exercise library, demo data (generated by `scripts/generate-demo-data.js`) |
-| `database/mongodb/` | JSON-schema validators for the 3 collections, `viva_demo.js` |
+| `database/mongodb/` | JSON-schema validators for the 3 collections, `queries.mongodb.js` (every MongoDB query, runnable in `mongosh` / Compass), `viva_demo.js` |
 | `database/queries/` | analytical suite, EXPLAIN benchmark |
 
 ```bash
 npm run db:init     # first-time build of MySQL + MongoDB (refuses if physiq_db exists)
 npm run db:reset    # DROP and rebuild (destroys data)
-npm run test:db     # 48 tests, each inside a rolled-back transaction
+npm run test:db     # 50 tests, each inside a rolled-back transaction
 ```

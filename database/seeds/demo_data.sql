@@ -7,9 +7,10 @@
 USE physiq_db;
 
 -- Demo accounts
-INSERT INTO users (name, email, password_hash, role, goal, height, starting_weight) VALUES
-('PhysiQ Admin', 'admin@physiq.test', '$2a$10$tvEaJlUNMX8eOuW5rgrRRuMZUAJLcxRcz3lQoKVgZ3SxVCQYdbQLK', 'admin', 'maintenance', 175.00, 72.00),
-('Alex Mercer', 'alex@physiq.test', '$2a$10$tvEaJlUNMX8eOuW5rgrRRuMZUAJLcxRcz3lQoKVgZ3SxVCQYdbQLK', 'member', 'hypertrophy', 178.00, 76.00);
+-- Both demo accounts have already seen the app tour (Profile -> "Replay the app tour" shows it again)
+INSERT INTO users (name, email, password_hash, role, goal, height, starting_weight, tour_completed_at) VALUES
+('PhysiQ Admin', 'admin@physiq.test', '$2a$10$tvEaJlUNMX8eOuW5rgrRRuMZUAJLcxRcz3lQoKVgZ3SxVCQYdbQLK', 'admin', 'maintenance', 175.00, 72.00, NOW()),
+('Alex Mercer', 'alex@physiq.test', '$2a$10$tvEaJlUNMX8eOuW5rgrRRuMZUAJLcxRcz3lQoKVgZ3SxVCQYdbQLK', 'member', 'hypertrophy', 178.00, 76.00, NOW());
 SET @alex = (SELECT id FROM users WHERE email = 'alex@physiq.test');
 
 -- An older, inactive split (only one split per user may be active)
@@ -44,7 +45,7 @@ SET @ex_triceps_rope_pushdown = (SELECT id FROM exercises WHERE name = 'Triceps 
 SET @ex_barbell_deadlift = (SELECT id FROM exercises WHERE name = 'Barbell Deadlift');
 SET @ex_lat_pulldown = (SELECT id FROM exercises WHERE name = 'Lat Pulldown');
 SET @ex_seated_cable_row = (SELECT id FROM exercises WHERE name = 'Seated Cable Row');
-SET @ex_hammer_curl = (SELECT id FROM exercises WHERE name = 'Hammer Curl');
+SET @ex_dumbbell_bicep_curl = (SELECT id FROM exercises WHERE name = 'Dumbbell Bicep Curl');
 SET @ex_barbell_back_squat = (SELECT id FROM exercises WHERE name = 'Barbell Back Squat');
 SET @ex_romanian_deadlift = (SELECT id FROM exercises WHERE name = 'Romanian Deadlift');
 SET @ex_leg_press = (SELECT id FROM exercises WHERE name = 'Leg Press');
@@ -84,9 +85,9 @@ INSERT INTO sets (session_id, exercise_id, set_number, reps, weight, is_warmup, 
 (@s, @ex_seated_cable_row, 1, 10, 55.00, FALSE, 9.0),
 (@s, @ex_seated_cable_row, 2, 9, 55.00, FALSE, 9.5),
 (@s, @ex_seated_cable_row, 3, 8, 55.00, FALSE, 9.0),
-(@s, @ex_hammer_curl, 1, 10, 14.00, FALSE, 8.0),
-(@s, @ex_hammer_curl, 2, 9, 14.00, FALSE, 8.5),
-(@s, @ex_hammer_curl, 3, 8, 14.00, FALSE, 9.5);
+(@s, @ex_dumbbell_bicep_curl, 1, 10, 14.00, FALSE, 8.0),
+(@s, @ex_dumbbell_bicep_curl, 2, 9, 14.00, FALSE, 8.5),
+(@s, @ex_dumbbell_bicep_curl, 3, 8, 14.00, FALSE, 9.5);
 
 -- Legs, 32 day(s) ago
 INSERT INTO workout_sessions (user_id, split_day_id, session_date, body_part, started_at, ended_at, notes) VALUES
@@ -141,9 +142,9 @@ INSERT INTO sets (session_id, exercise_id, set_number, reps, weight, is_warmup, 
 (@s, @ex_seated_cable_row, 1, 8, 57.50, FALSE, 8.5),
 (@s, @ex_seated_cable_row, 2, 7, 57.50, FALSE, 8.5),
 (@s, @ex_seated_cable_row, 3, 6, 57.50, FALSE, 9.0),
-(@s, @ex_hammer_curl, 1, 8, 16.50, FALSE, 8.5),
-(@s, @ex_hammer_curl, 2, 7, 16.50, FALSE, 9.0),
-(@s, @ex_hammer_curl, 3, 6, 16.50, FALSE, 9.0);
+(@s, @ex_dumbbell_bicep_curl, 1, 8, 16.50, FALSE, 8.5),
+(@s, @ex_dumbbell_bicep_curl, 2, 7, 16.50, FALSE, 9.0),
+(@s, @ex_dumbbell_bicep_curl, 3, 6, 16.50, FALSE, 9.0);
 
 -- Legs, 27 day(s) ago
 INSERT INTO workout_sessions (user_id, split_day_id, session_date, body_part, started_at, ended_at, notes) VALUES
@@ -198,9 +199,9 @@ INSERT INTO sets (session_id, exercise_id, set_number, reps, weight, is_warmup, 
 (@s, @ex_seated_cable_row, 1, 9, 57.50, FALSE, 9.0),
 (@s, @ex_seated_cable_row, 2, 8, 57.50, FALSE, 8.5),
 (@s, @ex_seated_cable_row, 3, 7, 57.50, FALSE, 8.5),
-(@s, @ex_hammer_curl, 1, 9, 16.50, FALSE, 9.0),
-(@s, @ex_hammer_curl, 2, 8, 16.50, FALSE, 9.5),
-(@s, @ex_hammer_curl, 3, 7, 16.50, FALSE, 9.0);
+(@s, @ex_dumbbell_bicep_curl, 1, 9, 16.50, FALSE, 9.0),
+(@s, @ex_dumbbell_bicep_curl, 2, 8, 16.50, FALSE, 9.5),
+(@s, @ex_dumbbell_bicep_curl, 3, 7, 16.50, FALSE, 9.0);
 
 -- Legs, 21 day(s) ago
 INSERT INTO workout_sessions (user_id, split_day_id, session_date, body_part, started_at, ended_at, notes) VALUES
@@ -255,9 +256,9 @@ INSERT INTO sets (session_id, exercise_id, set_number, reps, weight, is_warmup, 
 (@s, @ex_seated_cable_row, 1, 10, 57.50, FALSE, 8.0),
 (@s, @ex_seated_cable_row, 2, 9, 57.50, FALSE, 9.5),
 (@s, @ex_seated_cable_row, 3, 8, 57.50, FALSE, 8.5),
-(@s, @ex_hammer_curl, 1, 10, 16.50, FALSE, 8.0),
-(@s, @ex_hammer_curl, 2, 9, 16.50, FALSE, 9.0),
-(@s, @ex_hammer_curl, 3, 8, 16.50, FALSE, 9.0);
+(@s, @ex_dumbbell_bicep_curl, 1, 10, 16.50, FALSE, 8.0),
+(@s, @ex_dumbbell_bicep_curl, 2, 9, 16.50, FALSE, 9.0),
+(@s, @ex_dumbbell_bicep_curl, 3, 8, 16.50, FALSE, 9.0);
 
 -- Legs, 16 day(s) ago
 INSERT INTO workout_sessions (user_id, split_day_id, session_date, body_part, started_at, ended_at, notes) VALUES
@@ -312,9 +313,9 @@ INSERT INTO sets (session_id, exercise_id, set_number, reps, weight, is_warmup, 
 (@s, @ex_seated_cable_row, 1, 10, 57.50, FALSE, 8.0),
 (@s, @ex_seated_cable_row, 2, 9, 57.50, FALSE, 9.5),
 (@s, @ex_seated_cable_row, 3, 8, 57.50, FALSE, 9.5),
-(@s, @ex_hammer_curl, 1, 8, 19.00, FALSE, 8.0),
-(@s, @ex_hammer_curl, 2, 7, 19.00, FALSE, 9.0),
-(@s, @ex_hammer_curl, 3, 6, 19.00, FALSE, 9.0);
+(@s, @ex_dumbbell_bicep_curl, 1, 8, 19.00, FALSE, 8.0),
+(@s, @ex_dumbbell_bicep_curl, 2, 7, 19.00, FALSE, 9.0),
+(@s, @ex_dumbbell_bicep_curl, 3, 6, 19.00, FALSE, 9.0);
 
 -- Legs, 11 day(s) ago
 INSERT INTO workout_sessions (user_id, split_day_id, session_date, body_part, started_at, ended_at, notes) VALUES
@@ -369,9 +370,9 @@ INSERT INTO sets (session_id, exercise_id, set_number, reps, weight, is_warmup, 
 (@s, @ex_seated_cable_row, 1, 8, 60.00, FALSE, 8.0),
 (@s, @ex_seated_cable_row, 2, 7, 60.00, FALSE, 9.5),
 (@s, @ex_seated_cable_row, 3, 6, 60.00, FALSE, 9.0),
-(@s, @ex_hammer_curl, 1, 9, 19.00, FALSE, 9.0),
-(@s, @ex_hammer_curl, 2, 8, 19.00, FALSE, 9.0),
-(@s, @ex_hammer_curl, 3, 7, 19.00, FALSE, 9.0);
+(@s, @ex_dumbbell_bicep_curl, 1, 9, 19.00, FALSE, 9.0),
+(@s, @ex_dumbbell_bicep_curl, 2, 8, 19.00, FALSE, 9.0),
+(@s, @ex_dumbbell_bicep_curl, 3, 7, 19.00, FALSE, 9.0);
 
 -- Legs, 3 day(s) ago
 INSERT INTO workout_sessions (user_id, split_day_id, session_date, body_part, started_at, ended_at, notes) VALUES
@@ -468,3 +469,16 @@ INSERT INTO water_logs (user_id, fuel_date, amount_ml, container_label) VALUES
 (@alex, CURRENT_DATE, 500, 'Morning Bottle'),
 (@alex, CURRENT_DATE, 750, 'Gym Shaker'),
 (@alex, CURRENT_DATE, 250, 'Glass');
+
+-- Workout weigh-ins (migration 004) for the last 12 workouts: before = the body weight
+-- last logged on or before that day, after = 0.4 to 0.9 kg lighter (sweat)
+UPDATE workout_sessions ws
+JOIN (SELECT id FROM workout_sessions WHERE user_id = @alex ORDER BY session_date DESC, id DESC LIMIT 12) AS recent ON recent.id = ws.id
+SET ws.weight_before = COALESCE(
+        (SELECT bm.weight FROM body_measurements bm
+         WHERE bm.user_id = ws.user_id AND bm.weight IS NOT NULL AND bm.recorded_on <= ws.session_date
+         ORDER BY bm.recorded_on DESC LIMIT 1),
+        (SELECT u.starting_weight FROM users u WHERE u.id = ws.user_id));
+-- (a separate statement: a multi-table UPDATE does not promise left-to-right assignment)
+UPDATE workout_sessions SET weight_after = weight_before - (0.4 + MOD(id, 6) / 10)
+WHERE user_id = @alex AND weight_before IS NOT NULL;

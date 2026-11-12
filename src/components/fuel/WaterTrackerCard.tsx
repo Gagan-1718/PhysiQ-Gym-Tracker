@@ -1,24 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Droplets, Plus, Trash2 } from 'lucide-react';
+import { Check, Droplets, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Rings } from '@/components/ui/Rings';
 import { kg } from '@/lib/format';
-import type { DailyFuel, DailyNutritionHistory, WaterLog } from '@/types/database';
+import type { DailyFuel, WaterLog } from '@/types/database';
 
 const WATER_RING = { color: '#3CC8F2', deep: '#0E7FA0' };
 
 const PRESETS = [
   { amountMl: 250, label: 'Glass', badge: '+250 ml' },
   { amountMl: 500, label: 'Bottle', badge: '+500 ml' },
-  { amountMl: 750, label: 'Shaker', badge: '+750 ml' },
 ];
-
-function shortDay(dateStr: string): string {
-  const d = new Date(`${dateStr}T00:00:00`);
-  return d.toLocaleDateString('en-US', { weekday: 'short' });
-}
 
 function shortTime(ts: string): string {
   const part = ts.split(' ')[1];
@@ -28,38 +21,20 @@ function shortTime(ts: string): string {
 export function WaterTrackerCard({
   fuel,
   waterLogs,
-  history,
   busy,
   onAddWater,
   onDeleteWater,
 }: {
   fuel: DailyFuel | undefined;
   waterLogs: WaterLog[];
-  history: DailyNutritionHistory[];
   busy: boolean;
   onAddWater: (amountMl: number, containerLabel: string) => Promise<void>;
   onDeleteWater: (id: number) => Promise<void>;
 }) {
-  const [customMl, setCustomMl] = useState('');
-
   const loggedMl = fuel?.water_logged_ml ?? 0;
   const targetMl = fuel?.water_target_ml ?? 3000;
   const pct = targetMl > 0 ? Math.round((loggedMl / targetMl) * 100) : 0;
   const remainingMl = Math.max(0, targetMl - loggedMl);
-
-  const handleCustomSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const val = Number(customMl);
-    if (!Number.isInteger(val) || val < 50 || val > 5000) return;
-    setCustomMl('');
-    await onAddWater(val, 'Custom');
-  };
-
-  const maxHistoryMl = Math.max(
-    targetMl,
-    ...history.map((h) => Math.max(h.water_logged_ml, h.water_target_ml)),
-    1000
-  );
 
   return (
     <Card aria-label="Hydration tracker">
@@ -100,80 +75,20 @@ export function WaterTrackerCard({
       </div>
 
       {/* Quick-add preset buttons */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2">
         {PRESETS.map((p) => (
           <button
             key={p.amountMl}
             type="button"
             disabled={busy}
             onClick={() => onAddWater(p.amountMl, p.label)}
-            className="press flex flex-col items-center justify-center rounded-xl border border-line bg-surface-2 px-2 py-2.5 text-center transition-colors hover:border-water/50 hover:bg-surface-3 disabled:opacity-40"
+            className="press flex h-14 flex-col items-center justify-center rounded-xl border border-line bg-surface-2 px-2 text-center transition-colors hover:border-water/50 hover:bg-surface-3 disabled:opacity-40"
           >
-            <span className="text-sm font-bold text-water">{p.badge}</span>
+            <span className="text-[17px] font-bold text-water">{p.badge}</span>
             <span className="text-[11px] font-medium text-fg-3">{p.label}</span>
           </button>
         ))}
       </div>
-
-      {/* Custom amount form */}
-      <form onSubmit={handleCustomSubmit} className="mt-2.5 flex items-center gap-2">
-        <label htmlFor="custom-water-ml" className="sr-only">
-          Custom water amount in ml
-        </label>
-        <input
-          id="custom-water-ml"
-          type="number"
-          inputMode="numeric"
-          min={50}
-          max={5000}
-          step={50}
-          placeholder="Custom ml (50–5000)"
-          value={customMl}
-          onChange={(e) => setCustomMl(e.target.value)}
-          className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-3 text-[15px] text-fg placeholder:text-fg-3 focus:border-water/60 focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={busy || !customMl}
-          className="press inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-water px-3.5 text-sm font-bold text-black disabled:opacity-40"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.5} /> Log
-        </button>
-      </form>
-
-      {/* 7-day hydration mini bar chart */}
-      {history.length > 0 && (
-        <div className="mt-5 border-t border-line pt-4">
-          <div className="mb-2 flex items-center justify-between text-footnote">
-            <span className="font-semibold text-fg-2">Last 7 days hydration</span>
-            <span className="text-fg-3">Goal: {kg(Math.round(targetMl / 100) / 10)} L/day</span>
-          </div>
-          <div className="grid grid-cols-7 gap-1.5 pt-1">
-            {history.map((day) => {
-              const hPct = Math.min(100, Math.round((day.water_logged_ml / maxHistoryMl) * 100));
-              const metGoal = day.water_logged_ml >= day.water_target_ml && day.water_target_ml > 0;
-              return (
-                <div key={day.fuel_date} className="flex flex-col items-center">
-                  <div className="flex h-20 w-full items-end justify-center rounded-lg bg-surface-2 p-1">
-                    <div
-                      className="w-full rounded-md transition-all"
-                      style={{
-                        height: `${Math.max(8, hPct)}%`,
-                        background: metGoal ? '#3CC8F2' : 'rgba(60, 200, 242, 0.45)',
-                      }}
-                      title={`${day.fuel_date}: ${day.water_logged_ml} / ${day.water_target_ml} ml`}
-                    />
-                  </div>
-                  <span className="mt-1 text-[11px] font-medium text-fg-2">{shortDay(day.fuel_date)}</span>
-                  <span className="tabular text-[10px] text-fg-3">
-                    { (day.water_logged_ml / 1000).toFixed(1) }L
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Timestamped log entries */}
       {waterLogs.length > 0 && (

@@ -34,6 +34,10 @@ const DB_NAME = 'physiq_db'; // fixed: the SQL files say `USE physiq_db`
 
 const SQL_FILES = [
   'database/schema.sql',
+  'database/migrations/001_nutrition_tracking.sql',
+  'database/migrations/002_exercise_media.sql',
+  'database/migrations/003_exercise_knowledge.sql',
+  'database/migrations/004_weigh_in_and_tour.sql',
   'database/procedures.sql',
   'database/triggers.sql',
   'database/views.sql',

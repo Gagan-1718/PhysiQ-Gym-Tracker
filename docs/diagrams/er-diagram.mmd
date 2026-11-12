@@ -9,6 +9,7 @@ erDiagram
     decimal height
     decimal starting_weight
     tinyint weekly_goal
+    datetime tour_completed_at
     timestamp created_at
     timestamp updated_at
   }
@@ -43,6 +44,9 @@ erDiagram
     int muscle_group_id FK
     enum equipment_needed
     text instructions
+    varchar media_key
+    decimal weight_step_kg
+    decimal start_bw_ratio
     timestamp created_at
   }
   workout_sessions {
@@ -53,6 +57,8 @@ erDiagram
     varchar body_part
     datetime started_at
     datetime ended_at
+    decimal weight_before
+    decimal weight_after
     decimal total_volume
     varchar notes
     char client_ref
@@ -145,6 +151,17 @@ erDiagram
     varchar container_label
     timestamp logged_at
   }
+  muscle_regions {
+    varchar code PK
+    varchar label UK
+    enum body_view
+    int muscle_group_id FK
+  }
+  exercise_muscles {
+    int exercise_id PK,FK
+    varchar region_code PK,FK
+    enum role
+  }
 
   users ||--o{ splits : "user_id"
   splits ||--o{ split_days : "split_id"
@@ -165,3 +182,6 @@ erDiagram
   users ||--o{ meal_logs : "user_id"
   foods |o--o{ meal_logs : "food_id"
   users ||--o{ water_logs : "user_id"
+  muscle_groups ||--o{ muscle_regions : "muscle_group_id"
+  exercises ||--o{ exercise_muscles : "exercise_id"
+  muscle_regions ||--o{ exercise_muscles : "region_code"

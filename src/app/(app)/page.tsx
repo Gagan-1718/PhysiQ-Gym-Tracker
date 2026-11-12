@@ -83,7 +83,9 @@ export default function TodayPage() {
           ))}
         </div>
       ) : (
-        <RecoveryStrip days={split.data.days} />
+        <div data-tour="recovery">
+          <RecoveryStrip days={split.data.days} />
+        </div>
       )}
 
       <SectionHeader title="This week" href="/progress" />

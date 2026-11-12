@@ -17,7 +17,7 @@ const DB = process.env.MYSQL_DATABASE || 'physiq_db';
 const TABLE_ORDER = [
   'users', 'muscle_groups', 'exercises', 'splits', 'split_days', 'split_day_muscles',
   'workout_sessions', 'sets', 'personal_records', 'body_measurements', 'user_daily_fuel', 'admin_audit_logs',
-  'foods', 'meal_logs', 'water_logs',
+  'foods', 'meal_logs', 'water_logs', 'muscle_regions', 'exercise_muscles',
 ];
 
 const esc = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
@@ -72,6 +72,7 @@ async function main() {
      FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = ? ORDER BY EVENT_OBJECT_TABLE, TRIGGER_NAME`,
     [DB]
   );
+  const [baseTables] = await conn.query("SELECT TABLE_NAME AS t FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME", [DB]);
   await conn.end();
 
   const views = tableComments.filter((t) => t.TABLE_TYPE === 'VIEW').map((t) => t.TABLE_NAME).sort();
@@ -87,6 +88,8 @@ async function main() {
   out.push('**MongoDB:** `custom_routines`, `journey_stories`, `vector_embeddings` (validators in `database/mongodb/`).');
   out.push('');
 
+  // Any table added later and not listed above still gets documented, at the end
+  for (const { t } of baseTables) if (!TABLE_ORDER.includes(t)) TABLE_ORDER.push(t);
   TABLE_ORDER.forEach((table, i) => {
     out.push(`## ${i + 1}. \`${table}\``);
     out.push('');

@@ -1,7 +1,9 @@
 import { ApiError, ok, readJson, route } from '@/lib/api';
-import { execute, withTransaction } from '@/lib/mysql';
+import { execute, selectOne, withTransaction } from '@/lib/mysql';
 import { requireAdmin } from '@/lib/session';
 import { ExerciseSchema } from '@/lib/schemas';
+import { deleteVector, upsertExerciseVector } from '@/lib/vector';
+import type { Exercise } from '@/types/database';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -26,6 +28,14 @@ export const PATCH = route<Ctx>(async (req, { params }) => {
     { actingUserId: admin.id }
   );
   if (res.affectedRows === 0) throw new ApiError(404, 'Exercise not found.');
+
+  // Keep the exercise's vector in MongoDB in step (after the MySQL commit, best effort)
+  const exercise = await selectOne<Exercise>(
+    `SELECT e.id, e.name, e.muscle_group_id, mg.name AS muscle_group, e.equipment_needed, e.instructions, e.media_key
+     FROM exercises e JOIN muscle_groups mg ON mg.id = e.muscle_group_id WHERE e.id = ?`,
+    [id]
+  );
+  if (exercise) await upsertExerciseVector(exercise).catch((err) => console.warn('vector sync failed', err));
   return ok({ id });
 });
 
@@ -35,5 +45,6 @@ export const DELETE = route<Ctx>(async (_req, { params }) => {
   const id = parseId((await params).id);
   const res = await withTransaction((conn) => execute('DELETE FROM exercises WHERE id = ?', [id], conn), { actingUserId: admin.id });
   if (res.affectedRows === 0) throw new ApiError(404, 'Exercise not found.');
+  await deleteVector('exercise', id).catch((err) => console.warn('vector delete failed', err));
   return ok({ deleted: id });
 });

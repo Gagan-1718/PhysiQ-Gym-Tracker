@@ -38,7 +38,8 @@ BEGIN
     END IF;
 END$$
 
--- 3. Mark the split day as trained (never moves the date backwards)
+-- 3. Mark the split day as trained (never moves the date backwards), and let the
+--    pre-workout weigh-in (migration 004) be the day's body weight when none was logged
 DROP TRIGGER IF EXISTS trg_workout_sessions_ai$$
 CREATE TRIGGER trg_workout_sessions_ai
 AFTER INSERT ON workout_sessions
@@ -48,6 +49,11 @@ BEGIN
         UPDATE split_days
         SET last_trained_date = GREATEST(COALESCE(last_trained_date, NEW.session_date), NEW.session_date)
         WHERE id = NEW.split_day_id;
+    END IF;
+    IF NEW.weight_before IS NOT NULL THEN
+        INSERT INTO body_measurements (user_id, recorded_on, weight)
+        VALUES (NEW.user_id, NEW.session_date, NEW.weight_before) AS new_row
+        ON DUPLICATE KEY UPDATE weight = COALESCE(body_measurements.weight, new_row.weight);
     END IF;
 END$$
 

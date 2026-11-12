@@ -24,20 +24,23 @@ Gym-goers track workouts, splits and body changes across fragmented apps or pape
 
 ## 2. PESU DBMS Level 3 Requirements Compliance Matrix
 
+The requirement-by-requirement checklist (§1–§18 of the project brief) is in
+[docs/PROJECT_REPORT.md, Appendix A](docs/PROJECT_REPORT.md#appendix-a-requirement-checklist).
+
 | Syllabus requirement | PhysiQ implementation | Artifact |
 |---|---|---|
-| **SQL database (mandatory)** | MySQL 8.0+, 15 tables in 3NF (`personal_records` in BCNF) | [`database/schema.sql`](database/schema.sql) |
+| **SQL database (mandatory)** | MySQL 8.0+, 17 tables in 3NF (`personal_records`, `muscle_regions`, `exercise_muscles` in BCNF); DDL with `CREATE`, `ALTER` (migrations 001–003) and `DROP` | [`database/schema.sql`](database/schema.sql) |
 | **NoSQL database (mandatory)** | MongoDB `custom_routines` (nested templates) + `journey_stories` (sparse journals) + `vector_embeddings` (32-d vectors, cosine search in an aggregation pipeline), JSON-schema validators, indexes, cross-store id checks | [`database/mongodb/`](database/mongodb), [`src/lib/mongodb.ts`](src/lib/mongodb.ts), [`src/app/api/routines`](src/app/api/routines) |
 | **Normalization** | 1NF→BCNF analysis, documented controlled denormalisation | [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) |
 | **Role-based access (min 2 roles)** | `member` / `admin`; NextAuth + bcrypt; every query scoped by the session user; admin-only library writes. In MySQL itself the app runs as a least-privilege account (role `physiq_app`: no DDL / GRANT) and a `physiq_readonly` role exists | [`src/lib/auth.ts`](src/lib/auth.ts), [`src/lib/session.ts`](src/lib/session.ts), [`database/roles.sql`](database/roles.sql) |
 | **Transactions** | Workout = session + all sets in one transaction, idempotent via `UNIQUE(user_id, client_ref)`; editing a saved workout (row lock + trigger recompute); split switching (recovery carries over via one correlated `UPDATE`); audited admin writes | [`src/app/api/workouts/route.ts`](src/app/api/workouts/route.ts), [`src/lib/mysql.ts`](src/lib/mysql.ts) |
 | **Triggers** | 15: volume, last-trained date, PR detection, `SIGNAL` validation, daily fuel totals from meals and water, audit trail | [`database/triggers.sql`](database/triggers.sql) |
-| **Stored procedures & functions** | `sp_get_next_body_part`, `sp_estimate_next_target`, `sp_check_and_update_pr`, `sp_rebuild_personal_records`, `sp_get_daily_fuel`, `sp_log_fuel`, `sp_log_meal`, `sp_log_water`, `sp_rep_max_table` (recursive CTE), `sp_schema_stats` (`SQL SECURITY DEFINER`), `fn_calculate_1rm`, fuel and macro functions… (15 + 7) | [`database/procedures.sql`](database/procedures.sql) |
+| **Stored procedures & functions** | `sp_get_next_body_part`, `sp_estimate_next_target`, `sp_check_and_update_pr`, `sp_rebuild_personal_records`, `sp_get_daily_fuel`, `sp_log_fuel`, `sp_log_meal`, `sp_log_water`, `sp_rep_max_table` (recursive CTE), `sp_schema_stats` (`SQL SECURITY DEFINER`), `fn_calculate_1rm`, `fn_starting_weight`, fuel and macro functions… (15 + 8) | [`database/procedures.sql`](database/procedures.sql) |
 | **Views** | `view_split_day_status`, `view_personal_records_detailed`, `view_weekly_summary`, `view_weekly_muscle_volume`, `view_exercise_session_best`, `view_daily_nutrition_summary`, `view_hydration_daily` | [`database/views.sql`](database/views.sql) |
 | **Indexing & EXPLAIN** | Composite B-Tree indexes; measured 7 vs 60,019 rows examined, 0.07 ms vs 27.5 ms | [`database/indexes.sql`](database/indexes.sql), [`docs/QUERY_PERFORMANCE_EXPLAIN.md`](docs/QUERY_PERFORMANCE_EXPLAIN.md) |
 | **Complex queries** | CTEs, window functions, correlated subquery, anti-join, gaps-and-islands streak, keyset pagination | [`database/queries/`](database/queries) |
-| **Web interface** | Next.js 16 PWA: Today, Train/logger (incl. smart search), Fuel (meals, plate builder, water), Progress (incl. 1RM calculator), History (incl. edit), Profile (incl. data export), Admin | [`src/app/`](src/app) |
-| **Testing** | 48 database tests (each in a rolled-back transaction) + 39 API tests + 16 browser tests (Playwright; axe-core accessibility and overflow audit of every screen at 320 / 390 / 1280 px), run on every push by GitHub Actions | [`tests/`](tests), [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| **Web interface** | Next.js 16 PWA: Today, Train/logger (incl. smart search), Fuel (meals with smart search, water), Progress (strength, body, Journey), History (incl. edit), Profile (incl. data export), Admin; guided workout with exercise demonstrations, a red muscle map, a swipe weight ruler and automatic +2.5 / 5 / 10 kg steps between sets | [`src/app/`](src/app) |
+| **Testing** | 51 database tests (each in a rolled-back transaction) + 40 API tests + 16 browser tests (Playwright; axe-core accessibility and overflow audit of every screen at 320 / 390 / 1280 px), run on every push by GitHub Actions | [`tests/`](tests), [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 
 ---
 
@@ -87,7 +90,7 @@ flowchart LR
 ### Feature 4: Daily fuel & recovery protocol
 * `sp_get_daily_fuel` / `sp_log_fuel` over `user_daily_fuel`: protein 2 g/kg, water 40 ml/kg, calories ≈ 33 kcal/kg ± goal (+300 hypertrophy, +200 strength, −400 fat loss).
 * Today's targets follow the latest weigh-in; past days stay frozen.
-* UI: three activity rings on Today (training red, protein white, water blue). Food and water are logged on the **Fuel** page: meals from the `foods` library (`sp_log_meal`), a plate builder that counts cooking oil, water (`sp_log_water`), and triggers keep `user_daily_fuel` in sync.
+* UI: three activity rings on Today (training red, protein white, water blue). Food and water are logged on the **Fuel** page: meals from the `foods` library (`sp_log_meal`) with smart search, water in two taps (`sp_log_water`), and triggers keep `user_daily_fuel` in sync.
 
 ### Feature 5: Journey timeline (MongoDB)
 * Finishing a workout stores mood, tags and journal text in `journey_stories`, linked by `session_id`, with PR highlights embedded.
@@ -98,13 +101,12 @@ flowchart LR
 ### Feature 6: Overdue alerts
 * "Overdue" is defined once, in `view_split_day_status` (recovery window + 2 days). `GET /api/alerts` only reads it.
 * A banner at the top of every screen (except the live logger) names the worst overdue day with a one-tap *Train* button; dismissing it hides it until tomorrow.
-* Optional **browser notification** (Profile → Reminders), shown through a service worker at most once a day when the app is opened or returns to the foreground. True background push would need a push server and stored subscriptions, which this project does not run.
 
 ---
 
 ## 5. Relational Schema & Database Artifacts
 
-### 15 tables
+### 17 tables
 1. `users` (role, goal, height, starting_weight, weekly_goal)
 2. `muscle_groups` (lookup)
 3. `exercises` (FK → muscle_groups)
@@ -120,6 +122,8 @@ flowchart LR
 13. `foods` (built-in library + members' custom foods)
 14. `meal_logs` (name and macros copied at log time; FK → foods SET NULL)
 15. `water_logs`
+16. `muscle_regions` (body-map regions, FK → muscle_groups)
+17. `exercise_muscles` (M:N exercises ↔ muscle_regions, with a primary / secondary role)
 
 The MySQL `progress_photos` table from the first draft was dropped in favour of
 MongoDB journey stories. Food logging was added back later as the Fuel page
@@ -142,13 +146,15 @@ in a final feed.
 | 3 | **Design system & PWA shell**: tokens, UI kit, tab bar / sidebar, manifest + icons, login, register, onboarding | 6 | ✅ done |
 | 4 | **Gym-floor logger**: pre-filled plans, live logger, rest timer, PR badges, finish + journal, routines, history | 7, part of 8 | ✅ done |
 | 5 | **Dashboard & insights**: activity rings + fuel, weekly stats, streak, strength and body progress, profile, admin console | 8, part of 9 | ✅ done |
-| 6 | **Journey timeline & alerts**: MongoDB story feed with search, photos and milestones, overdue banner, browser notifications | 9 | ✅ done |
+| 6 | **Journey timeline & alerts**: MongoDB story feed with search, photos and milestones, overdue banner | 9 | ✅ done |
 | 7 | **Viva prep**: ER and architecture diagrams generated from the live schema, runnable SQL and MongoDB demos, 5-minute script and 29-step walkthrough, screenshots, contribution summary, API tests and CI | 10.3 | ✅ done |
-| 8 | **Hardening & quality**: 1RM calculator (`sp_rep_max_table`), edit a saved workout, least-privilege MySQL account and roles, data export, security headers + CSP, offline and error states, Next.js 16 / React 19 upgrade, Playwright + axe browser suite in CI | quality pass on 4, 5 and 10 | ✅ done |
-| 9 | **Fuel & smart search**: food library, meal and water logging through procedures with triggers keeping the daily totals, plate builder, MongoDB vector search for exercises and meals, multi-goal onboarding, metric or imperial input, split switching that keeps recovery | additions after phase 8 | ✅ done |
+| 8 | **Hardening & quality**: rep-max procedure (`sp_rep_max_table`), edit a saved workout, least-privilege MySQL account and roles, data export, security headers + CSP, offline and error states, Next.js 16 / React 19 upgrade, Playwright + axe browser suite in CI | quality pass on 4, 5 and 10 | ✅ done |
+| 9 | **Fuel & smart search**: food library, meal and water logging through procedures with triggers keeping the daily totals, MongoDB vector search for exercises and foods, metric or imperial input, split switching that keeps recovery | additions after phase 8 | ✅ done |
+| 10 | **Gym-floor simplification**: guided workout (choose exercises, then one at a time with a demonstration from `exercises.media_key`, migration 002), workout clock that stops when idle; removed the 1RM calculator screen, reminders, multi-goal sign-up, the plate builder and meal-idea chips | review after phase 9 | ✅ done |
+| 11 | **Exercise knowledge & set-by-set workout**: migration 003 (`weight_step_kg`, `start_bw_ratio`, `muscle_regions`, `exercise_muscles`), `fn_starting_weight`; the guided workout shows one set at a time with the worked muscles in red, a swipe weight ruler, and Done raises the next set by the exercise's step | feedback from gym use | ✅ done |
 
 Every phase was verified against real MySQL 8.0.46 and MongoDB 8.2:
-`npm test` (48 database tests + 39 API tests + 16 browser tests, also run by GitHub Actions on every push). The browser suite walks
+`npm test` (51 database tests + 40 API tests + 16 browser tests, also run by GitHub Actions on every push). The browser suite walks
 onboarding, a full workout, editing, the Journey, profile and admin, and audits every screen for accessibility.
 
 ---
